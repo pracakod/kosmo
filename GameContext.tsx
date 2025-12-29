@@ -1065,6 +1065,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         sendExpedition,
         sendAttack,
         sendSpyProbe,
+        sendTransport,
+        cancelMission,
         buyPremium,
         getCost,
         checkRequirements,
