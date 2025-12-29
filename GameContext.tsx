@@ -115,7 +115,8 @@ const initialState: GameState = {
 };
 
 const calculatePoints = (resources: any, buildings: any, ships: any) => {
-    const resPoints = Math.floor(((resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0)) / 1000);
+    const r = resources || {};
+    const resPoints = Math.floor(((Number(r.metal) || 0) + (Number(r.crystal) || 0) + (Number(r.deuterium) || 0)) / 1000);
     const buildPoints = Object.values(buildings || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 100, 0);
     const shipPoints = Object.values(ships || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 50, 0);
     return Math.floor(resPoints + buildPoints + shipPoints);
@@ -1042,7 +1043,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         updateProductionSetting,
         resetGame,
         clearLogs,
-        logout,
         logout,
         deleteAccount,
         updateAvatar,
