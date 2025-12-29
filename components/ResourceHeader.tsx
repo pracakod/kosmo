@@ -51,7 +51,7 @@ const ResourceHeader: React.FC = () => {
     return (
         <header className="bg-[#111422]/90 backdrop-blur-md border-b border-white/5 p-3 flex-shrink-0 z-20">
             <div className="flex flex-wrap gap-3 justify-between items-center w-full">
-                <div className="flex gap-3 flex-1 overflow-x-auto pb-2 no-scrollbar items-center mask-image-gradient">
+                <div className="flex gap-2 md:gap-3 flex-1 overflow-x-auto pb-2 items-center">
                     <ResourceItem
                         name="Metal"
                         value={resources.metal}

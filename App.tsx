@@ -13,6 +13,7 @@ import Research from './views/Research';
 import Fleet from './views/Fleet';
 import Shop from './views/Shop';
 import Ranking from './views/Ranking';
+import Settings from './views/Settings';
 
 export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings';
 
