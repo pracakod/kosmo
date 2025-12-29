@@ -96,8 +96,8 @@ const Settings: React.FC = () => {
                     <div className="flex gap-2">
                         <input
                             type="text"
-                            value={nameInput}
-                            onChange={(e) => setNameInput(e.target.value)}
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
                             maxLength={20}
                             className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
                         />

@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS } from '../constants';
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords } = useGame();
+    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeConstruction = constructionQueue[0];
     const activeShipBuild = shipyardQueue[0];
@@ -63,6 +63,19 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
 
     return (
         <div className="flex flex-col gap-8">
+            {/* Incoming Attack Alert */}
+            {incomingMissions.length > 0 && (
+                <div className="bg-red-900/50 border border-red-500 rounded-xl p-4 flex items-center justify-between animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                    <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-red-500 text-3xl">warning</span>
+                        <div>
+                            <h3 className="text-red-400 font-bold text-lg">WYKRYTO ZAGROŻENIE!</h3>
+                            <p className="text-red-200 text-sm">Nadciąga wroga flota! Szacowany czas kontaktu: {formatTime(Math.max(0, (incomingMissions[0].arrivalTime - Date.now()) / 1000))}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Planet Card */}
                 <div className="lg:col-span-5 xl:col-span-4">

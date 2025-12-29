@@ -17,7 +17,7 @@ interface GameContextType extends GameState {
     buildShip: (shipId: ShipId, amount: number) => void;
     sendExpedition: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
     sendAttack: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
-    sendSpyProbe: (amount: number) => boolean;
+    sendSpyProbe: (amount: number, coords: { galaxy: number, system: number, position: number }) => Promise<boolean>;
     buyPremium: (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }) => TransactionStatus;
     getCost: (type: 'building' | 'research', id: string, currentLevel: number) => { metal: number, crystal: number, deuterium: number };
     checkRequirements: (reqs?: Requirement[]) => boolean;
@@ -173,7 +173,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // Filter out completed missions that are already returned? 
             // Ideally we keep them for log but remove from active. 
             // For now, let's just set activeMissions
-            setGameState(prev => ({ ...prev, activeMissions: mappedMissions.filter(m => m.status !== 'completed') }));
+
+            const myMissions = mappedMissions.filter(m => m.ownerId === session.user.id && m.status !== 'completed');
+            const incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying');
+
+            setGameState(prev => ({
+                ...prev,
+                activeMissions: myMissions,
+                incomingMissions: incoming
+            }));
         }
     };
 
@@ -359,6 +367,30 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 result = battle.log;
                 loot = battle.loot;
                 survivingAttacker = battle.survivingAttackerShips;
+            }
+        } else if (mission.type === MissionType.SPY) {
+            if (mission.targetUserId) {
+                // Fetch target data
+                const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+                if (targetProfile) {
+                    // Create spy report for attacker
+                    result = {
+                        outcome: 'success',
+                        title: 'Raport Szpiegowski',
+                        message: `Skan planety [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\nZasoby: M:${Math.floor(targetProfile.resources?.metal || 0)} C:${Math.floor(targetProfile.resources?.crystal || 0)} D:${Math.floor(targetProfile.resources?.deuterium || 0)}\nBudynki: (Ukryte przez technologię szpiegowską level 0)\nFlota: ${Object.keys(targetProfile.ships || {}).length > 0 ? 'Wykryto sygnatury floty' : 'Brak floty'}.`
+                    };
+
+                    // Alert defender
+                    const newTargetLogs = [
+                        { id: Date.now().toString(), timestamp: Date.now(), title: "Wykryto Skanowanie!", message: `Obca sonda przeskanowała Twoją planetę.`, outcome: 'danger' },
+                        ...(targetProfile.mission_logs || [])
+                    ].slice(0, 50);
+
+                    await supabase.from('profiles').update({ mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
+                }
+            } else {
+                // PvE Spy?
+                result = { outcome: 'success', title: 'Raport', message: 'Opuszczona planeta. Brak oznak życia.' };
             }
         }
 
@@ -740,9 +772,51 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         });
     };
 
-    const sendSpyProbe = (amount: number) => {
+    const sendSpyProbe = async (amount: number, coords: { galaxy: number, system: number, position: number }) => {
         if ((gameState.ships[ShipId.ESPIONAGE_PROBE] || 0) < amount) return false;
-        setGameState(prev => ({ ...prev, ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount } }));
+
+        const now = Date.now();
+        const duration = 2 * 60 * 1000 / GAME_SPEED; // Probes are fast
+        const missionId = crypto.randomUUID();
+        const targetUserId = await findTargetUser(coords);
+
+        // Optimistic update
+        const mission: FleetMission = {
+            id: missionId,
+            ownerId: session?.user.id,
+            type: MissionType.SPY,
+            ships: { [ShipId.ESPIONAGE_PROBE]: amount } as any,
+            targetCoords: coords,
+            targetUserId: targetUserId,
+            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            startTime: now,
+            arrivalTime: now + (duration / 2),
+            returnTime: now + duration,
+            eventProcessed: false,
+            status: 'flying'
+        };
+
+        setGameState(prev => ({
+            ...prev,
+            ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount },
+            activeMissions: [...prev.activeMissions, mission]
+        }));
+
+        // DB Insert
+        await supabase.from('missions').insert({
+            id: missionId,
+            owner_id: session.user.id,
+            target_user_id: targetUserId,
+            mission_type: MissionType.SPY,
+            ships: { [ShipId.ESPIONAGE_PROBE]: amount },
+            target_coords: coords,
+            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            start_time: now,
+            arrival_time: now + (duration / 2),
+            return_time: now + duration,
+            status: 'flying'
+        });
+
         return true;
     };
 
