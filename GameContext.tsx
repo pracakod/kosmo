@@ -30,12 +30,14 @@ interface GameContextType extends GameState {
 
     updateAvatar: (url: string) => void;
     getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
+    renameUser: (name: string) => void;
 }
 
 const initialState: GameState = {
     avatarUrl: "/kosmo/avatars/avatar_default.png",
     planetType: 'terran',
     planetName: "Nowa Kolonia",
+    nickname: "Player", // Added nickname to initial state
     resources: {
         metal: 500,
         crystal: 300,
@@ -192,6 +194,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             setGameState(prev => ({
                 ...prev,
                 planetName: data.planet_name || prev.planetName,
+                nickname: data.nickname || prev.nickname || 'Player', // Load nickname
                 resources: { ...prev.resources, ...data.resources },
                 buildings: { ...prev.buildings, ...data.buildings },
                 research: { ...prev.research, ...data.research },
@@ -214,6 +217,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     const parsed = JSON.parse(saved);
                     // SECURITY CHECK: Only load if saved state belongs to this user
                     if (parsed.userId && parsed.userId === session.user.id) {
+                        // The instruction snippet for `data.active_missions` etc. here is incorrect as `data` is from Supabase, not local storage.
+                        // Assuming the intent was to load these from `parsed` if they exist, or to ensure they are not overwritten by old local storage.
+                        // For now, I'll apply the nickname part as per instruction, assuming other fields are handled by the spread operator.
+                        if (parsed.production_settings?.nickname) parsed.nickname = parsed.production_settings.nickname; // Assuming production_settings might be in local storage
+
                         setGameState(prev => ({
                             ...prev,
                             ...parsed,
@@ -255,13 +263,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             await supabase.from('profiles').upsert({
                 id: session.user.id,
                 planet_name: current.planetName,
+                nickname: current.nickname, // Save nickname
                 resources: current.resources,
                 buildings: current.buildings,
                 research: current.research,
                 ships: current.ships,
                 construction_queue: current.constructionQueue,
                 shipyard_queue: current.shipyardQueue,
-                production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl, planetType: current.planetType },
+                production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl, planetType: current.planetType, nickname: current.nickname }, // Save nickname in production_settings for legacy/consistency
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
@@ -867,7 +876,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const getPlayersInSystem = async (galaxy: number, system: number) => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, planet_name, galaxy_coords, points, production_settings')
+            .select('id, planet_name, galaxy_coords, points, production_settings, nickname') // Added nickname to select
             .contains('galaxy_coords', { galaxy, system });
 
         if (error) {
@@ -875,6 +884,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return [];
         }
         return data || [];
+    };
+
+    const renameUser = (name: string) => {
+        setGameState(prev => ({ ...prev, nickname: name }));
     };
 
     // Main Loop
@@ -956,9 +969,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         resetGame,
         clearLogs,
         logout,
+        logout,
         deleteAccount,
         updateAvatar,
-        getPlayersInSystem
+        getPlayersInSystem,
+        renameUser
     };
 
     return (

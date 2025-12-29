@@ -154,6 +154,7 @@ export interface MissionLog {
 
 export interface GameState {
   userId?: string; // Supabase User ID
+  nickname?: string; // Player display name
   avatarUrl?: string; // Current Avatar Image
   planetType?: 'terran' | 'desert' | 'ice';
   planetName: string;

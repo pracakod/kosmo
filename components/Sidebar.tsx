@@ -16,7 +16,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         const game = useGame();
         resetGame = game.resetGame;
         if (game.avatarUrl) avatarUrl = game.avatarUrl;
-        if (game.userId) userName = `Kmdr. ${game.userId.split('-')[0]}`;
+        if (game.nickname) userName = game.nickname;
+        else if (game.userId) userName = `Kmdr. ${game.userId.split('-')[0]}`;
     } catch (e) {
         // Fallback
     }
