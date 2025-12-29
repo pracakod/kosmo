@@ -49,8 +49,8 @@ const Auth: React.FC = () => {
                 <div className="flex flex-col items-center mb-8">
                     <div className="bg-center bg-no-repeat bg-cover rounded-full size-20 border-2 border-primary mb-4 shadow-lg shadow-primary/30"
                         style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbNn-VcSbOlNMpz85EjFU")' }}></div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight uppercase">StarCommand</h1>
-                    <p className="text-gray-500 mt-4">v1.2.0 (PvP Alpha)</p>
+                    <h1 className="text-3xl font-bold text-white tracking-tight uppercase">Centrum Dowodzenia</h1>
+                    <p className="text-gray-500 mt-4">v1.2.0 (PvP & Commander Update)</p>
                     <p className="text-[#929bc9] text-sm">Zaloguj się do terminala dowódcy</p>
                 </div>
 

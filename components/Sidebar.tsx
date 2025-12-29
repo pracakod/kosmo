@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-primary"
                         style={{ backgroundImage: `url("${avatarUrl}")` }}></div>
                     <div className="flex flex-col">
-                        <h1 className="text-white text-base font-bold tracking-tight uppercase">StarCommand</h1>
+                        <h1 className="text-white text-base font-bold tracking-tight uppercase">Centrum Dowodzenia</h1>
                         <p className="text-[#929bc9] text-xs font-normal">{userName}</p>
                     </div>
                 </div>
