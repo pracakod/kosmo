@@ -201,6 +201,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 planetType: data.production_settings?.planetType || prev.planetType || (['terran', 'desert', 'ice'][Math.floor(Math.random() * 3)]),
                 // Don't overwrite activeMissions from profile (legacy), we use missions table now
                 missionLogs: data.mission_logs || [],
+                galaxyCoords: data.galaxy_coords,
                 lastTick: Date.now()
             }));
         } else {
