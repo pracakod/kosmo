@@ -1,16 +1,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Safely retrieve environment variables.
-// In some environments, import.meta.env might be undefined, causing a crash.
-const meta = import.meta as any;
-const env = meta.env || {};
+// Supabase configuration
+// These are public keys, safe to include in client-side code
+const supabaseUrl = 'https://roouxunjcwzrqwyusari.supabase.co';
+const supabaseAnonKey = 'sb_publishable__KBx196RhAAcP2CpvKtTxQ_lgUEabF2';
 
-// Use fallbacks to prevent createClient from throwing if env vars are missing
-const supabaseUrl = env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || 'placeholder';
-
-// Helper to check if we have valid (non-placeholder) configuration
-export const isSupabaseConfigured = !supabaseUrl.includes('placeholder') && !supabaseAnonKey.includes('placeholder');
+// Helper to check if we have valid configuration
+export const isSupabaseConfigured = true;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

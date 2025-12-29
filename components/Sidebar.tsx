@@ -52,8 +52,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                             key={item.id}
                             onClick={() => onNavigate(item.id)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all group ${isActive
-                                    ? 'bg-primary/20 text-white border border-primary/50 shadow-[0_0_15px_rgba(19,55,236,0.3)]'
-                                    : 'text-[#929bc9] hover:bg-white/5 hover:text-white'
+                                ? 'bg-primary/20 text-white border border-primary/50 shadow-[0_0_15px_rgba(19,55,236,0.3)]'
+                                : 'text-[#929bc9] hover:bg-white/5 hover:text-white'
                                 } ${isShop ? 'text-yellow-400 hover:text-yellow-300' : ''}`}
                         >
                             <span className={`material-symbols-outlined ${isActive ? 'text-primary' : isShop ? 'text-yellow-500' : 'group-hover:text-primary transition-colors'}`}>
@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                         <span className="text-xs text-[#929bc9]">Status: Online</span>
                     </div>
-                    <span className="text-xs text-[#929bc9]/60 font-mono">v1.0.1</span>
+                    <span className="text-xs text-[#929bc9]/60 font-mono">v1.0.2</span>
                 </div>
             </div>
         </aside>
