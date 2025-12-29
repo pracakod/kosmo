@@ -751,331 +751,339 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             start_time: now,
             arrival_time: now + (duration / 2),
-            // Find if target is a player
-            const targetUserId = await findTargetUser(coords);
-
-            // Optimistic
-            const mission: FleetMission = {
-                id: missionId,
-                ownerId: session?.user.id,
-                type: MissionType.ATTACK,
-                ships: ships,
-                targetCoords: coords,
-                targetUserId: targetUserId,
-                originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-                startTime: now,
-                arrivalTime: now + (duration / 2),
-                returnTime: now + duration,
-                eventProcessed: false,
-                status: 'flying'
-            };
-
-            setGameState(prev => {
-    const newShips = { ...prev.ships };
-    Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
-    return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
-});
-
-// DB Insert
-await supabase.from('missions').insert({
-    id: missionId,
-    owner_id: session.user.id,
-    target_user_id: targetUserId,
-    mission_type: MissionType.ATTACK,
-    ships: ships,
-    target_coords: coords,
-    origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-    start_time: now,
-    arrival_time: now + (duration / 2),
-    return_time: now + duration,
-    status: 'flying'
-});
-    };
-
-const sendSpyProbe = async (amount: number, coords: { galaxy: number, system: number, position: number }) => {
-    if ((gameState.ships[ShipId.ESPIONAGE_PROBE] || 0) < amount) return false;
-
-    const now = Date.now();
-    const duration = 30 * 1000; // 30 seconds for spy probe
-
-    const missionId = crypto.randomUUID();
-    const targetUserId = await findTargetUser(coords);
-
-    // Optimistic update
-    const mission: FleetMission = {
-        id: missionId,
-        ownerId: session?.user.id,
-        type: MissionType.SPY,
-        ships: { [ShipId.ESPIONAGE_PROBE]: amount } as any,
-        targetCoords: coords,
-        targetUserId: targetUserId,
-        originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-        startTime: now,
-        arrivalTime: now + (duration / 2),
-        returnTime: now + duration,
-        eventProcessed: false,
-        status: 'flying'
-    };
-
-    setGameState(prev => ({
-        ...prev,
-        ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount },
-        activeMissions: [...prev.activeMissions, mission]
-    }));
-
-    // DB Insert
-    await supabase.from('missions').insert({
-        id: missionId,
-        owner_id: session.user.id,
-        target_user_id: targetUserId,
-        mission_type: MissionType.SPY,
-        ships: { [ShipId.ESPIONAGE_PROBE]: amount },
-        target_coords: coords,
-        origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-        start_time: now,
-        arrival_time: now + (duration / 2),
-        return_time: now + duration,
-        status: 'flying'
-    });
-
-    return true;
-};
-
-// Upgrades
-const upgradeBuilding = (buildingId: BuildingId) => {
-    const currentLevel = gameState.buildings[buildingId];
-    const cost = getCost('building', buildingId, currentLevel);
-    if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-    if (gameState.constructionQueue.length > 0) return;
-
-    const totalResources = cost.metal + cost.crystal;
-    let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
-    buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
-    buildTimeMs = buildTimeMs / GAME_SPEED;
-    const buildTime = Math.max(1000, buildTimeMs);
-    const now = Date.now();
-
-    setGameState(prev => ({
-        ...prev,
-        resources: {
-            ...prev.resources,
-            metal: prev.resources.metal - cost.metal,
-            crystal: prev.resources.crystal - cost.crystal,
-            deuterium: prev.resources.deuterium - cost.deuterium
-        },
-        constructionQueue: [{
-            id: now.toString(),
-            type: 'building',
-            itemId: buildingId,
-            targetLevel: currentLevel + 1,
-            startTime: now,
-            endTime: now + buildTime
-        }]
-    }));
-};
-
-const upgradeResearch = (researchId: ResearchId) => {
-    const currentLevel = gameState.research[researchId];
-    const cost = getCost('research', researchId, currentLevel);
-    if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-    if (gameState.constructionQueue.length > 0) return;
-
-    const labLevel = gameState.buildings[BuildingId.RESEARCH_LAB];
-    if (labLevel === 0) return;
-
-    const totalResources = cost.metal + cost.crystal;
-    let buildTimeMs = (totalResources / 1000) * 3600 * 1000;
-    buildTimeMs = buildTimeMs / (labLevel + 1);
-    buildTimeMs = buildTimeMs / GAME_SPEED;
-    const buildTime = Math.max(1000, buildTimeMs);
-    const now = Date.now();
-
-    setGameState(prev => ({
-        ...prev,
-        resources: {
-            ...prev.resources,
-            metal: prev.resources.metal - cost.metal,
-            crystal: prev.resources.crystal - cost.crystal,
-            deuterium: prev.resources.deuterium - cost.deuterium
-        },
-        constructionQueue: [{
-            id: now.toString(),
-            type: 'research',
-            itemId: researchId,
-            targetLevel: currentLevel + 1,
-            startTime: now,
-            endTime: now + buildTime
-        }]
-    }));
-};
-
-const buildShip = (shipId: ShipId, amount: number) => {
-    const ship = SHIPS[shipId];
-    const totalCost = { metal: ship.baseCost.metal * amount, crystal: ship.baseCost.crystal * amount, deuterium: ship.baseCost.deuterium * amount };
-    if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
-    const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
-    if (shipyardLevel === 0) return;
-
-    const singleBuildTime = (ship.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
-    const now = Date.now();
-    let startTime = now;
-    if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
-
-    const newItem: ConstructionItem = {
-        id: now.toString() + Math.random(),
-        type: 'ship',
-        itemId: shipId,
-        quantity: amount,
-        startTime: startTime,
-        endTime: startTime + (singleBuildTime * amount)
-    };
-
-    setGameState(prev => ({
-        ...prev,
-        resources: {
-            ...prev.resources,
-            metal: prev.resources.metal - totalCost.metal,
-            crystal: prev.resources.crystal - totalCost.crystal,
-            deuterium: prev.resources.deuterium - totalCost.deuterium
-        },
-        shipyardQueue: [...prev.shipyardQueue, newItem]
-    }));
-};
-
-const renamePlanet = (newName: string) => { setGameState(prev => ({ ...prev, planetName: newName })); };
-const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
-const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
-const clearLogs = () => { setGameState(prev => ({ ...prev, missionLogs: [] })); };
-const logout = async () => {
-    localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
-    await supabase.auth.signOut();
-    window.location.reload();
-};
-
-const deleteAccount = async () => {
-    if (!session?.user) return;
-    if (!confirm('Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć. Twoje imperium zostanie zniszczone.')) return;
-
-    try {
-        await supabase.from('missions').delete().eq('owner_id', session.user.id);
-        await supabase.from('profiles').delete().eq('id', session.user.id);
-        await logout();
-    } catch (e) {
-        console.error("Error deleting account:", e);
-        alert("Błąd podczas usuwania konta. Spróbuj ponownie.");
-    }
-};
-
-const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
-
-const getPlayersInSystem = async (galaxy: number, system: number) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('id, planet_name, galaxy_coords, points, production_settings') // Removed nickname from select
-
-        .contains('galaxy_coords', { galaxy, system });
-
-    if (error) {
-        console.error("Error fetching system users:", error);
-        return [];
-    }
-    return data || [];
-};
-
-const renameUser = (name: string) => {
-    setGameState(prev => ({ ...prev, nickname: name }));
-};
-
-// Main Loop
-useEffect(() => {
-    if (!loaded) return;
-
-    const tick = () => {
-        const now = Date.now();
-        setGameState(prev => {
-            const production = calculateProduction(prev);
-            const secondsPassed = (now - prev.lastTick) / 1000;
-            if (secondsPassed <= 0) return prev;
-
-            const newResources = { ...prev.resources };
-            newResources.metal = Math.min(newResources.storage.metal, newResources.metal + (production.metal * secondsPassed));
-            newResources.crystal = Math.min(newResources.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
-            newResources.deuterium = Math.min(newResources.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
-            newResources.energy = production.energy;
-            newResources.maxEnergy = production.maxEnergy;
-            newResources.storage = production.storage;
-
-            let newBuildings = { ...prev.buildings };
-            let newResearch = { ...prev.research };
-            let newQueue = [...prev.constructionQueue];
-
-            if (newQueue.length > 0 && now >= newQueue[0].endTime) {
-                const item = newQueue[0];
-                if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
-                else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
-                newQueue.shift();
-            }
-
-            let newShips = { ...prev.ships };
-            let newShipQueue = [...prev.shipyardQueue];
-            while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
-                const completed = newShipQueue.shift();
-                if (completed) newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
-            }
-
-            // Missions are now handled asynchronously in a separate useEffect
-            // const processedMissionState = handleMissions({ ...prev, activeMissions: prev.activeMissions, missionLogs: prev.missionLogs, ships: newShips, resources: newResources } as GameState, now);
-
-            return {
-                ...prev,
-                resources: {
-                    ...newResources, // Updated resources
-                    storage: production.storage
-                },
-                buildings: newBuildings,
-                research: newResearch,
-                ships: newShips,
-                constructionQueue: newQueue,
-                shipyardQueue: newShipQueue,
-                activeMissions: prev.activeMissions, // Managed by sync
-                missionLogs: prev.missionLogs,
-                productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
-                lastTick: now
-            };
+            return_time: now + duration,
+            status: 'flying'
         });
     };
 
-    const interval = setInterval(tick, TICK_RATE);
-    return () => clearInterval(interval);
-}, [loaded]);
+    const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
+        const duration = 5 * 60 * 1000;
+        const now = Date.now();
+        const missionId = crypto.randomUUID();
+        const targetUserId = await findTargetUser(coords);
 
-const contextValue: GameContextType = {
-    ...gameState,
-    upgradeBuilding,
-    upgradeResearch,
-    buildShip,
-    sendExpedition,
-    sendAttack,
-    sendSpyProbe,
-    buyPremium,
-    getCost,
-    checkRequirements,
-    renamePlanet,
-    updateProductionSetting,
-    resetGame,
-    clearLogs,
-    logout,
-    deleteAccount,
-    updateAvatar,
-    getPlayersInSystem,
-    renameUser
-};
+        // Optimistic
+        const mission: FleetMission = {
+            id: missionId,
+            ownerId: session?.user.id,
+            type: MissionType.ATTACK,
+            ships: ships,
+            targetCoords: coords,
+            targetUserId: targetUserId,
+            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            startTime: now,
+            arrivalTime: now + (duration / 2),
+            returnTime: now + duration,
+            eventProcessed: false,
+            status: 'flying'
+        };
 
-return (
-    <GameContext.Provider value={contextValue}>
-        {children}
-    </GameContext.Provider>
-);
+        setGameState(prev => {
+            const newShips = { ...prev.ships };
+            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
+            return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
+        });
+
+        // DB Insert
+        await supabase.from('missions').insert({
+            id: missionId,
+            owner_id: session.user.id,
+            target_user_id: targetUserId,
+            mission_type: MissionType.ATTACK,
+            ships: ships,
+            target_coords: coords,
+            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            start_time: now,
+            arrival_time: now + (duration / 2),
+            return_time: now + duration,
+            status: 'flying'
+        });
+    };
+
+    const sendSpyProbe = async (amount: number, coords: { galaxy: number, system: number, position: number }) => {
+        if ((gameState.ships[ShipId.ESPIONAGE_PROBE] || 0) < amount) return false;
+
+        const now = Date.now();
+        const duration = 30 * 1000; // 30 seconds for spy probe
+
+        const missionId = crypto.randomUUID();
+        const targetUserId = await findTargetUser(coords);
+
+        // Optimistic update
+        const mission: FleetMission = {
+            id: missionId,
+            ownerId: session?.user.id,
+            type: MissionType.SPY,
+            ships: { [ShipId.ESPIONAGE_PROBE]: amount } as any,
+            targetCoords: coords,
+            targetUserId: targetUserId,
+            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            startTime: now,
+            arrivalTime: now + (duration / 2),
+            returnTime: now + duration,
+            eventProcessed: false,
+            status: 'flying'
+        };
+
+        setGameState(prev => ({
+            ...prev,
+            ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount },
+            activeMissions: [...prev.activeMissions, mission]
+        }));
+
+        // DB Insert
+        await supabase.from('missions').insert({
+            id: missionId,
+            owner_id: session.user.id,
+            target_user_id: targetUserId,
+            mission_type: MissionType.SPY,
+            ships: { [ShipId.ESPIONAGE_PROBE]: amount },
+            target_coords: coords,
+            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            start_time: now,
+            arrival_time: now + (duration / 2),
+            return_time: now + duration,
+            status: 'flying'
+        });
+
+        return true;
+    };
+
+    // Upgrades
+    const upgradeBuilding = (buildingId: BuildingId) => {
+        const currentLevel = gameState.buildings[buildingId];
+        const cost = getCost('building', buildingId, currentLevel);
+        if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
+        if (gameState.constructionQueue.length > 0) return;
+
+        const totalResources = cost.metal + cost.crystal;
+        let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
+        buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
+        buildTimeMs = buildTimeMs / GAME_SPEED;
+        const buildTime = Math.max(1000, buildTimeMs);
+        const now = Date.now();
+
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal - cost.metal,
+                crystal: prev.resources.crystal - cost.crystal,
+                deuterium: prev.resources.deuterium - cost.deuterium
+            },
+            constructionQueue: [{
+                id: now.toString(),
+                type: 'building',
+                itemId: buildingId,
+                targetLevel: currentLevel + 1,
+                startTime: now,
+                endTime: now + buildTime
+            }]
+        }));
+    };
+
+    const upgradeResearch = (researchId: ResearchId) => {
+        const currentLevel = gameState.research[researchId];
+        const cost = getCost('research', researchId, currentLevel);
+        if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
+        if (gameState.constructionQueue.length > 0) return;
+
+        const labLevel = gameState.buildings[BuildingId.RESEARCH_LAB];
+        if (labLevel === 0) return;
+
+        const totalResources = cost.metal + cost.crystal;
+        let buildTimeMs = (totalResources / 1000) * 3600 * 1000;
+        buildTimeMs = buildTimeMs / (labLevel + 1);
+        buildTimeMs = buildTimeMs / GAME_SPEED;
+        const buildTime = Math.max(1000, buildTimeMs);
+        const now = Date.now();
+
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal - cost.metal,
+                crystal: prev.resources.crystal - cost.crystal,
+                deuterium: prev.resources.deuterium - cost.deuterium
+            },
+            constructionQueue: [{
+                id: now.toString(),
+                type: 'research',
+                itemId: researchId,
+                targetLevel: currentLevel + 1,
+                startTime: now,
+                endTime: now + buildTime
+            }]
+        }));
+    };
+
+    const buildShip = (shipId: ShipId, amount: number) => {
+        const ship = SHIPS[shipId];
+        const totalCost = { metal: ship.baseCost.metal * amount, crystal: ship.baseCost.crystal * amount, deuterium: ship.baseCost.deuterium * amount };
+        if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
+        const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
+        if (shipyardLevel === 0) return;
+
+        const singleBuildTime = (ship.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+        const now = Date.now();
+        let startTime = now;
+        if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
+
+        const newItem: ConstructionItem = {
+            id: now.toString() + Math.random(),
+            type: 'ship',
+            itemId: shipId,
+            quantity: amount,
+            startTime: startTime,
+            endTime: startTime + (singleBuildTime * amount)
+        };
+
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal - totalCost.metal,
+                crystal: prev.resources.crystal - totalCost.crystal,
+                deuterium: prev.resources.deuterium - totalCost.deuterium
+            },
+            shipyardQueue: [...prev.shipyardQueue, newItem]
+        }));
+    };
+
+    const renamePlanet = (newName: string) => { setGameState(prev => ({ ...prev, planetName: newName })); };
+    const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
+    const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
+    const clearLogs = () => { setGameState(prev => ({ ...prev, missionLogs: [] })); };
+    const logout = async () => {
+        localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
+        await supabase.auth.signOut();
+        window.location.reload();
+    };
+
+    const deleteAccount = async () => {
+        if (!session?.user) return;
+        if (!confirm('Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć. Twoje imperium zostanie zniszczone.')) return;
+
+        try {
+            await supabase.from('missions').delete().eq('owner_id', session.user.id);
+            await supabase.from('profiles').delete().eq('id', session.user.id);
+            await logout();
+        } catch (e) {
+            console.error("Error deleting account:", e);
+            alert("Błąd podczas usuwania konta. Spróbuj ponownie.");
+        }
+    };
+
+    const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
+
+    const getPlayersInSystem = async (galaxy: number, system: number) => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, planet_name, galaxy_coords, points, production_settings') // Removed nickname from select
+
+            .contains('galaxy_coords', { galaxy, system });
+
+        if (error) {
+            console.error("Error fetching system users:", error);
+            return [];
+        }
+        return data || [];
+    };
+
+    const renameUser = (name: string) => {
+        setGameState(prev => ({ ...prev, nickname: name }));
+    };
+
+    // Main Loop
+    useEffect(() => {
+        if (!loaded) return;
+
+        const tick = () => {
+            const now = Date.now();
+            setGameState(prev => {
+                const production = calculateProduction(prev);
+                const secondsPassed = (now - prev.lastTick) / 1000;
+                if (secondsPassed <= 0) return prev;
+
+                const newResources = { ...prev.resources };
+                newResources.metal = Math.min(newResources.storage.metal, newResources.metal + (production.metal * secondsPassed));
+                newResources.crystal = Math.min(newResources.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
+                newResources.deuterium = Math.min(newResources.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
+                newResources.energy = production.energy;
+                newResources.maxEnergy = production.maxEnergy;
+                newResources.storage = production.storage;
+
+                let newBuildings = { ...prev.buildings };
+                let newResearch = { ...prev.research };
+                let newQueue = [...prev.constructionQueue];
+
+                if (newQueue.length > 0 && now >= newQueue[0].endTime) {
+                    const item = newQueue[0];
+                    if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
+                    else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
+                    newQueue.shift();
+                }
+
+                let newShips = { ...prev.ships };
+                let newShipQueue = [...prev.shipyardQueue];
+                while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
+                    const completed = newShipQueue.shift();
+                    if (completed) newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
+                }
+
+                // Missions are now handled asynchronously in a separate useEffect
+                // const processedMissionState = handleMissions({ ...prev, activeMissions: prev.activeMissions, missionLogs: prev.missionLogs, ships: newShips, resources: newResources } as GameState, now);
+
+                return {
+                    ...prev,
+                    resources: {
+                        ...newResources, // Updated resources
+                        storage: production.storage
+                    },
+                    buildings: newBuildings,
+                    research: newResearch,
+                    ships: newShips,
+                    constructionQueue: newQueue,
+                    shipyardQueue: newShipQueue,
+                    activeMissions: prev.activeMissions, // Managed by sync
+                    missionLogs: prev.missionLogs,
+                    productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
+                    lastTick: now
+                };
+            });
+        };
+
+        const interval = setInterval(tick, TICK_RATE);
+        return () => clearInterval(interval);
+    }, [loaded]);
+
+    const contextValue: GameContextType = {
+        ...gameState,
+        upgradeBuilding,
+        upgradeResearch,
+        buildShip,
+        sendExpedition,
+        sendAttack,
+        sendSpyProbe,
+        buyPremium,
+        getCost,
+        checkRequirements,
+        renamePlanet,
+        updateProductionSetting,
+        resetGame,
+        clearLogs,
+        logout,
+        deleteAccount,
+        updateAvatar,
+        getPlayersInSystem,
+        renameUser
+    };
+
+    return (
+        <GameContext.Provider value={contextValue}>
+            {children}
+        </GameContext.Provider>
+    );
 };
 
 export const useGame = () => {
