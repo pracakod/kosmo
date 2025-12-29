@@ -9,13 +9,17 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
     let resetGame = () => { };
+    let avatarUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU";
+    let userName = "Kmdr. DareG";
+
     try {
         const game = useGame();
         resetGame = game.resetGame;
+        if (game.avatarUrl) avatarUrl = game.avatarUrl;
+        if (game.userId) userName = `Kmdr. ${game.userId.split('-')[0]}`;
     } catch (e) {
-        // Fallback if rendered outside context
+        // Fallback
     }
-
 
     const navItems = [
         { id: 'overview', label: 'Podgląd', icon: 'dashboard' },
@@ -24,10 +28,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         { id: 'research', label: 'Badania', icon: 'science' },
         { id: 'galaxy', label: 'Galaktyka', icon: 'public' },
         { id: 'fleet', label: 'Flota', icon: 'flight_takeoff' },
-        { id: 'shop', label: 'Sklep', icon: 'shopping_cart' }, // Added
+        { id: 'shop', label: 'Sklep', icon: 'shopping_cart' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
         { id: 'alliance', label: 'Sojusz', icon: 'groups' },
-        { id: 'settings', label: 'Opcje', icon: 'settings' }, // Added
+        { id: 'settings', label: 'Opcje', icon: 'settings' },
     ];
 
     return (
@@ -35,10 +39,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             <div className="p-6 border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-primary"
-                        style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU")' }}></div>
+                        style={{ backgroundImage: `url("${avatarUrl}")` }}></div>
                     <div className="flex flex-col">
                         <h1 className="text-white text-base font-bold tracking-tight uppercase">StarCommand</h1>
-                        <p className="text-[#929bc9] text-xs font-normal">Kmdr. DareG</p>
+                        <p className="text-[#929bc9] text-xs font-normal">{userName}</p>
                     </div>
                 </div>
             </div>

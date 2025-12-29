@@ -154,6 +154,7 @@ export interface MissionLog {
 
 export interface GameState {
   userId?: string; // Supabase User ID
+  avatarUrl?: string; // Current Avatar Image
   planetName: string;
   resources: {
     metal: number;
@@ -168,9 +169,7 @@ export interface GameState {
       deuterium: number;
     }
   };
-  productionSettings: {
-    [key in BuildingId]?: number;
-  };
+  productionSettings: Record<string, any>;
   productionRates: {
     metal: number;
     crystal: number;

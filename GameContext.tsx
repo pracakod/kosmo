@@ -25,9 +25,11 @@ interface GameContextType extends GameState {
     resetGame: () => void;
     clearLogs: () => void;
     logout: () => void;
+    updateAvatar: (url: string) => void;
 }
 
 const initialState: GameState = {
+    avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU",
     planetName: "Nowa Kolonia",
     resources: {
         metal: 500,
@@ -185,6 +187,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 constructionQueue: data.construction_queue || [],
                 shipyardQueue: data.shipyard_queue || [],
                 productionSettings: { ...prev.productionSettings, ...data.production_settings },
+                avatarUrl: data.production_settings?.avatarUrl || prev.avatarUrl || initialState.avatarUrl,
                 // Don't overwrite activeMissions from profile (legacy), we use missions table now
                 missionLogs: data.mission_logs || [],
                 lastTick: Date.now()
@@ -233,7 +236,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 ships: current.ships,
                 construction_queue: current.constructionQueue,
                 shipyard_queue: current.shipyardQueue,
-                production_settings: current.productionSettings,
+                production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl },
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
@@ -808,6 +811,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
     const clearLogs = () => { setGameState(prev => ({ ...prev, missionLogs: [] })); };
     const logout = async () => { await supabase.auth.signOut(); window.location.reload(); };
+    const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
 
     // Main Loop
     useEffect(() => {
@@ -887,7 +891,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         updateProductionSetting,
         resetGame,
         clearLogs,
-        logout
+        logout,
+        updateAvatar
     };
 
     return (
