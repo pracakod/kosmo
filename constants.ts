@@ -2,22 +2,22 @@
 import { BuildingDef, BuildingId, ResearchDef, ResearchId, ShipDef, ShipId } from './types';
 
 export const formatTime = (seconds: number): string => {
-    if (seconds < 0) return "00:00";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    
-    if (h > 0) {
-        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  if (seconds < 0) return "00:00";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
 // Centralized image store with working, reliable links
 export const IMAGES = {
   avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU",
   planet: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc",
-  
+
   // Buildings
   metalMine: "https://lh3.googleusercontent.com/aida-public/AB6AXuDGQIJljQouQH4MzIGOVbgW-EQtjzCt6kX1AwEZ4akSObYGimEARO2A1gF_u5T1Np88-HIh8DPf451V--bWkqvLMJwwLBeuKT6IxZQ1ryzMAIHXH5zq6ky9Lks5SzkOiGSJOLyPrxrvFNrNtHmMBGyar00Q_K-YajHCyhDN7eAJ3zjL-6bUcJCSrx_Ru3RVvmlvUiPv3JoJ6hEHz02kzuiCQ1kCeS8rdm3U17_a202JojN9VbVwY7paXQyqWZdrImPP1voU9K9ZqBI",
   crystalMine: "https://lh3.googleusercontent.com/aida-public/AB6AXuDBW174vypvIVjAn8MWpepmqSRAGXXMZtYN7r1qImhzQn76zkQ13Xyl6SQqfKSzpWH53jHOqSQ7xEHnY8sEZhxaoXIPEnaxXeG4MJDDrjTP_bOpVkgdgH4xqX96-WY9mz3IxyK-bCh1MxkxU7pWO0xKsLgUVpK7js5kca8LhGLszR-DOZG5IHpqRwBwfLrxR7lU5uqRgRDQ0kx-zJIw74MnL2HV9QIMbhy_ukgULBvPyMdjxWdfXkE2X5Js-_Vho5iSQ4829VDnpiE",
@@ -27,20 +27,20 @@ export const IMAGES = {
   robotFactory: "https://lh3.googleusercontent.com/aida-public/AB6AXuDKFYodx8aYkS3L0_aZKv8NQVKCFFLEp_aIojke7fVSBUGfftz5yRPvF1fuXX4vvvHwtId36V6DzP398lKo5i9fDlbC3dgYH7qP5VhLyKyyn_n9D4fSyvnoiPHulQLtl5Do1YYRpVvhVcfGOS4IyPuY7dVya1qor3vSjhE-KsxkO9Nr0rKccvd0lp1OQYWa4fOwAJKWnx24KLrcu70jfMTpcUW-Fb5dXiBJkD9UFjV4B07Jr5EhFLNsjASa8zQIzRaxg3XKdJnmvFs",
   shipyard: "https://lh3.googleusercontent.com/aida-public/AB6AXuDbgGTOOmYRO8Cx2O9AikzppzN9zC4-i7_FrPEcct-2C21HpEJmdGGu5Za7crC8JzzPSg7_h9whOWZrcV1uaeGNi-PRI2xgDrhQfv1_Lby8fBTWyDZhQ06O3AM6n76j_-cHlHjJLahmP4ygvJ-iwGSSXwntVJtmV76vprhB_mPDHFsOxjwoWadVZ5tBOQifnLzeGQYMb6Q00oYkbFwAD8554XNTDT0nmK16jTdF17V-MgWnK8RmGNBFkySydK0sEWwjYVjCScUCM6I",
   researchLab: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tc9scmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc",
-  
+
   // Tech Images - Distinct & Fixed
   techEnergy: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg",
   techLaser: "https://lh3.googleusercontent.com/aida-public/AB6AXuCttLEph3WsOd3HRlZC0zxgyo5HtGQLhoc_Nr46u_bMbqY6nTEQYuIV_gyR_hpfVBS-J_jj5GGZynbPPZti1oj5iZ3eOY_YBYNi3q8nw6c4ebgmqCgJnaJhFtJwFfpNu4nYT65VMgmQkWQU-ek95Y5Ue6RnI9LCcYQpDhod0Y_eUiJYtnqiu9_aD-u_ukPsujkP5hgKqFchbR8vhUje3E-LrA80lMR4QTQEfNKXUDobsJRFGe11_CQSYumUsrXBnYunhGfRGvl2epw", // Laser beam
-  techIon: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg", 
+  techIon: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg",
   techHyper: "https://lh3.googleusercontent.com/aida-public/AB6AXuC_5G35L8rN6N_8x173o5o3z6c0K8P5w2Z4s7Y8l9X0M2b5Q3v6R4t8J9L1K5N7P4Q2M6v8L3z9J0x5N2k8R7w9M4P1L6O3v8K5N7Q2M6v8L3z9J0x5N2k8R7w9M4P1L6O3v8K5N7Q2", // Purple vortex
   techCombustion: "https://lh3.googleusercontent.com/aida-public/AB6AXuDbgGTOOmYRO8Cx2O9AikzppzN9zC4-i7_FrPEcct-2C21HpEJmdGGu5Za7crC8JzzPSg7_h9whOWZrcV1uaeGNi-PRI2xgDrhQfv1_Lby8fBTWyDZhQ06O3AM6n76j_-cHlHjJLahmP4ygvJ-iwGSSXwntVJtmV76vprhB_mPDHFsOxjwoWadVZ5tBOQifnLzeGQYMb6Q00oYkbFwAD8554XNTDT0nmK16jTdF17V-MgWnK8RmGNBFkySydK0sEWwjYVjCScUCM6I", // Thruster
-  techImpulse: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8", 
+  techImpulse: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8",
   techHyperDrive: "https://lh3.googleusercontent.com/aida-public/AB6AXuDbgGTOOmYRO8Cx2O9AikzppzN9zC4-i7_FrPEcct-2C21HpEJmdGGu5Za7crC8JzzPSg7_h9whOWZrcV1uaeGNi-PRI2xgDrhQfv1_Lby8fBTWyDZhQ06O3AM6n76j_-cHlHjJLahmP4ygvJ-iwGSSXwntVJtmV76vprhB_mPDHFsOxjwoWadVZ5tBOQifnLzeGQYMb6Q00oYkbFwAD8554XNTDT0nmK16jTdF17V-MgWnK8RmGNBFkySydK0sEWwjYVjCScUCM6I", // Advanced Engine
   techPlasma: "https://lh3.googleusercontent.com/aida-public/AB6AXuA5zJhoBmc9B_7K3kdzmS0jRGQ4TxTF1sKrsA0-Zxnv4gQMVzgicY3JzPKK5mAwCC1iuh4xUjsQTCiOr1frnHwM2FNQ59ZbM8gyFwJvf5kgN1Np1dDGsQP7vua8fW77DzSNOmAX7frp_E13Rt22KjtAxy61zJl5Drp2C1v4LUF1HPLKJqcHTdEO6D_s3q5ujXDXOR8tV0yHYqfY4Gjc1egtpZyY1hbpRfwcedU-Fd728-EDyp_LSAz12VFwRRaLGqsOpgXayb0dFUU",
   techEspionage: "https://lh3.googleusercontent.com/aida-public/AB6AXuAuzcKCcqW_Uwb_MHjDE4UnIS9iufqeQRG-ox9HOxWuvVuHaPFUOrPzlXsVC7PfwZ7MI1K-xoYXSIRYGuCSJskYUnvKDvMxqvSe3Gia4Hb2MB3OLyt_tMwvU9qvxgjTrPmM6wQypgXYMFoiUUJMXWeDDfXxHDYHBm1mxGIFog5PovvrH7Zb2U4gFbh_HAslZUcihLWiSiQi2WAG8mGqDZzKh4eaLLLitm105RayEmmJXCGVObylA3o_oKyx4bVz44Os-zM8jsZ59ng",
   techComputer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tc9scmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc",
   techAstro: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSOTflDav4MFvu_Yvg-9qCDKqpS6BwAJDvSFmXbaK1M4mBatMw8wpRPT_bROfe2lelYtoxtN-ew041hcpd7KHjnZTbZ7Ov1q8gvcDdQ-zV7WCHlysly8ohvQJqhXRh1J3QUSfnu95xoFJX3O50BjiNefxhrFKws1eSBVnIPiB0iOWl_S8NDWo5mwLU-rA0pT6VOakhtRCgKUZrJmDumK6NIAyB0H60AK5EdDlixy4qsNd1SagA7z0AUEAqWHF43uun44RCqVq1hOY",
-  
+
   // Specific Visuals for Techs
   techWeapon: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8", // Aggressive red ship
   techShield: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUSEKlHxUvCzxVOgj1Y6MtxX1VhQuac5X-CQBCwdETPQW0ynuAd-uEVEWMCGnx7FyX7vOxy4epq_CKJImgHYAUcz04j5B4DL1cjdUqVefFWq4dFoTwzLUivuBxpd4Q1i7dnsLEZAlkOwXPiYSMTau5dTr7XWhZMcXfDAG4bloSSPGJYItXueBQ_uivo-IdPPh5ad4npHg32fLsQj__8JNmEc7rzx0kjjz3wz_upv0MPt66tV9BzNqd29cwpdNqoUhnRVHjteACKYU", // Blue shield/aura
@@ -51,16 +51,16 @@ export const IMAGES = {
   heavyFighter: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8",
   cruiser: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUSEKlHxUvCzxVOgj1Y6MtxX1VhQuac5X-CQBCwdETPQW0ynuAd-uEVEWMCGnx7FyX7vOxy4epq_CKJImgHYAUcz04j5B4DL1cjdUqVefFWq4dFoTwzLUivuBxpd4Q1i7dnsLEZAlkOwXPiYSMTau5dTr7XWhZMcXfDAG4bloSSPGJYItXueBQ_uivo-IdPPh5ad4npHg32fLsQj__8JNmEc7rzx0kjjz3wz_upv0MPt66tV9BzNqd29cwpdNqoUhnRVHjteACKYU",
   battleship: "https://lh3.googleusercontent.com/aida-public/AB6AXuCttLEph3WsOd3HRlZC0zxgyo5HtGQLhoc_Nr46u_bMbqY6nTEQYuIV_gyR_hpfVBS-J_jj5GGZynbPPZti1oj5iZ3eOY_YBYNi3q8nw6c4ebgmqCgJnaJhFtJwFfpNu4nYT65VMgmQkWQU-ek95Y5Ue6RnI9LCcYQpDhod0Y_eUiJYtnqiu9_aD-u_ukPsujkP5hgKqFchbR8vhUje3E-LrA80lMR4QTQEfNKXUDobsJRFGe11_CQSYumUsrXBnYunhGfRGvl2epw",
-  
+
   // New/Fixed Ship Images
   destroyer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8", // Heavy dark ship
   deathStar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc", // Planet-like
   smallCargo: "https://lh3.googleusercontent.com/aida-public/AB6AXuDRSU7R7iNG5erlv5BC4D3tevSXb0oHxJBNQhnfOmlJLcH2XYG3Z7KlFDuWM1814zQAKi3dEFatilogq6SxoaGVsGsHQosk3QnETGAa0cwDXIO9bjWHURnJbj27LQ7dS5ZzG7ez6APcjQ2MfPujA0P3prhUxW25qFIkBs9_-XDm0G8lgzSf2Bg3g7A8fLt2DMsGj1AeeKuLD8_QW19c634ft78Xeil2MkjidH3CL-CGpkcy2nCNrED8WlZyvkHNjoO1LgdBWsb3jf4",
-  mediumCargo: "https://lh3.googleusercontent.com/aida-public/AB6AXuC_5G35L8rN6N_8x173o5o3z6c0K8P5w2Z4s7Y8l9X0M2b5Q3v6R4t8J9L1K5N7P4Q2M6v8L3z9J0x5N2k8R7w9M4P1L6O3v8K5N7Q2M6v8L3z9J0x5N2k8R7w9M4P1L6O3v8K5N7Q2", // Fixed link
-  hugeCargo: "https://lh3.googleusercontent.com/aida-public/AB6AXuB_9K12L5m3N8_5x462o7p6d8b0L9Q6w4Y5u8m0X1N3c6Q4w7S5u9j0L2M6P5N8Q3M7w9L4z0K1x6N3l9S8w0M5P2L7O4v9K6N8Q3M7w9L4z0K1x6N3l9S8w0M5P2L7O4v9K6N8Q3M7w9L4z0K1x6N3l9S8w0M5P2L7O4v9K6N8Q3M7w9L4z0K1x6N3l9S8w0M5P2L7O4v9K6", // Fixed link
-  colonyShip: "https://lh3.googleusercontent.com/aida-public/AB6AXuB_9K12L5m3N8_5x462o7p6d8b0L9Q6w4Y5u8m0X1N3c6Q4w7S5u9j0L2M6P5N8Q3M7w9L4z0K1x6N3l9S8w0M5P2L7O4v9K6N8Q3M7w9L4z0K1x6N3l9S8w0M5P2L7O4v9K6", // Reusing Huge Cargo for bulky colony look
+  mediumCargo: "/ships/medium_cargo.png",
+  hugeCargo: "/ships/huge_cargo.png",
+  colonyShip: "/ships/colony_ship.png",
   espionageProbe: "https://lh3.googleusercontent.com/aida-public/AB6AXuAuzcKCcqW_Uwb_MHjDE4UnIS9iufqeQRG-ox9HOxWuvVuHaPFUOrPzlXsVC7PfwZ7MI1K-xoYXSIRYGuCSJskYUnvKDvMxqvSe3Gia4Hb2MB3OLyt_tMwvU9qvxgjTrPmM6wQypgXYMFoiUUJMXWeDDfXxHDYHBm1mxGIFog5PovvrH7Zb2U4gFbh_HAslZUcihLWiSiQi2WAG8mGqDZzKh4eaLLLitm105RayEmmJXCGVObylA3o_oKyx4bVz44Os-zM8jsZ59ng",
-  pioneer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tc9scmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc" // Research ship look
+  pioneer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tcscmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc" // Research ship look
 };
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
@@ -115,7 +115,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Magazyn Metalu",
     description: "Zwiększa limit przechowywania metalu.",
     baseCost: { metal: 1000, crystal: 0, deuterium: 0 },
-    image: IMAGES.metalMine, 
+    image: IMAGES.metalMine,
     buildTimeBase: 25
   },
   [BuildingId.CRYSTAL_STORAGE]: {
@@ -123,7 +123,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Magazyn Kryształu",
     description: "Zwiększa limit przechowywania kryształu.",
     baseCost: { metal: 1000, crystal: 500, deuterium: 0 },
-    image: IMAGES.crystalMine, 
+    image: IMAGES.crystalMine,
     buildTimeBase: 25
   },
   [BuildingId.DEUTERIUM_TANK]: {
@@ -131,7 +131,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Zbiornik Deuteru",
     description: "Zwiększa limit przechowywania deuteru.",
     baseCost: { metal: 1000, crystal: 1000, deuterium: 0 },
-    image: IMAGES.deuteriumSynth, 
+    image: IMAGES.deuteriumSynth,
     buildTimeBase: 25
   },
   [BuildingId.ROBOT_FACTORY]: {
@@ -225,13 +225,13 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     buildTimeBase: 200,
     requirements: [{ type: 'research', id: ResearchId.HYPERSPACE_TECH, level: 3 }]
   },
-  [ResearchId.PLASMA_TECH]: { id: ResearchId.PLASMA_TECH, name: "Technologia Plazmowa", description: "", baseCost: {metal: 2000, crystal: 4000, deuterium: 1000}, image: IMAGES.techPlasma, buildTimeBase: 100 },
-  [ResearchId.ESPIONAGE_TECH]: { id: ResearchId.ESPIONAGE_TECH, name: "Technologia Szpiegowska", description: "", baseCost: {metal: 200, crystal: 1000, deuterium: 200}, image: IMAGES.techEspionage, buildTimeBase: 40 },
-  [ResearchId.COMPUTER_TECH]: { id: ResearchId.COMPUTER_TECH, name: "Technologia Komputerowa", description: "", baseCost: {metal: 0, crystal: 400, deuterium: 600}, image: IMAGES.techComputer, buildTimeBase: 50 },
-  [ResearchId.ASTROPHYSICS]: { id: ResearchId.ASTROPHYSICS, name: "Astrofizyka", description: "", baseCost: {metal: 4000, crystal: 8000, deuterium: 4000}, image: IMAGES.techAstro, buildTimeBase: 100 },
-  [ResearchId.WEAPON_TECH]: { id: ResearchId.WEAPON_TECH, name: "Technologia Bojowa", description: "", baseCost: {metal: 800, crystal: 200, deuterium: 0}, image: IMAGES.techWeapon, buildTimeBase: 60 },
-  [ResearchId.SHIELDING_TECH]: { id: ResearchId.SHIELDING_TECH, name: "Technologia Ochronna", description: "", baseCost: {metal: 200, crystal: 600, deuterium: 0}, image: IMAGES.techShield, buildTimeBase: 60 },
-  [ResearchId.ARMOUR_TECH]: { id: ResearchId.ARMOUR_TECH, name: "Opancerzenie", description: "", baseCost: {metal: 1000, crystal: 0, deuterium: 0}, image: IMAGES.techArmour, buildTimeBase: 60 },
+  [ResearchId.PLASMA_TECH]: { id: ResearchId.PLASMA_TECH, name: "Technologia Plazmowa", description: "", baseCost: { metal: 2000, crystal: 4000, deuterium: 1000 }, image: IMAGES.techPlasma, buildTimeBase: 100 },
+  [ResearchId.ESPIONAGE_TECH]: { id: ResearchId.ESPIONAGE_TECH, name: "Technologia Szpiegowska", description: "", baseCost: { metal: 200, crystal: 1000, deuterium: 200 }, image: IMAGES.techEspionage, buildTimeBase: 40 },
+  [ResearchId.COMPUTER_TECH]: { id: ResearchId.COMPUTER_TECH, name: "Technologia Komputerowa", description: "", baseCost: { metal: 0, crystal: 400, deuterium: 600 }, image: IMAGES.techComputer, buildTimeBase: 50 },
+  [ResearchId.ASTROPHYSICS]: { id: ResearchId.ASTROPHYSICS, name: "Astrofizyka", description: "", baseCost: { metal: 4000, crystal: 8000, deuterium: 4000 }, image: IMAGES.techAstro, buildTimeBase: 100 },
+  [ResearchId.WEAPON_TECH]: { id: ResearchId.WEAPON_TECH, name: "Technologia Bojowa", description: "", baseCost: { metal: 800, crystal: 200, deuterium: 0 }, image: IMAGES.techWeapon, buildTimeBase: 60 },
+  [ResearchId.SHIELDING_TECH]: { id: ResearchId.SHIELDING_TECH, name: "Technologia Ochronna", description: "", baseCost: { metal: 200, crystal: 600, deuterium: 0 }, image: IMAGES.techShield, buildTimeBase: 60 },
+  [ResearchId.ARMOUR_TECH]: { id: ResearchId.ARMOUR_TECH, name: "Opancerzenie", description: "", baseCost: { metal: 1000, crystal: 0, deuterium: 0 }, image: IMAGES.techArmour, buildTimeBase: 60 },
 };
 
 export const SHIPS: Record<ShipId, ShipDef> = {
