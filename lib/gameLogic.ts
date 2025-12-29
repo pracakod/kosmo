@@ -96,10 +96,28 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
     } else if (eventRoll < 0.80) {
         // SHIPS (Derelicts)
         // Can find small ships usually.
-        const possibleShips = [ShipId.LIGHT_FIGHTER, ShipId.HEAVY_FIGHTER, ShipId.SMALL_CARGO, ShipId.ESPIONAGE_PROBE];
+        // Weighted probability for ship types
+        const shipRoll = Math.random();
+        let possibleShips: ShipId[];
+        let amountMultiplier = 1;
+
+        if (shipRoll < 0.70) {
+            // Common (70%)
+            possibleShips = [ShipId.LIGHT_FIGHTER, ShipId.HEAVY_FIGHTER, ShipId.SMALL_CARGO, ShipId.ESPIONAGE_PROBE];
+            amountMultiplier = 5; // Can find up to 5+1
+        } else if (shipRoll < 0.95) {
+            // Rare (25%)
+            possibleShips = [ShipId.MEDIUM_CARGO, ShipId.PIONEER, ShipId.CRUISER];
+            amountMultiplier = 3; // Can find up to 3+1
+        } else {
+            // Epic (5%) - Very rare
+            possibleShips = [ShipId.BATTLESHIP, ShipId.DESTROYER, ShipId.HUGE_CARGO];
+            amountMultiplier = 1; // Can find usually 1, rarely 2
+        }
+
         const foundShip = possibleShips[Math.floor(Math.random() * possibleShips.length)];
-        // Amount depends on fleet strength but capped
-        const amount = Math.floor(Math.random() * 5) + 1;
+        // Amount depends on fleet strength but capped by multiplier
+        const amount = Math.floor(Math.random() * amountMultiplier) + 1;
 
         const shipName = SHIPS[foundShip]?.name || foundShip;
 
