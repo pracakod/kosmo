@@ -66,16 +66,9 @@ const Settings: React.FC = () => {
                         <div key={av.name} className="flex flex-col gap-2">
                             <button
                                 onClick={() => updateAvatar(av.url)}
-                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-2 transition-all ${avatarUrl === av.url ? 'border-primary ring-2 ring-primary/20 scale-95' : 'border-white/10 hover:border-white/30 hover:scale-105'}`}
+                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'}`}
                             >
                                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${av.url}")` }}></div>
-                                {avatarUrl === av.url && (
-                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                        <div className="bg-primary text-white rounded-full p-1">
-                                            <span className="material-symbols-outlined text-lg">check</span>
-                                        </div>
-                                    </div>
-                                )}
                             </button>
                             <span className="text-xs text-center text-[#929bc9] font-medium">{av.name}</span>
                         </div>
@@ -90,11 +83,11 @@ const Settings: React.FC = () => {
                     O Grze
                 </h3>
                 <p className="text-[#929bc9] text-sm mb-4 leading-relaxed">
-                    Cosmos Conquest to symulator zarządzania imperium kosmicznym. Rozwijaj swoje kolonie, buduj potężną flotę i eksploruj galaktykę.
-                    Gra stworzona jako demonstracja możliwości nowoczesnych technologii webowych (React, Tailwind CSS).
+                    Zostań architektem międzygwiezdnego imperium w <strong>Cosmos Conquest</strong>. Obejmij dowodzenie nad nową kolonią, zarządzaj wydobyciem rzadkich surowców i rozwijaj futurystyczne technologie, aby zbudować flotę zdolną do dominacji w galaktyce.
+                    Gra łączy głęboką strategię ekonomiczną z dynamiczną symulacją walki w czasie rzeczywistym, oferując immersyjne doświadczenie w nowoczesnym wydaniu.
                 </p>
-                <div className="text-xs text-[#555a7a]">
-                    Wersja: 1.0.0 Alpha
+                <div className="text-xs text-[#555a7a] font-mono">
+                    Wersja: v1.2.0 (PvP & Commander Update)
                 </div>
             </div>
 

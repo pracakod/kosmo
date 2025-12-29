@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { supabase } from './lib/supabase';
+import { calculateExpeditionOutcome } from './lib/gameLogic';
 import { GameState, BuildingId, ResearchId, ShipId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
 import { BUILDINGS, RESEARCH, SHIPS } from './constants';
 
@@ -272,24 +273,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         let survivingDefender = null;
 
         if (mission.type === MissionType.EXPEDITION) {
-            const hasPioneer = (mission.ships[ShipId.PIONEER] || 0) > 0;
-            let fleetCapacity = 0;
-            Object.entries(mission.ships).forEach(([id, count]) => { fleetCapacity += (SHIPS[id as ShipId].capacity * count); });
-            const roll = Math.random();
-            const baseChance = hasPioneer ? 0.9 : 0.7;
+            const expResult = calculateExpeditionOutcome(mission);
+            result = {
+                outcome: expResult.log.outcome,
+                message: expResult.log.message,
+                title: expResult.log.title,
+                rewards: expResult.rewards
+            };
+            loot = expResult.rewards;
 
-            if (roll < baseChance) {
-                const rewardRoll = Math.random();
-                if (rewardRoll < 0.4) {
-                    const metal = Math.floor(Math.random() * Math.min(20000, fleetCapacity * 0.5)) + 1000;
-                    const crystal = Math.floor(Math.random() * Math.min(10000, fleetCapacity * 0.3)) + 500;
-                    loot = { metal, crystal };
-                    result = { outcome: 'success', message: 'Ekspedycja odkryła złoża.', logs: "Odkryto zasoby." };
-                } else {
-                    result = { outcome: 'neutral', message: 'Pusta przestrzeń.', logs: "Nic nie znaleziono." };
-                }
-            } else {
-                result = { outcome: 'neutral', message: 'Pusta przestrzeń.', logs: "Nic nie znaleziono." };
+            // Add Dark Matter if found
+            if (expResult.rewards.darkMatter) {
+                // Dark matter is added to profile resources immediately upon return in processMissionReturn?
+                // or should be added to mission resources? 
+                // Mission resources usually hold metal/crystal/deut. 
+                // We need to ensure darkMatter is handled in processMissionReturn too.
+                // For now, let's put it in loot, and handle in return.
             }
         }
         else if (mission.type === MissionType.ATTACK) {
@@ -345,7 +344,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     // Process Mission Return (Home reached)
-    const processMissionReturn = async (mission: FleetMission) => {
+    const processMissionReturn = async (localMission: FleetMission) => {
+        // Fetch fresh mission data to ensure we have the latest result/resources from DB
+        const { data: missionData } = await supabase.from('missions').select('*').eq('id', localMission.id).single();
+
+        // Fallback to local if fetch fails (shouldn't happen) but prefer DB data
+        const mission = missionData ? {
+            ...localMission,
+            resources: missionData.resources,
+            result: missionData.result,
+            type: missionData.mission_type as MissionType
+        } : localMission;
+
         const { data: myProfile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         if (myProfile) {
             const newShips = { ...myProfile.ships };
@@ -360,10 +370,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 newRes.metal += (mission.resources.metal || 0);
                 newRes.crystal += (mission.resources.crystal || 0);
                 newRes.deuterium += (mission.resources.deuterium || 0);
+                newRes.darkMatter += (mission.resources.darkMatter || 0);
             }
 
+            const title = mission.result?.title || `Powrót Floty`;
+            const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
+            const outcome = mission.result?.outcome || 'success';
+
             const newLogs = [
-                { id: Date.now().toString(), timestamp: Date.now(), title: "Powrót Floty", message: `Flota wróciła z misji ${mission.type}.`, outcome: 'success', rewards: mission.resources },
+                { id: Date.now().toString(), timestamp: Date.now(), title, message, outcome, rewards: mission.resources },
                 ...(myProfile.mission_logs || [])
             ].slice(0, 50);
 
@@ -567,30 +582,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         };
     };
 
-    const generateExpeditionResult = (mission: FleetMission): { log: MissionLog, rewards: MissionRewards } => {
-        // ... (Same logic as previous, omitting for brevity)
-        // Replaces generateExpeditionResult logic completely in next steps
-        // Placeholder to keep TS happy until full replace
-        const hasPioneer = (mission.ships[ShipId.PIONEER] || 0) > 0;
-        let fleetCapacity = 0;
-        Object.entries(mission.ships).forEach(([id, count]) => { fleetCapacity += (SHIPS[id as ShipId].capacity * count); });
-        const roll = Math.random();
-        const baseChance = hasPioneer ? 0.9 : 0.7;
-        const logBase = { id: Date.now().toString() + Math.random(), timestamp: Date.now() };
 
-        if (roll < baseChance) {
-            const rewardRoll = Math.random();
-            if (rewardRoll < 0.4) {
-                const metal = Math.floor(Math.random() * Math.min(20000, fleetCapacity * 0.5)) + 1000;
-                const crystal = Math.floor(Math.random() * Math.min(10000, fleetCapacity * 0.3)) + 500;
-                return { log: { ...logBase, title: "Odkrycie Złóż", message: `Flota odkryła bogate złoża na asteroidzie. Pozyskano surowce.`, outcome: 'success', rewards: { metal, crystal } }, rewards: { metal, crystal } };
-            } else {
-                // simplified for brevity
-                return { log: { ...logBase, title: "Pusta Przestrzeń", message: "Nic nie znaleziono.", outcome: "neutral" }, rewards: {} };
-            }
-        }
-        return { log: { ...logBase, title: "Pusta Przestrzeń", message: "Nic nie znaleziono.", outcome: "neutral" }, rewards: {} };
-    };
 
     // Actions
     const buyPremium = (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }): TransactionStatus => {
