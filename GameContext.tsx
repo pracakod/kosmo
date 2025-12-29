@@ -163,52 +163,54 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
 
     // Load from Supabase or LocalStorage
-    useEffect(() => {
-        const loadData = async () => {
-            if (!session?.user) return;
+    const refreshProfile = async () => {
+        if (!session?.user) return;
 
-            // Try Supabase first
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
+        // Try Supabase first
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-            if (data && !error) {
-                // Merge loaded data
-                setGameState(prev => ({
-                    ...prev,
-                    planetName: data.planet_name || prev.planetName,
-                    resources: { ...prev.resources, ...data.resources },
-                    buildings: { ...prev.buildings, ...data.buildings },
-                    research: { ...prev.research, ...data.research },
-                    ships: { ...prev.ships, ...data.ships },
-                    constructionQueue: data.construction_queue || [],
-                    shipyardQueue: data.shipyard_queue || [],
-                    productionSettings: { ...prev.productionSettings, ...data.production_settings },
-                    activeMissions: data.active_missions || [],
-                    missionLogs: data.mission_logs || [],
-                    lastTick: Date.now()
-                }));
-            } else {
-                // Fallback to localstorage or new game
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    try {
-                        const parsed = JSON.parse(saved);
-                        setGameState(prev => ({
-                            ...prev,
-                            ...parsed,
-                            userId: session.user.id,
-                            lastTick: Date.now()
-                        }));
-                    } catch (e) { }
-                }
+        if (data && !error) {
+            // Merge loaded data
+            setGameState(prev => ({
+                ...prev,
+                planetName: data.planet_name || prev.planetName,
+                resources: { ...prev.resources, ...data.resources },
+                buildings: { ...prev.buildings, ...data.buildings },
+                research: { ...prev.research, ...data.research },
+                ships: { ...prev.ships, ...data.ships },
+                constructionQueue: data.construction_queue || [],
+                shipyardQueue: data.shipyard_queue || [],
+                productionSettings: { ...prev.productionSettings, ...data.production_settings },
+                // Don't overwrite activeMissions from profile (legacy), we use missions table now
+                missionLogs: data.mission_logs || [],
+                lastTick: Date.now()
+            }));
+        } else {
+            // Fallback to localstorage or new game
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    setGameState(prev => ({
+                        ...prev,
+                        ...parsed,
+                        userId: session.user.id,
+                        lastTick: Date.now()
+                    }));
+                } catch (e) { }
             }
-            setLoaded(true);
-        };
+        }
+        setLoaded(true);
+    };
 
-        loadData();
+    // Load from Supabase or LocalStorage
+    useEffect(() => {
+        refreshProfile();
+        fetchMissions();
     }, [session]);
 
     // Auto-save loop (Interval instead of debounce to prevent starvation by ticks)
@@ -371,6 +373,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         // Mark completed
         await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
+        await refreshProfile(); // Refresh resources & ships
         fetchMissions();
     };
 
