@@ -107,7 +107,7 @@ const Auth: React.FC = () => {
 
             {/* Version Badge */}
             <div className="absolute bottom-4 right-4 text-xs text-[#929bc9]/50 font-mono">
-                v1.0.6
+                v1.1.0
             </div>
         </div>
     );

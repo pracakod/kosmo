@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { GameProvider } from './GameContext';
 import Layout from './components/Layout';
 import Auth from './views/Auth';
+import GalaxySetup from './views/GalaxySetup';
 import Overview from './views/Overview';
 import Buildings from './views/Buildings';
 import Shipyard from './views/Shipyard';
@@ -18,6 +19,7 @@ export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fle
 const App: React.FC = () => {
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [hasGalaxyCoords, setHasGalaxyCoords] = useState<boolean | null>(null);
     const [currentView, setCurrentView] = useState<ViewType>('overview');
 
     useEffect(() => {
@@ -34,11 +36,38 @@ const App: React.FC = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_event, session) => {
                 setSession(session);
+                if (!session) {
+                    setHasGalaxyCoords(null);
+                }
             }
         );
 
         return () => subscription.unsubscribe();
     }, []);
+
+    // Sprawdź czy użytkownik ma już pozycję w galaktyce
+    useEffect(() => {
+        const checkGalaxyCoords = async () => {
+            if (!session?.user) {
+                setHasGalaxyCoords(null);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('galaxy_coords')
+                .eq('id', session.user.id)
+                .single();
+
+            if (data && !error && data.galaxy_coords) {
+                setHasGalaxyCoords(true);
+            } else {
+                setHasGalaxyCoords(false);
+            }
+        };
+
+        checkGalaxyCoords();
+    }, [session]);
 
     if (loading) {
         return (
@@ -51,6 +80,25 @@ const App: React.FC = () => {
 
     if (!isSupabaseConfigured || !session) {
         return <Auth onLogin={setSession} />;
+    }
+
+    // Ładowanie sprawdzania pozycji
+    if (hasGalaxyCoords === null) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#101322]">
+                <div className="text-white text-xl">Sprawdzanie pozycji...</div>
+            </div>
+        );
+    }
+
+    // Nowy gracz - wybór pozycji w galaktyce
+    if (hasGalaxyCoords === false) {
+        return (
+            <GalaxySetup
+                session={session}
+                onComplete={() => setHasGalaxyCoords(true)}
+            />
+        );
     }
 
     const renderView = () => {

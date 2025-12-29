@@ -42,11 +42,11 @@ export enum ShipId {
   HEAVY_FIGHTER = 'heavyFighter',
   CRUISER = 'cruiser',
   BATTLESHIP = 'battleship',
-  DESTROYER = 'destroyer',       
-  DEATH_STAR = 'deathStar',      
+  DESTROYER = 'destroyer',
+  DEATH_STAR = 'deathStar',
   SMALL_CARGO = 'smallCargo',
-  MEDIUM_CARGO = 'mediumCargo', 
-  HUGE_CARGO = 'hugeCargo',     
+  MEDIUM_CARGO = 'mediumCargo',
+  HUGE_CARGO = 'hugeCargo',
   COLONY_SHIP = 'colonyShip',
   ESPIONAGE_PROBE = 'espionageProbe',
   PIONEER = 'pioneer'
@@ -110,42 +110,42 @@ export interface ConstructionItem {
 }
 
 export enum MissionType {
-    EXPEDITION = 'expedition',
-    ATTACK = 'attack',
-    TRANSPORT = 'transport',
-    SPY = 'spy'
+  EXPEDITION = 'expedition',
+  ATTACK = 'attack',
+  TRANSPORT = 'transport',
+  SPY = 'spy'
 }
 
 export interface MissionRewards {
-    metal?: number;
-    crystal?: number;
-    deuterium?: number;
-    darkMatter?: number;
-    ships?: Record<string, number>;
-    items?: string[]; // Names of rare items found
+  metal?: number;
+  crystal?: number;
+  deuterium?: number;
+  darkMatter?: number;
+  ships?: Record<string, number>;
+  items?: string[]; // Names of rare items found
 }
 
 export interface FleetMission {
-    id: string;
-    ownerId?: string; // Who sent it
-    targetId?: string; // Who is being attacked
-    type: MissionType;
-    ships: Record<ShipId, number>;
-    targetCoords: { galaxy: number; system: number; position: number };
-    startTime: number;
-    arrivalTime: number; // Time when it reaches target (Event happens here)
-    returnTime: number; // Time when it returns home (Resources added here)
-    eventProcessed: boolean; // Has the expedition event happened yet?
-    pendingRewards?: MissionRewards; // Rewards carrying back home
+  id: string;
+  ownerId?: string; // Who sent it
+  targetId?: string; // Who is being attacked
+  type: MissionType;
+  ships: Record<ShipId, number>;
+  targetCoords: { galaxy: number; system: number; position: number };
+  startTime: number;
+  arrivalTime: number; // Time when it reaches target (Event happens here)
+  returnTime: number; // Time when it returns home (Resources added here)
+  eventProcessed: boolean; // Has the expedition event happened yet?
+  pendingRewards?: MissionRewards; // Rewards carrying back home
 }
 
 export interface MissionLog {
-    id: string;
-    timestamp: number;
-    title: string;
-    message: string;
-    outcome: 'success' | 'neutral' | 'failure' | 'danger';
-    rewards?: MissionRewards;
+  id: string;
+  timestamp: number;
+  title: string;
+  message: string;
+  outcome: 'success' | 'neutral' | 'failure' | 'danger';
+  rewards?: MissionRewards;
 }
 
 export interface GameState {
@@ -155,30 +155,31 @@ export interface GameState {
     metal: number;
     crystal: number;
     deuterium: number;
-    darkMatter: number; 
+    darkMatter: number;
     energy: number;
     maxEnergy: number;
     storage: {
-        metal: number;
-        crystal: number;
-        deuterium: number;
-    }
-  };
-  productionSettings: {
-      [key in BuildingId]?: number; 
-  };
-  productionRates: {
       metal: number;
       crystal: number;
       deuterium: number;
+    }
+  };
+  productionSettings: {
+    [key in BuildingId]?: number;
+  };
+  productionRates: {
+    metal: number;
+    crystal: number;
+    deuterium: number;
   };
   buildings: Record<BuildingId, number>;
   research: Record<ResearchId, number>;
   ships: Record<ShipId, number>;
   constructionQueue: ConstructionItem[];
-  shipyardQueue: ConstructionItem[]; 
+  shipyardQueue: ConstructionItem[];
   activeMissions: FleetMission[];
   incomingMissions: FleetMission[]; // Attacks coming towards me
   missionLogs: MissionLog[];
+  galaxyCoords?: { galaxy: number; system: number; position: number };
   lastTick: number;
 }

@@ -28,18 +28,18 @@ interface GameContextType extends GameState {
 }
 
 const initialState: GameState = {
-    planetName: "Kolonia Główna",
+    planetName: "Nowa Kolonia",
     resources: {
-        metal: 15000,
-        crystal: 10000,
-        deuterium: 5000,
-        darkMatter: 500,
+        metal: 500,
+        crystal: 300,
+        deuterium: 100,
+        darkMatter: 50,
         energy: 0,
         maxEnergy: 0,
         storage: {
-            metal: 25000,
-            crystal: 25000,
-            deuterium: 25000
+            metal: 10000,
+            crystal: 10000,
+            deuterium: 10000
         }
     },
     productionSettings: {
@@ -55,17 +55,17 @@ const initialState: GameState = {
         deuterium: 0
     },
     buildings: {
-        [BuildingId.METAL_MINE]: 10,
-        [BuildingId.CRYSTAL_MINE]: 8,
-        [BuildingId.DEUTERIUM_SYNTH]: 5,
-        [BuildingId.SOLAR_PLANT]: 10,
+        [BuildingId.METAL_MINE]: 1,
+        [BuildingId.CRYSTAL_MINE]: 0,
+        [BuildingId.DEUTERIUM_SYNTH]: 0,
+        [BuildingId.SOLAR_PLANT]: 1,
         [BuildingId.FUSION_REACTOR]: 0,
-        [BuildingId.ROBOT_FACTORY]: 2,
-        [BuildingId.SHIPYARD]: 4,
-        [BuildingId.RESEARCH_LAB]: 1,
-        [BuildingId.METAL_STORAGE]: 1,
-        [BuildingId.CRYSTAL_STORAGE]: 1,
-        [BuildingId.DEUTERIUM_TANK]: 1,
+        [BuildingId.ROBOT_FACTORY]: 0,
+        [BuildingId.SHIPYARD]: 0,
+        [BuildingId.RESEARCH_LAB]: 0,
+        [BuildingId.METAL_STORAGE]: 0,
+        [BuildingId.CRYSTAL_STORAGE]: 0,
+        [BuildingId.DEUTERIUM_TANK]: 0,
     },
     research: {
         [ResearchId.ENERGY_TECH]: 0,
@@ -135,6 +135,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     ships: { ...prev.ships, ...data.ships },
                     constructionQueue: data.construction_queue || [],
                     shipyardQueue: data.shipyard_queue || [],
+                    productionSettings: { ...prev.productionSettings, ...data.production_settings },
+                    activeMissions: data.active_missions || [],
+                    missionLogs: data.mission_logs || [],
                     lastTick: Date.now()
                 }));
             } else {
@@ -177,6 +180,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 ships: gameState.ships,
                 construction_queue: gameState.constructionQueue,
                 shipyard_queue: gameState.shipyardQueue,
+                production_settings: gameState.productionSettings,
+                active_missions: gameState.activeMissions,
+                mission_logs: gameState.missionLogs,
                 last_updated: Date.now()
             });
         }, 2000); // Auto-save every 2s of inactivity

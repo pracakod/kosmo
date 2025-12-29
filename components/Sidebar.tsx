@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                         <span className="text-xs text-[#929bc9]">Status: Online</span>
                     </div>
-                    <span className="text-xs text-[#929bc9]/60 font-mono">v1.0.6</span>
+                    <span className="text-xs text-[#929bc9]/60 font-mono">v1.1.0</span>
                 </div>
             </div>
         </aside>
