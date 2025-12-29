@@ -8,19 +8,12 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
-    let resetGame = () => { };
-    let avatarUrl = "/kosmo/avatars/avatar_default.png";
-    let userName = "Kmdr. DareG";
+    const game = useGame();
 
-    try {
-        const game = useGame();
-        resetGame = game.resetGame;
-        if (game.avatarUrl) avatarUrl = game.avatarUrl;
-        if (game.nickname) userName = game.nickname;
-        else if (game.userId) userName = `Kmdr. ${game.userId.split('-')[0]}`;
-    } catch (e) {
-        // Fallback
-    }
+    // Safely derive values
+    const resetGame = game?.resetGame || (() => { });
+    const avatarUrl = game?.avatarUrl || "/kosmo/avatars/avatar_default.png";
+    const userName = game?.nickname || (game?.userId ? `Kmdr. ${game.userId.split('-')[0]}` : "Kmdr. DareG");
 
     const navItems = [
         { id: 'overview', label: 'Podgląd', icon: 'dashboard' },
