@@ -15,7 +15,7 @@ export const formatTime = (seconds: number): string => {
 
 // Centralized image store with working, reliable links
 export const IMAGES = {
-  avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU",
+  avatar: "/kosmo/avatars/avatar_default.png",
   planet: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc",
 
   // Buildings

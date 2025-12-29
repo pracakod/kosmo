@@ -46,48 +46,49 @@ const Auth: React.FC = () => {
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
             </div>
 
-            <div className="relative z-10 w-full max-w-md p-6 md:p-8 bg-[#1c2136]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl mx-4">
-                <div className="flex flex-col items-center mb-8">
-                    <div className="rounded-full size-24 border-2 border-primary mb-4 shadow-lg shadow-primary/30 overflow-hidden bg-[#111422]">
+            <div className="relative z-10 w-full max-w-md p-6 md:p-8 bg-[#1c2136]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl mx-4 animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex flex-col items-center mb-8 group">
+                    <div className="rounded-full size-24 border-2 border-primary mb-4 shadow-lg shadow-primary/30 overflow-hidden bg-[#111422] transition-transform duration-500 group-hover:scale-110 group-hover:shadow-primary/50 relative">
+                        <div className="absolute inset-0 bg-primary/20 animate-pulse z-10 pointer-events-none"></div>
                         <img
                             src={IMAGES.avatar}
                             alt="Logo"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover relative z-0"
                             onError={(e) => { e.currentTarget.src = '/kosmo/avatars/avatar_default.png'; }}
                         />
                     </div>
-                    <h1 className="text-4xl font-bold text-white tracking-tight uppercase font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary">Kosmo</h1>
-                    <p className="text-gray-500 mt-2">v1.2.0 (PvP & Commander Update)</p>
-                    <p className="text-[#929bc9] text-sm md:text-base text-center mt-2">Zaloguj się do terminala dowódcy</p>
+                    <h1 className="text-4xl font-bold text-white tracking-tight uppercase font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary animate-in slide-in-from-top-4 duration-700 delay-150">Kosmo</h1>
+                    <p className="text-gray-500 mt-2 animate-in slide-in-from-top-2 duration-700 delay-200">v1.2.0 (PvP & Commander Update)</p>
+                    <p className="text-[#929bc9] text-sm md:text-base text-center mt-2 animate-in slide-in-from-top-2 duration-700 delay-300">Zaloguj się do terminala dowódcy</p>
                 </div>
 
-                <form onSubmit={handleAuth} className="flex flex-col gap-4">
+                <form onSubmit={handleAuth} className="flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-700 delay-300">
                     {error && (
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm text-center">
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm text-center animate-pulse">
                             {error}
                         </div>
                     )}
 
-                    <div>
-                        <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block">Email</label>
+                    <div className="group">
+                        <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block group-focus-within:text-primary transition-colors">Email</label>
                         <input
                             type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                            className="w-full bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
                             placeholder="dowodca@flota.pl"
                         />
                     </div>
 
-                    <div>
-                        <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block">Hasło</label>
+                    <div className="group">
+                        <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block group-focus-within:text-primary transition-colors">Hasło</label>
                         <input
                             type="password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                            className="w-full bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
                             placeholder="••••••••"
                         />
                     </div>
@@ -95,18 +96,19 @@ const Auth: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`mt-4 py-3 rounded-lg font-bold uppercase tracking-wider transition-all shadow-lg
-                            ${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 text-white shadow-primary/20'}
+                        className={`mt-4 py-3 rounded-lg font-bold uppercase tracking-wider transition-all shadow-lg relative overflow-hidden group
+                            ${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-primary hover:bg-blue-600 text-white shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5'}
                         `}
                     >
-                        {loading ? 'Przetwarzanie...' : (isLogin ? 'Zaloguj się' : 'Zarejestruj konto')}
+                        <span className="relative z-10">{loading ? 'Przetwarzanie...' : (isLogin ? 'Zaloguj się' : 'Zarejestruj konto')}</span>
+                        {!loading && <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>}
                     </button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center animate-in fade-in duration-1000 delay-500">
                     <button
                         onClick={() => setIsLogin(!isLogin)}
-                        className="text-sm text-[#929bc9] hover:text-white transition-colors"
+                        className="text-sm text-[#929bc9] hover:text-white transition-colors hover:underline underline-offset-4"
                     >
                         {isLogin ? 'Nie masz konta? Zarejestruj się' : 'Masz już konto? Zaloguj się'}
                     </button>
