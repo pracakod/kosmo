@@ -106,11 +106,11 @@ const Galaxy: React.FC = () => {
         }
     };
 
-    const handleSendSpy = () => {
+    const handleSendSpy = async () => {
         if (!spyModal) return;
 
-        const success = sendSpyProbe(probeCount);
-        if (success) {
+        const success = await sendSpyProbe(probeCount, { galaxy: coords.galaxy, system: coords.system, position: spyModal.pos });
+        if (success !== false) {
             setStatusMessage("Wysyłanie sond...");
             // Simulate flight time
             setTimeout(() => {
@@ -258,8 +258,11 @@ const Galaxy: React.FC = () => {
                                     <button className="w-8 h-8 rounded bg-white/5 hover:bg-primary hover:text-white text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Kolonizuj">
                                         <span className="material-symbols-outlined text-lg">flag</span>
                                     </button>
-                                ) : !planet.isPlayer && (
+                                ) : !planet.isPlayer && !planet.isBot ? (
                                     <div className="flex gap-1">
+                                        <button
+                                            onClick={() => openSpyModal(pos)}
+                                            className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj">
                                             <span className="material-symbols-outlined text-lg">visibility</span>
                                         </button>
                                         <button
@@ -275,196 +278,213 @@ const Galaxy: React.FC = () => {
                                             <span className="material-symbols-outlined text-lg">local_shipping</span>
                                         </button>
                                     </div>
+                                ) : planet.isBot && (
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => openSpyModal(pos)}
+                                            className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj">
+                                            <span className="material-symbols-outlined text-lg">visibility</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setAttackModal({ pos, name: planet.name });
+                                                setSelectedShips({});
+                                                setStatusMessage(null);
+                                            }}
+                                            className="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Atakuj">
+                                            <span className="material-symbols-outlined text-lg">swords</span>
+                                        </button>
+                                    </div>
                                 )}
+                            </div>
                         </div>
-                        </div>
-            );
+                    );
                 })}
-        </div>
-
-            {/* Spy Launch Modal */ }
-    {
-        spyModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                <div className="bg-[#1c2136] w-full max-w-sm rounded-xl border border-purple-500/50 shadow-2xl p-6 relative">
-                    <button onClick={() => setSpyModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
-                        <span className="material-symbols-outlined">close</span>
-                    </button>
-
-                    <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-                        <span className="material-symbols-outlined text-purple-400 text-3xl">visibility</span>
-                        <div>
-                            <h3 className="text-xl font-bold text-white">Wyślij Sondy</h3>
-                            <p className="text-xs text-[#929bc9]">Cel: {spyModal.name} [{coords.galaxy}:{coords.system}:{spyModal.pos}]</p>
-                        </div>
-                    </div>
-
-                    {statusMessage ? (
-                        <div className="text-center py-4">
-                            <p className={`text-lg font-bold ${statusMessage.includes('Wysyłanie') ? 'text-green-400' : 'text-red-400'}`}>{statusMessage}</p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-4">
-                            <div className="bg-[#111422] p-4 rounded-lg border border-white/5 text-center">
-                                <p className="text-sm text-[#929bc9] mb-2">Dostępne sondy</p>
-                                <p className="text-2xl font-mono text-white font-bold">{availableProbes}</p>
-                            </div>
-
-                            <div className="flex items-center bg-[#111422] rounded-lg border border-white/10 overflow-hidden">
-                                <button
-                                    onClick={() => setProbeCount(Math.max(1, probeCount - 1))}
-                                    className="w-12 h-12 flex items-center justify-center text-[#929bc9] hover:bg-white/5"
-                                >
-                                    <span className="material-symbols-outlined">remove</span>
-                                </button>
-                                <input
-                                    type="number"
-                                    className="flex-1 bg-transparent text-center text-white font-bold text-lg focus:outline-none"
-                                    value={probeCount}
-                                    onChange={(e) => setProbeCount(Math.min(availableProbes, Math.max(1, parseInt(e.target.value) || 1)))}
-                                    max={availableProbes}
-                                />
-                                <button
-                                    onClick={() => setProbeCount(Math.min(availableProbes, probeCount + 1))}
-                                    className="w-12 h-12 flex items-center justify-center text-[#929bc9] hover:bg-white/5"
-                                >
-                                    <span className="material-symbols-outlined">add</span>
-                                </button>
-                            </div>
-
-                            <button
-                                onClick={handleSendSpy}
-                                disabled={availableProbes < 1}
-                                className={`w-full py-3 rounded-lg font-bold uppercase tracking-widest transition-colors ${availableProbes > 0 ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-[#232948] text-white/20 cursor-not-allowed'}`}
-                            >
-                                Wyślij Flotę
-                            </button>
-                        </div>
-                    )}
-                </div>
             </div>
-        )
-    }
 
-    {/* Attack Modal */ }
-    {
-        attackModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                <div className="bg-[#1c2136] w-full max-w-lg rounded-xl border border-red-500/50 shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
-                    <button onClick={() => setAttackModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
-                        <span className="material-symbols-outlined">close</span>
-                    </button>
+            {/* Spy Launch Modal */}
+            {
+                spyModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#1c2136] w-full max-w-sm rounded-xl border border-purple-500/50 shadow-2xl p-6 relative">
+                            <button onClick={() => setSpyModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
 
-                    <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-                        <span className="material-symbols-outlined text-red-500 text-3xl">swords</span>
-                        <div>
-                            <h3 className="text-xl font-bold text-white">Rozpocznij Atak</h3>
-                            <p className="text-xs text-[#929bc9]">Cel: {attackModal.name} [{coords.galaxy}:{coords.system}:{attackModal.pos}]</p>
-                        </div>
-                    </div>
+                            <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                                <span className="material-symbols-outlined text-purple-400 text-3xl">visibility</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Wyślij Sondy</h3>
+                                    <p className="text-xs text-[#929bc9]">Cel: {spyModal.name} [{coords.galaxy}:{coords.system}:{spyModal.pos}]</p>
+                                </div>
+                            </div>
 
-                    {statusMessage ? (
-                        <div className="text-center py-8">
-                            <p className={`text-xl font-bold ${statusMessage.includes('Wysyłanie') ? 'text-green-400' : 'text-red-400'}`}>{statusMessage}</p>
-                            {statusMessage.includes('Wysyłanie') && (
-                                <p className="text-sm text-[#929bc9] mt-2">Flota dotrze do celu za 5 minut.</p>
+                            {statusMessage ? (
+                                <div className="text-center py-4">
+                                    <p className={`text-lg font-bold ${statusMessage.includes('Wysyłanie') ? 'text-green-400' : 'text-red-400'}`}>{statusMessage}</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-4">
+                                    <div className="bg-[#111422] p-4 rounded-lg border border-white/5 text-center">
+                                        <p className="text-sm text-[#929bc9] mb-2">Dostępne sondy</p>
+                                        <p className="text-2xl font-mono text-white font-bold">{availableProbes}</p>
+                                    </div>
+
+                                    <div className="flex items-center bg-[#111422] rounded-lg border border-white/10 overflow-hidden">
+                                        <button
+                                            onClick={() => setProbeCount(Math.max(1, probeCount - 1))}
+                                            className="w-12 h-12 flex items-center justify-center text-[#929bc9] hover:bg-white/5"
+                                        >
+                                            <span className="material-symbols-outlined">remove</span>
+                                        </button>
+                                        <input
+                                            type="number"
+                                            className="flex-1 bg-transparent text-center text-white font-bold text-lg focus:outline-none"
+                                            value={probeCount}
+                                            onChange={(e) => setProbeCount(Math.min(availableProbes, Math.max(1, parseInt(e.target.value) || 1)))}
+                                            max={availableProbes}
+                                        />
+                                        <button
+                                            onClick={() => setProbeCount(Math.min(availableProbes, probeCount + 1))}
+                                            className="w-12 h-12 flex items-center justify-center text-[#929bc9] hover:bg-white/5"
+                                        >
+                                            <span className="material-symbols-outlined">add</span>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={handleSendSpy}
+                                        disabled={availableProbes < 1}
+                                        className={`w-full py-3 rounded-lg font-bold uppercase tracking-widest transition-colors ${availableProbes > 0 ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-[#232948] text-white/20 cursor-not-allowed'}`}
+                                    >
+                                        Wyślij Flotę
+                                    </button>
+                                </div>
                             )}
                         </div>
-                    ) : (
-                        <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2">
-                                {Object.entries(ships).map(([id, count]) => {
-                                    if (count <= 0 || id === 'solarSatellite' || id === 'crawlers') return null; // Skip satellites/crawlers/empty
-                                    const current = selectedShips[id] || 0;
-                                    return (
-                                        <div key={id} className="flex items-center justify-between bg-[#111422] p-3 rounded-lg border border-white/5">
-                                            <span className="text-sm text-[#929bc9] font-bold capitalize">{id.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-[#555a7a] mr-2">Dostępne: {count}</span>
-                                                <input
-                                                    type="number"
-                                                    max={count}
-                                                    min={0}
-                                                    value={current}
-                                                    onChange={(e) => {
-                                                        const val = Math.min(count, Math.max(0, parseInt(e.target.value) || 0));
-                                                        setSelectedShips(prev => ({ ...prev, [id]: val }));
-                                                    }}
-                                                    className="w-20 bg-black/20 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-red-500"
-                                                />
-                                                <button onClick={() => setSelectedShips(prev => ({ ...prev, [id]: count }))} className="text-xs text-red-400 hover:text-white px-2 uppercase font-bold">Max</button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {Object.values(ships).every(c => !c) && <p className="text-center text-white/20 italic">Brak dostępnych statków bojowych.</p>}
+                    </div>
+                )
+            }
+
+            {/* Attack Modal */}
+            {
+                attackModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#1c2136] w-full max-w-lg rounded-xl border border-red-500/50 shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+                            <button onClick={() => setAttackModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+
+                            <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                                <span className="material-symbols-outlined text-red-500 text-3xl">swords</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Rozpocznij Atak</h3>
+                                    <p className="text-xs text-[#929bc9]">Cel: {attackModal.name} [{coords.galaxy}:{coords.system}:{attackModal.pos}]</p>
+                                </div>
                             </div>
 
-                            <button
-                                onClick={() => {
-                                    const hasShips = Object.values(selectedShips).some(v => v > 0);
-                                    if (!hasShips) {
-                                        setStatusMessage("Wybierz przynajmniej jeden statek!");
-                                        return;
-                                    }
-                                    sendAttack(selectedShips as Record<ShipId, number>, { galaxy: coords.galaxy, system: coords.system, position: attackModal.pos });
-                                    setStatusMessage("Wysyłanie floty...");
-                                    setTimeout(() => setAttackModal(null), 2000);
-                                }}
-                                className="w-full py-4 mt-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-red-900/20 transition-all active:scale-95"
-                            >
-                                Wyślij Atak
+                            {statusMessage ? (
+                                <div className="text-center py-8">
+                                    <p className={`text-xl font-bold ${statusMessage.includes('Wysyłanie') ? 'text-green-400' : 'text-red-400'}`}>{statusMessage}</p>
+                                    {statusMessage.includes('Wysyłanie') && (
+                                        <p className="text-sm text-[#929bc9] mt-2">Flota dotrze do celu za 5 minut.</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-4">
+                                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2">
+                                        {Object.entries(ships).map(([id, count]) => {
+                                            if (count <= 0 || id === 'solarSatellite' || id === 'crawlers') return null; // Skip satellites/crawlers/empty
+                                            const current = selectedShips[id] || 0;
+                                            return (
+                                                <div key={id} className="flex items-center justify-between bg-[#111422] p-3 rounded-lg border border-white/5">
+                                                    <span className="text-sm text-[#929bc9] font-bold capitalize">{id.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-[#555a7a] mr-2">Dostępne: {count}</span>
+                                                        <input
+                                                            type="number"
+                                                            max={count}
+                                                            min={0}
+                                                            value={current}
+                                                            onChange={(e) => {
+                                                                const val = Math.min(count, Math.max(0, parseInt(e.target.value) || 0));
+                                                                setSelectedShips(prev => ({ ...prev, [id]: val }));
+                                                            }}
+                                                            className="w-20 bg-black/20 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-red-500"
+                                                        />
+                                                        <button onClick={() => setSelectedShips(prev => ({ ...prev, [id]: count }))} className="text-xs text-red-400 hover:text-white px-2 uppercase font-bold">Max</button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {Object.values(ships).every(c => !c) && <p className="text-center text-white/20 italic">Brak dostępnych statków bojowych.</p>}
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            const hasShips = Object.values(selectedShips).some(v => v > 0);
+                                            if (!hasShips) {
+                                                setStatusMessage("Wybierz przynajmniej jeden statek!");
+                                                return;
+                                            }
+                                            sendAttack(selectedShips as Record<ShipId, number>, { galaxy: coords.galaxy, system: coords.system, position: attackModal.pos });
+                                            setStatusMessage("Wysyłanie floty...");
+                                            setTimeout(() => setAttackModal(null), 2000);
+                                        }}
+                                        className="w-full py-4 mt-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-red-900/20 transition-all active:scale-95"
+                                    >
+                                        Wyślij Atak
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Espionage Report Modal */}
+            {
+                spyReport && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#1c2136] w-full max-w-md rounded-xl border border-purple-500/50 shadow-2xl p-6 relative">
+                            <button onClick={() => setSpyReport(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+
+                            <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                                <span className="material-symbols-outlined text-purple-400 text-3xl">description</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Raport Szpiegowski</h3>
+                                    <p className="text-xs text-[#929bc9]">Baza Piracka [1:1:2]</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div className="bg-[#111422] p-3 rounded-lg border border-white/5">
+                                    <span className="text-[10px] uppercase font-bold text-[#929bc9]">Surowce</span>
+                                    <div className="flex flex-col gap-1 mt-2 text-sm">
+                                        <div className="flex justify-between"><span className="text-[#929bc9]">Metal</span> <span className="text-white font-mono">{spyReport.metal.toLocaleString()}</span></div>
+                                        <div className="flex justify-between"><span className="text-[#929bc9]">Kryształ</span> <span className="text-white font-mono">{spyReport.crystal.toLocaleString()}</span></div>
+                                        <div className="flex justify-between"><span className="text-[#929bc9]">Deuter</span> <span className="text-white font-mono">{spyReport.deuterium.toLocaleString()}</span></div>
+                                        <div className="flex justify-between"><span className="text-[#929bc9]">Energia</span> <span className="text-white font-mono">{spyReport.energy.toLocaleString()}</span></div>
+                                    </div>
+                                </div>
+                                <div className="bg-[#111422] p-3 rounded-lg border border-white/5">
+                                    <span className="text-[10px] uppercase font-bold text-[#929bc9]">Flota i Obrona</span>
+                                    <div className="flex flex-col gap-1 mt-2 text-sm">
+                                        <div className="flex justify-between"><span className="text-[#929bc9]">Statki</span> <span className="text-red-400 font-mono font-bold">{spyReport.ships}</span></div>
+                                        <div className="flex justify-between"><span className="text-[#929bc9]">Obrona</span> <span className="text-blue-400 font-mono font-bold">{spyReport.defense}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={() => setSpyReport(null)} className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-colors">
+                                Zamknij Raport
                             </button>
                         </div>
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-    {/* Espionage Report Modal */ }
-    {
-        spyReport && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-                <div className="bg-[#1c2136] w-full max-w-md rounded-xl border border-purple-500/50 shadow-2xl p-6 relative">
-                    <button onClick={() => setSpyReport(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
-                        <span className="material-symbols-outlined">close</span>
-                    </button>
-
-                    <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-                        <span className="material-symbols-outlined text-purple-400 text-3xl">description</span>
-                        <div>
-                            <h3 className="text-xl font-bold text-white">Raport Szpiegowski</h3>
-                            <p className="text-xs text-[#929bc9]">Baza Piracka [1:1:2]</p>
-                        </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-[#111422] p-3 rounded-lg border border-white/5">
-                            <span className="text-[10px] uppercase font-bold text-[#929bc9]">Surowce</span>
-                            <div className="flex flex-col gap-1 mt-2 text-sm">
-                                <div className="flex justify-between"><span className="text-[#929bc9]">Metal</span> <span className="text-white font-mono">{spyReport.metal.toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-[#929bc9]">Kryształ</span> <span className="text-white font-mono">{spyReport.crystal.toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-[#929bc9]">Deuter</span> <span className="text-white font-mono">{spyReport.deuterium.toLocaleString()}</span></div>
-                                <div className="flex justify-between"><span className="text-[#929bc9]">Energia</span> <span className="text-white font-mono">{spyReport.energy.toLocaleString()}</span></div>
-                            </div>
-                        </div>
-                        <div className="bg-[#111422] p-3 rounded-lg border border-white/5">
-                            <span className="text-[10px] uppercase font-bold text-[#929bc9]">Flota i Obrona</span>
-                            <div className="flex flex-col gap-1 mt-2 text-sm">
-                                <div className="flex justify-between"><span className="text-[#929bc9]">Statki</span> <span className="text-red-400 font-mono font-bold">{spyReport.ships}</span></div>
-                                <div className="flex justify-between"><span className="text-[#929bc9]">Obrona</span> <span className="text-blue-400 font-mono font-bold">{spyReport.defense}</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onClick={() => setSpyReport(null)} className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-colors">
-                        Zamknij Raport
-                    </button>
-                </div>
-            </div>
-        )
-    }
+                )
+            }
         </div >
     );
 };
