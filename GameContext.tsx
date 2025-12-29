@@ -110,7 +110,12 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ children, session }) => {
     const [gameState, setGameState] = useState<GameState>({ ...initialState, userId: session?.user.id });
     const [loaded, setLoaded] = useState(false);
-    const saveTimeout = useRef<ReturnType<typeof setTimeout>>();
+    const gameStateRef = useRef(gameState);
+
+    // Keep ref synchronized
+    useEffect(() => {
+        gameStateRef.current = gameState;
+    }, [gameState]);
 
     // Load from Supabase or LocalStorage
     useEffect(() => {
@@ -161,33 +166,49 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         loadData();
     }, [session]);
 
-    // Sync to Supabase periodically (Debounced)
+    // Auto-save loop (Interval instead of debounce to prevent starvation by ticks)
     useEffect(() => {
         if (!loaded || !session?.user) return;
 
-        clearTimeout(saveTimeout.current);
-        saveTimeout.current = setTimeout(async () => {
-            // Save to LocalStorage as backup
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+        const save = async () => {
+            const current = gameStateRef.current;
+
+            // Save to LocalStorage
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
 
             // Save to Supabase
             await supabase.from('profiles').upsert({
                 id: session.user.id,
-                planet_name: gameState.planetName,
-                resources: gameState.resources,
-                buildings: gameState.buildings,
-                research: gameState.research,
-                ships: gameState.ships,
-                construction_queue: gameState.constructionQueue,
-                shipyard_queue: gameState.shipyardQueue,
-                production_settings: gameState.productionSettings,
-                active_missions: gameState.activeMissions,
-                mission_logs: gameState.missionLogs,
+                planet_name: current.planetName,
+                resources: current.resources,
+                buildings: current.buildings,
+                research: current.research,
+                ships: current.ships,
+                construction_queue: current.constructionQueue,
+                shipyard_queue: current.shipyardQueue,
+                production_settings: current.productionSettings,
+                active_missions: current.activeMissions,
+                mission_logs: current.missionLogs,
+                galaxy_coords: current.galaxyCoords,
                 last_updated: Date.now()
             });
-        }, 2000); // Auto-save every 2s of inactivity
+        };
 
-    }, [gameState, loaded, session]);
+        const interval = setInterval(save, 5000); // Save every 5 seconds
+
+        // Save on unmount / refresh
+        const handleBeforeUnload = () => {
+            save();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            // Try to save on unmount (best effort)
+            save();
+        };
+    }, [loaded, session]);
 
     // REAL TIME MISSION HANDLING
     const handleMissions = (current: GameState, now: number) => {
