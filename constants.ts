@@ -118,7 +118,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Magazyn Metalu",
     description: "Zwiększa limit przechowywania metalu.",
     baseCost: { metal: 1000, crystal: 0, deuterium: 0 },
-    image: IMAGES.metalMine,
+    image: IMAGES.metalStorage,
     buildTimeBase: 25
   },
   [BuildingId.CRYSTAL_STORAGE]: {
@@ -126,7 +126,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Magazyn Kryształu",
     description: "Zwiększa limit przechowywania kryształu.",
     baseCost: { metal: 1000, crystal: 500, deuterium: 0 },
-    image: IMAGES.crystalMine,
+    image: IMAGES.crystalStorage,
     buildTimeBase: 25
   },
   [BuildingId.DEUTERIUM_TANK]: {
@@ -134,7 +134,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Zbiornik Deuteru",
     description: "Zwiększa limit przechowywania deuteru.",
     baseCost: { metal: 1000, crystal: 1000, deuterium: 0 },
-    image: IMAGES.deuteriumSynth,
+    image: IMAGES.deuteriumTank,
     buildTimeBase: 25
   },
   [BuildingId.ROBOT_FACTORY]: {
