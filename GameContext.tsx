@@ -203,18 +203,29 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 lastTick: Date.now()
             }));
         } else {
-            // Fallback to localstorage or new game
+            // Fallback to localstorage only if user IDs match (security)
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    setGameState(prev => ({
-                        ...prev,
-                        ...parsed,
-                        userId: session.user.id,
-                        lastTick: Date.now()
-                    }));
-                } catch (e) { }
+                    // SECURITY CHECK: Only load if saved state belongs to this user
+                    if (parsed.userId && parsed.userId === session.user.id) {
+                        setGameState(prev => ({
+                            ...prev,
+                            ...parsed,
+                            userId: session.user.id,
+                            lastTick: Date.now()
+                        }));
+                    } else {
+                        // Data belongs to another user or is legacy (unsafe to import automatically)
+                        console.warn("Cleared mismatching local storage data");
+                        localStorage.removeItem(STORAGE_KEY);
+                        // Ensure we rely on initial state
+                        setGameState(prev => ({ ...initialState, userId: session.user.id }));
+                    }
+                } catch (e) {
+                    localStorage.removeItem(STORAGE_KEY);
+                }
             }
         }
         setLoaded(true);
@@ -827,7 +838,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
     const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
     const clearLogs = () => { setGameState(prev => ({ ...prev, missionLogs: [] })); };
-    const logout = async () => { await supabase.auth.signOut(); window.location.reload(); };
+    const logout = async () => {
+        localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
+        await supabase.auth.signOut();
+        window.location.reload();
+    };
     const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
 
     // Main Loop
