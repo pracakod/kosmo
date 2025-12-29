@@ -951,7 +951,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const getPlayersInSystem = async (galaxy: number, system: number) => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, planet_name, galaxy_coords, points, production_settings, nickname') // Added nickname to select
+            .select('id, planet_name, galaxy_coords, points, production_settings') // Removed nickname from select
+
             .contains('galaxy_coords', { galaxy, system });
 
         if (error) {
