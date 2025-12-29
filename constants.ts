@@ -47,15 +47,15 @@ export const IMAGES = {
   techArmour: "https://lh3.googleusercontent.com/aida-public/AB6AXuDKFYodx8aYkS3L0_aZKv8NQVKCFFLEp_aIojke7fVSBUGfftz5yRPvF1fuXX4vvvHwtId36V6DzP398lKo5i9fDlbC3dgYH7qP5VhLyKyyn_n9D4fSyvnoiPHulQLtl5Do1YYRpVvhVcfGOS4IyPuY7dVya1qor3vSjhE-KsxkO9Nr0rKccvd0lp1OQYWa4fOwAJKWnx24KLrcu70jfMTpcUW-Fb5dXiBJkD9UFjV4B07Jr5EhFLNsjASa8zQIzRaxg3XKdJnmvFs", // Industrial structure
 
   // Ships
-  lightFighter: "https://lh3.googleusercontent.com/aida-public/AB6AXuAj6WbWmAOMzezAn47OMuG8FMVzGX2pKAdGUgwW7f03WKsqxTb_CWClKcKtPitL4twwN_H5EMhVcNdS5MbgkHZwNez9PnNc3lgfEKiGrM84IU--TyDo5BuilAjvsWeKqx4sBbJQ25Hl3Pg9nbnvhr7e_FzYYamgYx6-4fBe7WQzm_cZBvKhhtP4KRDGmK51CAQ-M_phdujPSU9PtWwPCZidKDGfKZgDzWO7lKZbzcSRsiYbPjvHDCdfxbKFdiy1u4xry-Pd3av5NCI",
-  heavyFighter: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8",
-  cruiser: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUSEKlHxUvCzxVOgj1Y6MtxX1VhQuac5X-CQBCwdETPQW0ynuAd-uEVEWMCGnx7FyX7vOxy4epq_CKJImgHYAUcz04j5B4DL1cjdUqVefFWq4dFoTwzLUivuBxpd4Q1i7dnsLEZAlkOwXPiYSMTau5dTr7XWhZMcXfDAG4bloSSPGJYItXueBQ_uivo-IdPPh5ad4npHg32fLsQj__8JNmEc7rzx0kjjz3wz_upv0MPt66tV9BzNqd29cwpdNqoUhnRVHjteACKYU",
-  battleship: "https://lh3.googleusercontent.com/aida-public/AB6AXuCttLEph3WsOd3HRlZC0zxgyo5HtGQLhoc_Nr46u_bMbqY6nTEQYuIV_gyR_hpfVBS-J_jj5GGZynbPPZti1oj5iZ3eOY_YBYNi3q8nw6c4ebgmqCgJnaJhFtJwFfpNu4nYT65VMgmQkWQU-ek95Y5Ue6RnI9LCcYQpDhod0Y_eUiJYtnqiu9_aD-u_ukPsujkP5hgKqFchbR8vhUje3E-LrA80lMR4QTQEfNKXUDobsJRFGe11_CQSYumUsrXBnYunhGfRGvl2epw",
+  lightFighter: "/kosmo/ships/light_fighter.png",
+  heavyFighter: "/kosmo/ships/heavy_fighter.png",
+  cruiser: "/kosmo/ships/cruiser.png",
+  battleship: "/kosmo/ships/battleship.png",
 
   // New/Fixed Ship Images
-  destroyer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8", // Heavy dark ship
-  deathStar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc", // Planet-like
-  smallCargo: "https://lh3.googleusercontent.com/aida-public/AB6AXuDRSU7R7iNG5erlv5BC4D3tevSXb0oHxJBNQhnfOmlJLcH2XYG3Z7KlFDuWM1814zQAKi3dEFatilogq6SxoaGVsGsHQosk3QnETGAa0cwDXIO9bjWHURnJbj27LQ7dS5ZzG7ez6APcjQ2MfPujA0P3prhUxW25qFIkBs9_-XDm0G8lgzSf2Bg3g7A8fLt2DMsGj1AeeKuLD8_QW19c634ft78Xeil2MkjidH3CL-CGpkcy2nCNrED8WlZyvkHNjoO1LgdBWsb3jf4",
+  destroyer: "/kosmo/ships/destroyer.png", // Heavy dark ship
+  deathStar: "/kosmo/ships/death_star.png", // Planet-like
+  smallCargo: "/kosmo/ships/small_cargo.png",
   mediumCargo: "/kosmo/ships/medium_cargo.png",
   hugeCargo: "/kosmo/ships/huge_cargo.png",
   colonyShip: "/kosmo/ships/colony_ship.png",
