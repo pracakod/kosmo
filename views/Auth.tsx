@@ -39,16 +39,16 @@ const Auth: React.FC = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#101322] relative overflow-hidden">
-             {/* Animated Background */}
-             <div className="absolute inset-0 z-0">
+            {/* Animated Background */}
+            <div className="absolute inset-0 z-0">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" style={{animationDelay: '2s'}}></div>
-             </div>
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+            </div>
 
-             <div className="relative z-10 w-full max-w-md p-8 bg-[#1c2136]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+            <div className="relative z-10 w-full max-w-md p-8 bg-[#1c2136]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
                 <div className="flex flex-col items-center mb-8">
-                     <div className="bg-center bg-no-repeat bg-cover rounded-full size-20 border-2 border-primary mb-4 shadow-lg shadow-primary/30" 
-                     style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU")' }}></div>
+                    <div className="bg-center bg-no-repeat bg-cover rounded-full size-20 border-2 border-primary mb-4 shadow-lg shadow-primary/30"
+                        style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU")' }}></div>
                     <h1 className="text-3xl font-bold text-white tracking-tight uppercase">StarCommand</h1>
                     <p className="text-[#929bc9] text-sm">Zaloguj się do terminala dowódcy</p>
                 </div>
@@ -62,8 +62,8 @@ const Auth: React.FC = () => {
 
                     <div>
                         <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block">Email</label>
-                        <input 
-                            type="email" 
+                        <input
+                            type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -74,8 +74,8 @@ const Auth: React.FC = () => {
 
                     <div>
                         <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block">Hasło</label>
-                        <input 
-                            type="password" 
+                        <input
+                            type="password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -84,7 +84,7 @@ const Auth: React.FC = () => {
                         />
                     </div>
 
-                    <button 
+                    <button
                         type="submit"
                         disabled={loading}
                         className={`mt-4 py-3 rounded-lg font-bold uppercase tracking-wider transition-all shadow-lg
@@ -96,14 +96,19 @@ const Auth: React.FC = () => {
                 </form>
 
                 <div className="mt-6 text-center">
-                    <button 
+                    <button
                         onClick={() => setIsLogin(!isLogin)}
                         className="text-sm text-[#929bc9] hover:text-white transition-colors"
                     >
                         {isLogin ? 'Nie masz konta? Zarejestruj się' : 'Masz już konto? Zaloguj się'}
                     </button>
                 </div>
-             </div>
+            </div>
+
+            {/* Version Badge */}
+            <div className="absolute bottom-4 right-4 text-xs text-[#929bc9]/50 font-mono">
+                v1.0.1
+            </div>
         </div>
     );
 };
