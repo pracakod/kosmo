@@ -103,7 +103,7 @@ const App: React.FC = () => {
 
     const renderView = () => {
         switch (currentView) {
-            case 'overview': return <Overview />;
+            case 'overview': return <Overview onNavigate={setCurrentView} />;
             case 'buildings': return <Buildings />;
             case 'research': return <Research />;
             case 'shipyard': return <Shipyard />;
@@ -111,7 +111,7 @@ const App: React.FC = () => {
             case 'galaxy': return <Galaxy />;
             case 'shop': return <Shop />;
             case 'settings': return <Settings />;
-            default: return <Overview />;
+            default: return <Overview onNavigate={setCurrentView} />;
         }
     };
 
