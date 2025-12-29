@@ -451,9 +451,6 @@ const Galaxy: React.FC = () => {
                 )
             }
 
-            )
-            }
-
             {/* Transport Modal */}
             {
                 transportModal && (
