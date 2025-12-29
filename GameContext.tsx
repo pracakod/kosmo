@@ -272,7 +272,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             await supabase.from('profiles').upsert({
                 id: session.user.id,
                 planet_name: current.planetName,
-                nickname: current.nickname, // Save nickname
+                // nickname removed from root level, stored in production_settings
                 resources: current.resources,
                 buildings: current.buildings,
                 research: current.research,
