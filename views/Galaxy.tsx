@@ -16,21 +16,27 @@ interface SpyReport {
 const Galaxy: React.FC = () => {
     // Start at Galaxy 1, System 1 to see player immediately
     const [coords, setCoords] = useState({ galaxy: 1, system: 1 });
-    const { planetName, ships, sendSpyProbe } = useGame();
+    const { planetName, ships, sendSpyProbe, galaxyCoords, planetType } = useGame();
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
-    const [spyModal, setSpyModal] = useState<{pos: number, name: string} | null>(null);
+    const [spyModal, setSpyModal] = useState<{ pos: number, name: string } | null>(null);
     const [probeCount, setProbeCount] = useState(1);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
     const getPlanet = (pos: number) => {
-        // PLAYER HOME: Always at [1:1:1]
-        if (coords.galaxy === 1 && coords.system === 1 && pos === 1) {
-            return { 
-                name: planetName, 
-                player: "Ty", 
-                rank: 1, 
-                img: IMAGES.planet, 
-                type: "Ziemiopodobna",
+        // PLAYER HOME: Dynamic check
+        if (galaxyCoords &&
+            coords.galaxy === galaxyCoords.galaxy &&
+            coords.system === galaxyCoords.system &&
+            galaxyCoords.position === pos) {
+
+            const pType = planetType === 'ice' ? "Lodowa" : (planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
+
+            return {
+                name: planetName,
+                player: "Ty",
+                rank: 1, // TODO: Fetch rank
+                img: IMAGES.planet,
+                type: pType,
                 isPlayer: true,
                 activity: ""
             };
@@ -38,11 +44,11 @@ const Galaxy: React.FC = () => {
 
         // BOT PLANET: Always at [1:1:2]
         if (coords.galaxy === 1 && coords.system === 1 && pos === 2) {
-            return { 
-                name: "Piracka Baza", 
-                player: "SpacePirate", 
-                rank: 666, 
-                img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCttLEph3WsOd3HRlZC0zxgyo5HtGQLhoc_Nr46u_bMbqY6nTEQYuIV_gyR_hpfVBS-J_jj5GGZynbPPZti1oj5iZ3eOY_YBYNi3q8nw6c4ebgmqCgJnaJhFtJwFfpNu4nYT65VMgmQkWQU-ek95Y5Ue6RnI9LCcYQpDhod0Y_eUiJYtnqiu9_aD-u_ukPsujkP5hgKqFchbR8vhUje3E-LrA80lMR4QTQEfNKXUDobsJRFGe11_CQSYumUsrXBnYunhGfRGvl2epw", 
+            return {
+                name: "Piracka Baza",
+                player: "SpacePirate",
+                rank: 666,
+                img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCttLEph3WsOd3HRlZC0zxgyo5HtGQLhoc_Nr46u_bMbqY6nTEQYuIV_gyR_hpfVBS-J_jj5GGZynbPPZti1oj5iZ3eOY_YBYNi3q8nw6c4ebgmqCgJnaJhFtJwFfpNu4nYT65VMgmQkWQU-ek95Y5Ue6RnI9LCcYQpDhod0Y_eUiJYtnqiu9_aD-u_ukPsujkP5hgKqFchbR8vhUje3E-LrA80lMR4QTQEfNKXUDobsJRFGe11_CQSYumUsrXBnYunhGfRGvl2epw",
                 type: "Pustynna",
                 isPlayer: false,
                 isBot: true,
@@ -51,7 +57,7 @@ const Galaxy: React.FC = () => {
         }
 
         // All other slots are empty
-        return null; 
+        return null;
     };
 
     const openSpyModal = (pos: number) => {
@@ -98,13 +104,13 @@ const Galaxy: React.FC = () => {
             return { ...prev, system: next };
         });
     };
-    
+
     const changeGalaxy = (delta: number) => {
         setCoords(prev => {
-             const next = prev.galaxy + delta;
-             if (next < 1) return prev;
-             if (next > 9) return prev;
-             return { ...prev, galaxy: next };
+            const next = prev.galaxy + delta;
+            if (next < 1) return prev;
+            if (next > 9) return prev;
+            return { ...prev, galaxy: next };
         });
     }
 
@@ -113,17 +119,17 @@ const Galaxy: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-6 pb-20 relative min-h-full">
-            
+
             {/* Solar System Visual - Background Effect (Absolute Positioned to prevent layout shift) */}
             <div className="absolute top-20 left-1/2 -translate-x-1/2 pointer-events-none z-0 opacity-40 w-full flex justify-center overflow-hidden">
-                 <div className="w-[600px] h-[600px] rounded-full bg-yellow-500/20 blur-[120px] -translate-y-1/2"></div>
-                 <div className="absolute top-0 w-[300px] h-[300px] rounded-full bg-orange-500/10 blur-[60px] animate-pulse -translate-y-1/2"></div>
+                <div className="w-[600px] h-[600px] rounded-full bg-yellow-500/20 blur-[120px] -translate-y-1/2"></div>
+                <div className="absolute top-0 w-[300px] h-[300px] rounded-full bg-orange-500/10 blur-[60px] animate-pulse -translate-y-1/2"></div>
             </div>
 
             {/* Navigation Header */}
             <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 shadow-lg sticky top-0 z-20 backdrop-blur-md bg-opacity-90">
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    
+
                     {/* Coordinates Control */}
                     <div className="flex gap-2 w-full md:w-auto">
                         <div className="flex-1 flex flex-col gap-1">
@@ -167,7 +173,7 @@ const Galaxy: React.FC = () => {
 
                     return (
                         <div key={pos} className={`relative flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border transition-all ${planet?.isPlayer ? 'bg-[#1a2342] border-primary/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]' : 'bg-[#1c2136] border-white/5 hover:border-white/20'}`}>
-                            
+
                             {/* Position Number */}
                             <div className="flex flex-col items-center justify-center w-6 md:w-8 text-[#929bc9] font-mono text-xs md:text-sm opacity-50">
                                 {pos}
@@ -217,7 +223,7 @@ const Galaxy: React.FC = () => {
                                     </button>
                                 ) : !planet.isPlayer && (
                                     <div className="flex gap-1">
-                                        <button 
+                                        <button
                                             onClick={() => openSpyModal(pos)}
                                             className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj"
                                         >
@@ -244,7 +250,7 @@ const Galaxy: React.FC = () => {
                         <button onClick={() => setSpyModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
                             <span className="material-symbols-outlined">close</span>
                         </button>
-                        
+
                         <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
                             <span className="material-symbols-outlined text-purple-400 text-3xl">visibility</span>
                             <div>
@@ -265,20 +271,20 @@ const Galaxy: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center bg-[#111422] rounded-lg border border-white/10 overflow-hidden">
-                                    <button 
+                                    <button
                                         onClick={() => setProbeCount(Math.max(1, probeCount - 1))}
                                         className="w-12 h-12 flex items-center justify-center text-[#929bc9] hover:bg-white/5"
                                     >
                                         <span className="material-symbols-outlined">remove</span>
                                     </button>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         className="flex-1 bg-transparent text-center text-white font-bold text-lg focus:outline-none"
                                         value={probeCount}
                                         onChange={(e) => setProbeCount(Math.min(availableProbes, Math.max(1, parseInt(e.target.value) || 1)))}
                                         max={availableProbes}
                                     />
-                                    <button 
+                                    <button
                                         onClick={() => setProbeCount(Math.min(availableProbes, probeCount + 1))}
                                         className="w-12 h-12 flex items-center justify-center text-[#929bc9] hover:bg-white/5"
                                     >
@@ -286,7 +292,7 @@ const Galaxy: React.FC = () => {
                                     </button>
                                 </div>
 
-                                <button 
+                                <button
                                     onClick={handleSendSpy}
                                     disabled={availableProbes < 1}
                                     className={`w-full py-3 rounded-lg font-bold uppercase tracking-widest transition-colors ${availableProbes > 0 ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-[#232948] text-white/20 cursor-not-allowed'}`}
@@ -306,7 +312,7 @@ const Galaxy: React.FC = () => {
                         <button onClick={() => setSpyReport(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
                             <span className="material-symbols-outlined">close</span>
                         </button>
-                        
+
                         <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
                             <span className="material-symbols-outlined text-purple-400 text-3xl">description</span>
                             <div>
