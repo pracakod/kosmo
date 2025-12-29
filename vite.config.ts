@@ -1,10 +1,11 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-  // Load all env variables including system ones
-  const env = loadEnv(mode, process.cwd(), '');
+export default defineConfig(() => {
+  // Get env vars from system environment (GitHub Actions sets these)
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
   return {
     base: '/kosmo/',
@@ -14,8 +15,8 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
-      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY)
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey)
     },
     resolve: {
       alias: {
