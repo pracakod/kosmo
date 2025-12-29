@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { IMAGES } from '../constants';
 
 const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -45,13 +46,19 @@ const Auth: React.FC = () => {
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
             </div>
 
-            <div className="relative z-10 w-full max-w-md p-8 bg-[#1c2136]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+            <div className="relative z-10 w-full max-w-md p-6 md:p-8 bg-[#1c2136]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl mx-4">
                 <div className="flex flex-col items-center mb-8">
-                    <div className="bg-center bg-no-repeat bg-cover rounded-full size-20 border-2 border-primary mb-4 shadow-lg shadow-primary/30"
-                        style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbNn-VcSbOlNMpz85EjFU")' }}></div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight uppercase">Centrum Dowodzenia</h1>
-                    <p className="text-gray-500 mt-4">v1.2.0 (PvP & Commander Update)</p>
-                    <p className="text-[#929bc9] text-sm">Zaloguj się do terminala dowódcy</p>
+                    <div className="rounded-full size-24 border-2 border-primary mb-4 shadow-lg shadow-primary/30 overflow-hidden bg-[#111422]">
+                        <img
+                            src={IMAGES.avatar}
+                            alt="Logo"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.currentTarget.src = '/kosmo/avatars/avatar_default.png'; }}
+                        />
+                    </div>
+                    <h1 className="text-4xl font-bold text-white tracking-tight uppercase font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary">Kosmo</h1>
+                    <p className="text-gray-500 mt-2">v1.2.0 (PvP & Commander Update)</p>
+                    <p className="text-[#929bc9] text-sm md:text-base text-center mt-2">Zaloguj się do terminala dowódcy</p>
                 </div>
 
                 <form onSubmit={handleAuth} className="flex flex-col gap-4">
@@ -107,8 +114,9 @@ const Auth: React.FC = () => {
             </div>
 
             {/* Version Badge */}
-            <div className="absolute bottom-4 right-4 text-xs text-[#929bc9]/50 font-mono">
-                v1.1.4
+            {/* Author Footer */}
+            <div className="absolute bottom-4 left-0 right-0 text-center text-xs text-[#929bc9]/50 font-mono">
+                Stworzone przez DareG TV
             </div>
         </div>
     );
