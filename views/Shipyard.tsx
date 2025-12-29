@@ -5,7 +5,11 @@ import { BuildingId, ResearchId, ShipId } from '../types';
 
 const Shipyard: React.FC = () => {
     const { ships, resources, buildShip, checkRequirements, buildings, research, shipyardQueue } = useGame();
-    const shipList = Object.values(SHIPS);
+    const shipList = Object.values(SHIPS).sort((a, b) => {
+        const costA = a.baseCost.metal + a.baseCost.crystal + a.baseCost.deuterium;
+        const costB = b.baseCost.metal + b.baseCost.crystal + b.baseCost.deuterium;
+        return costA - costB;
+    });
     const shipyardLevel = buildings[BuildingId.SHIPYARD];
 
     // Local state for input values
