@@ -19,14 +19,17 @@ export const IMAGES = {
   planet: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc",
 
   // Buildings
-  metalMine: "https://lh3.googleusercontent.com/aida-public/AB6AXuDGQIJljQouQH4MzIGOVbgW-EQtjzCt6kX1AwEZ4akSObYGimEARO2A1gF_u5T1Np88-HIh8DPf451V--bWkqvLMJwwLBeuKT6IxZQ1ryzMAIHXH5zq6ky9Lks5SzkOiGSJOLyPrxrvFNrNtHmMBGyar00Q_K-YajHCyhDN7eAJ3zjL-6bUcJCSrx_Ru3RVvmlvUiPv3JoJ6hEHz02kzuiCQ1kCeS8rdm3U17_a202JojN9VbVwY7paXQyqWZdrImPP1voU9K9ZqBI",
-  crystalMine: "https://lh3.googleusercontent.com/aida-public/AB6AXuDBW174vypvIVjAn8MWpepmqSRAGXXMZtYN7r1qImhzQn76zkQ13Xyl6SQqfKSzpWH53jHOqSQ7xEHnY8sEZhxaoXIPEnaxXeG4MJDDrjTP_bOpVkgdgH4xqX96-WY9mz3IxyK-bCh1MxkxU7pWO0xKsLgUVpK7js5kca8LhGLszR-DOZG5IHpqRwBwfLrxR7lU5uqRgRDQ0kx-zJIw74MnL2HV9QIMbhy_ukgULBvPyMdjxWdfXkE2X5Js-_Vho5iSQ4829VDnpiE",
-  deuteriumSynth: "https://lh3.googleusercontent.com/aida-public/AB6AXuBPQ20bjSXiXNiM7fx9cYcVy5O0LMGSKVDkW6RSLYo2wuIxPFQaEHfAoDlzcOCrKxij8ux0O8QWgdc3JK4aHWrubaEyja2auqXJ_JWq1Vj2VRpexMa3KBixruWrPpS2acL5mpCfMtsv3wdaFDqUuOf7TF8ZQVk7UDxbHm18A15imgGV5dN1nzWjIzXQiF6SyLoQMU8yNsX8yW8HCPpzrIW18dcvwmXKXSzu-v3ZiquTQ-w-xKLY0VyhE7IJwk-rLCEnUG6nStJWwIQ",
-  solarPlant: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg",
-  fusionReactor: "https://lh3.googleusercontent.com/aida-public/AB6AXuA5zJhoBmc9B_7K3kdzmS0jRGQ4TxTF1sKrsA0-Zxnv4gQMVzgicY3JzPKK5mAwCC1iuh4xUjsQTCiOr1frnHwM2FNQ59ZbM8gyFwJvf5kgN1Np1dDGsQP7vua8fW77DzSNOmAX7frp_E13Rt22KjtAxy61zJl5Drp2C1v4LUF1HPLKJqcHTdEO6D_s3q5ujXDXOR8tV0yHYqfY4Gjc1egtpZyY1hbpRfwcedU-Fd728-EDyp_LSAz12VFwRRaLGqsOpgXayb0dFUU",
-  robotFactory: "https://lh3.googleusercontent.com/aida-public/AB6AXuDKFYodx8aYkS3L0_aZKv8NQVKCFFLEp_aIojke7fVSBUGfftz5yRPvF1fuXX4vvvHwtId36V6DzP398lKo5i9fDlbC3dgYH7qP5VhLyKyyn_n9D4fSyvnoiPHulQLtl5Do1YYRpVvhVcfGOS4IyPuY7dVya1qor3vSjhE-KsxkO9Nr0rKccvd0lp1OQYWa4fOwAJKWnx24KLrcu70jfMTpcUW-Fb5dXiBJkD9UFjV4B07Jr5EhFLNsjASa8zQIzRaxg3XKdJnmvFs",
-  shipyard: "https://lh3.googleusercontent.com/aida-public/AB6AXuDbgGTOOmYRO8Cx2O9AikzppzN9zC4-i7_FrPEcct-2C21HpEJmdGGu5Za7crC8JzzPSg7_h9whOWZrcV1uaeGNi-PRI2xgDrhQfv1_Lby8fBTWyDZhQ06O3AM6n76j_-cHlHjJLahmP4ygvJ-iwGSSXwntVJtmV76vprhB_mPDHFsOxjwoWadVZ5tBOQifnLzeGQYMb6Q00oYkbFwAD8554XNTDT0nmK16jTdF17V-MgWnK8RmGNBFkySydK0sEWwjYVjCScUCM6I",
-  researchLab: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tc9scmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc",
+  metalMine: "/kosmo/budowle/kopalniametalu.png",
+  crystalMine: "/kosmo/budowle/kopalnia krysztalu.png",
+  deuteriumSynth: "/kosmo/budowle/synterzator deuter.png",
+  solarPlant: "/kosmo/budowle/elektrownia sloneczna.png",
+  fusionReactor: "/kosmo/budowle/Reaktor Fuzyjny.png",
+  robotFactory: "/kosmo/budowle/Fabryka Robotów.png",
+  shipyard: "/kosmo/budowle/stocznia.png",
+  researchLab: "/kosmo/budowle/Laboratorium Badawcz.png",
+  metalStorage: "/kosmo/budowle/Magazyn MetaluKryształu.png",
+  crystalStorage: "/kosmo/budowle/Magazyn MetaluKryształu.png",
+  deuteriumTank: "/kosmo/budowle/zbiornik deuter.png",
 
   // Tech Images - Distinct & Fixed
   techEnergy: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg",
@@ -379,4 +382,11 @@ export const SHIPS: Record<ShipId, ShipDef> = {
     capacity: 2000,
     requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 6 }, { type: 'research', id: ResearchId.ESPIONAGE_TECH, level: 4 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 4 }]
   }
+};
+
+export const PLANET_IMAGES: Record<string, string> = {
+  terran: "/kosmo/planets/planet_terran.png",
+  desert: "/kosmo/planets/planet_desert.png",
+  ice: "/kosmo/planets/planet_ice.png",
+  default: IMAGES.planet
 };

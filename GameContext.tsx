@@ -31,6 +31,7 @@ interface GameContextType extends GameState {
 
 const initialState: GameState = {
     avatarUrl: "/kosmo/avatars/avatar_default.png",
+    planetType: 'terran',
     planetName: "Nowa Kolonia",
     resources: {
         metal: 500,
@@ -189,6 +190,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 shipyardQueue: data.shipyard_queue || [],
                 productionSettings: { ...prev.productionSettings, ...data.production_settings },
                 avatarUrl: data.production_settings?.avatarUrl || prev.avatarUrl || initialState.avatarUrl,
+                planetType: data.production_settings?.planetType || prev.planetType || (['terran', 'desert', 'ice'][Math.floor(Math.random() * 3)]),
                 // Don't overwrite activeMissions from profile (legacy), we use missions table now
                 missionLogs: data.mission_logs || [],
                 lastTick: Date.now()
@@ -237,7 +239,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 ships: current.ships,
                 construction_queue: current.constructionQueue,
                 shipyard_queue: current.shipyardQueue,
-                production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl },
+                production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl, planetType: current.planetType },
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
@@ -371,6 +373,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 newRes.crystal += (mission.resources.crystal || 0);
                 newRes.deuterium += (mission.resources.deuterium || 0);
                 newRes.darkMatter += (mission.resources.darkMatter || 0);
+
+                // Add found ships (Expedition Rewards)
+                if (mission.resources.ships) {
+                    Object.entries(mission.resources.ships).forEach(([id, count]) => {
+                        newShips[id] = (newShips[id] || 0) + (count as number);
+                    });
+                }
             }
 
             const title = mission.result?.title || `Powrót Floty`;
@@ -387,6 +396,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 resources: newRes,
                 mission_logs: newLogs
             }).eq('id', session.user.id);
+
+            // Update Local State immediately to prevent race condition with Autosaver
+            setGameState(prev => ({
+                ...prev,
+                ships: newShips,
+                resources: newRes,
+                missionLogs: newLogs
+            }));
         }
 
         // Mark completed
