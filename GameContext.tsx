@@ -228,10 +228,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     return { ...mission, eventProcessed: true, pendingRewards: result.rewards };
                 }
                 else if (mission.type === MissionType.ATTACK) {
-                    // Calculate Battle (Simplified)
+                    // Calculate Battle (Advanced)
                     const result = generateBattleResult(mission);
                     newLogs.unshift(result.log);
-                    return { ...mission, eventProcessed: true, pendingRewards: result.rewards };
+                    // Update mission ships with survivors
+                    return {
+                        ...mission,
+                        ships: result.survivingShips,
+                        eventProcessed: true,
+                        pendingRewards: result.rewards
+                    };
                 }
 
                 return { ...mission, eventProcessed: true };
@@ -273,28 +279,94 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         };
     };
 
-    const generateBattleResult = (mission: FleetMission): { log: MissionLog, rewards: MissionRewards } => {
-        // Simple logic: If you have more attack power than random defense, you win loot
+    const generateBattleResult = (mission: FleetMission): { log: MissionLog, rewards: MissionRewards, survivingShips: Record<ShipId, number> } => {
         let attackPower = 0;
+        let defensePower = 0; // Shields included effectively
+        let totalShips = 0;
+
+        // Calculate Player Fleet Power
         Object.entries(mission.ships).forEach(([id, count]) => {
-            attackPower += (SHIPS[id as ShipId].attack * count);
+            const ship = SHIPS[id as ShipId];
+            attackPower += (ship.attack * count);
+            defensePower += (ship.defense * count);
+            totalShips += count;
         });
 
-        const lootMetal = Math.floor(Math.random() * attackPower) + 5000;
-        const lootCrystal = Math.floor(Math.random() * (attackPower / 2)) + 2000;
+        // Generate Pirate/Alien Defense
+        // Pirates strength scales with attacker but has a minimum base
+        // Logic: Pirates are 50% to 150% of attacker strength, but at least 100 dmg
+        const difficultyRoll = 0.5 + Math.random(); // 0.5 - 1.5
+        const pirateAttack = Math.max(100, Math.floor(attackPower * difficultyRoll));
+        const pirateDefense = Math.max(100, Math.floor(defensePower * difficultyRoll * 0.8));
+
+        // Battle Simulation
+        const playerWin = attackPower > pirateDefense;
+        const playerDamageTaken = Math.max(0, pirateAttack - (defensePower * 0.1)); // Defense mitigates some dmg
+
+        // Calculate Losses (Percentage based on damage taken vs total health pool approx)
+        // Simplified: Damage taken / Total Defense = % lost
+        let lossRatio = Math.min(1.0, playerDamageTaken / defensePower);
+
+        // If played won, losses are reduced significantly (morale/tactics)
+        if (playerWin) lossRatio *= 0.3;
+
+        // Apply losses
+        const survivingShips: Record<string, number> = {};
+        const lostShips: Record<string, number> = {};
+        let totalLost = 0;
+
+        Object.entries(mission.ships).forEach(([id, count]) => {
+            // Randomness in losses per ship type
+            const shipLossRatio = Math.min(1, Math.max(0, lossRatio + (Math.random() * 0.2 - 0.1)));
+            const lost = Math.floor(count * shipLossRatio);
+            const survived = count - lost;
+
+            if (survived > 0) survivingShips[id as ShipId] = survived;
+            if (lost > 0) {
+                lostShips[id] = lost;
+                totalLost += lost;
+            }
+        });
+
+        // Rewards
+        let rewards: MissionRewards = {};
+        let message = "";
+        let outcome: 'success' | 'failure' | 'neutral' = 'neutral';
+
+        if (playerWin) {
+            outcome = 'success';
+            const lootFactor = Math.random() * 0.5 + 0.5; // 50-100% efficiency
+            const lootMetal = Math.floor((pirateDefense * 2) * lootFactor) + 1000;
+            const lootCrystal = Math.floor((pirateDefense) * lootFactor) + 500;
+            const lootDeut = Math.floor((pirateDefense * 0.2) * lootFactor);
+
+            rewards = { metal: lootMetal, crystal: lootCrystal, deuterium: lootDeut };
+            message = `Wygrana bitwa z Piratami!\nZniszczono flotę wroga.\nStraty własne: ${totalLost} statków.\nZrabowano: M:${lootMetal} K:${lootCrystal} D:${lootDeut}`;
+        } else {
+            outcome = 'failure';
+            message = `Przegrana bitwa!\nPiraci byli zbyt silni (Atak: ${pirateAttack}).\nTwoja flota została zmuszona do odwrotu.\nStraty własne: ${totalLost} statków.`;
+        }
+
+        // Total wipeout check
+        const returningCount = Object.values(survivingShips).reduce((a, b) => a + b, 0);
+        if (returningCount === 0) {
+            message += "\nCAŁA FLOTA ZOSTAŁA ZNISZCZONA.";
+            outcome = 'failure';
+        }
 
         return {
             log: {
                 id: Date.now().toString(),
                 timestamp: Date.now(),
-                title: "Raport Bitewny",
-                message: `Flota dotarła do współrzędnych [1:${mission.targetCoords.system}:${mission.targetCoords.position}]. Wygrano bitwę i zrabowano surowce!`,
-                outcome: 'success',
-                rewards: { metal: lootMetal, crystal: lootCrystal }
+                title: playerWin ? "Zwycięstwo w Bitwie" : "Klęska w Bitwie",
+                message: message,
+                outcome: outcome,
+                rewards: rewards
             },
-            rewards: { metal: lootMetal, crystal: lootCrystal }
+            rewards: rewards,
+            survivingShips: survivingShips as Record<ShipId, number>
         };
-    }
+    };
 
     // ... [Existing calculation code for production/costs/etc remains same] ...
     // Re-implementing helper functions for context clarity
