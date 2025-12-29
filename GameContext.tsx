@@ -26,6 +26,7 @@ interface GameContextType extends GameState {
     resetGame: () => void;
     clearLogs: () => void;
     logout: () => void;
+    deleteAccount: () => Promise<void>;
     updateAvatar: (url: string) => void;
 }
 
@@ -843,6 +844,21 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         await supabase.auth.signOut();
         window.location.reload();
     };
+
+    const deleteAccount = async () => {
+        if (!session?.user) return;
+        if (!confirm('Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć. Twoje imperium zostanie zniszczone.')) return;
+
+        try {
+            await supabase.from('missions').delete().eq('owner_id', session.user.id);
+            await supabase.from('profiles').delete().eq('id', session.user.id);
+            await logout();
+        } catch (e) {
+            console.error("Error deleting account:", e);
+            alert("Błąd podczas usuwania konta. Spróbuj ponownie.");
+        }
+    };
+
     const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
 
     // Main Loop
@@ -924,6 +940,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         resetGame,
         clearLogs,
         logout,
+        deleteAccount,
         updateAvatar
     };
 

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useGame } from '../GameContext';
 
 const Settings: React.FC = () => {
-    const { planetName, renamePlanet, resetGame, updateAvatar, avatarUrl } = useGame();
+    const { planetName, renamePlanet, resetGame, updateAvatar, avatarUrl, deleteAccount } = useGame();
     const [nameInput, setNameInput] = useState(planetName);
 
     const handleSaveName = () => {
@@ -101,12 +101,25 @@ const Settings: React.FC = () => {
                     Te operacje są nieodwracalne. Zresetowanie gry spowoduje utratę wszystkich postępów, budynków, floty i surowców.
                 </p>
 
-                <button
-                    onClick={() => { if (confirm('Jesteś pewien? To usunie cały postęp!')) resetGame() }}
-                    className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all"
-                >
-                    Zresetuj Całe Konto
-                </button>
+                <div className="flex flex-col gap-4">
+                    <button
+                        onClick={() => { if (confirm('To usunie tylko dane z tego urządzenia (wyloguje). Aby usunąć konto z serwera, użyj drugiego przycisku.')) resetGame() }}
+                        className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all"
+                    >
+                        Wyloguj i Wyczyść Konsolę
+                    </button>
+
+                    <button
+                        onClick={deleteAccount}
+                        className="bg-red-900/50 hover:bg-red-700 text-white border border-red-500/50 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined">delete_forever</span>
+                        Usuń Konto Trwale
+                    </button>
+                    <p className="text-xs text-red-400 text-center mt-2">
+                        Uwaga: Usunięcie konta trwale wykasuje Twój profil i misje z bazy danych. Tej akcji nie da się cofnąć!
+                    </p>
+                </div>
             </div>
         </div >
     );
