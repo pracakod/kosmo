@@ -85,7 +85,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3">
+                    <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 overscroll-y-contain touch-action-manipulation pb-24">
                         {fullNavItems.map(item => (
                             <button
                                 key={item.id}
@@ -99,6 +99,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                                 <span className="text-sm font-bold">{item.label}</span>
                             </button>
                         ))}
+
+                        {/* Logout Button Mobile */}
+                        <button
+                            onClick={() => {
+                                try {
+                                    const { logout } = useGame();
+                                    logout();
+                                } catch (e) {
+                                    window.location.reload();
+                                }
+                            }}
+                            className="flex flex-col items-center justify-center p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 col-span-2 mt-4"
+                        >
+                            <span className="material-symbols-outlined text-3xl mb-2">logout</span>
+                            <span className="text-sm font-bold">Wyloguj Się</span>
+                        </button>
                     </div>
                 </div>
             )}
