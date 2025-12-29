@@ -27,7 +27,7 @@ interface GameContextType extends GameState {
     clearLogs: () => void;
     logout: () => void;
     deleteAccount: () => Promise<void>;
-    deleteAccount: () => Promise<void>;
+
     updateAvatar: (url: string) => void;
     getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
 }
