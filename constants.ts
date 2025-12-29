@@ -59,8 +59,8 @@ export const IMAGES = {
   mediumCargo: "/kosmo/ships/medium_cargo.png",
   hugeCargo: "/kosmo/ships/huge_cargo.png",
   colonyShip: "/kosmo/ships/colony_ship.png",
-  espionageProbe: "https://lh3.googleusercontent.com/aida-public/AB6AXuAuzcKCcqW_Uwb_MHjDE4UnIS9iufqeQRG-ox9HOxWuvVuHaPFUOrPzlXsVC7PfwZ7MI1K-xoYXSIRYGuCSJskYUnvKDvMxqvSe3Gia4Hb2MB3OLyt_tMwvU9qvxgjTrPmM6wQypgXYMFoiUUJMXWeDDfXxHDYHBm1mxGIFog5PovvrH7Zb2U4gFbh_HAslZUcihLWiSiQi2WAG8mGqDZzKh4eaLLLitm105RayEmmJXCGVObylA3o_oKyx4bVz44Os-zM8jsZ59ng",
-  pioneer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tcscmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc" // Research ship look
+  espionageProbe: "/kosmo/ships/espionage_probe.png",
+  pioneer: "/kosmo/ships/pioneer.png" // Research ship look
 };
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {

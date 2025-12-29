@@ -117,6 +117,51 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         gameStateRef.current = gameState;
     }, [gameState]);
 
+    const findTargetUser = async (coords: { galaxy: number, system: number, position: number }) => {
+        const { data } = await supabase
+            .from('profiles')
+            .select('id')
+            .match({ galaxy: coords.galaxy, system: coords.system, position: coords.position })
+            .single();
+        return data?.id || null;
+    };
+
+    // Replace fetching activeMissions from profile with fetching from 'missions' table
+    const fetchMissions = async () => {
+        if (!session?.user) return;
+
+        // Fetch missions where I am owner OR target
+        const { data, error } = await supabase
+            .from('missions')
+            .select('*')
+            .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
+
+        if (data && !error) {
+            const mappedMissions: FleetMission[] = data.map((m: any) => ({
+                id: m.id,
+                ownerId: m.owner_id,
+                targetUserId: m.target_user_id,
+                type: m.mission_type as MissionType,
+                ships: m.ships,
+                targetCoords: m.target_coords,
+                originCoords: m.origin_coords,
+                startTime: m.start_time,
+                arrivalTime: m.arrival_time,
+                returnTime: m.return_time,
+                eventProcessed: m.status !== 'flying', // simplified mechanism
+                status: m.status, // 'flying', 'returning', 'completed'
+                resources: m.resources,
+                result: m.result
+            }));
+
+            // Filter out completed missions that are already returned? 
+            // Ideally we keep them for log but remove from active. 
+            // For now, let's just set activeMissions
+            setGameState(prev => ({ ...prev, activeMissions: mappedMissions.filter(m => m.status !== 'completed') }));
+        }
+    };
+
+
     // Load from Supabase or LocalStorage
     useEffect(() => {
         const loadData = async () => {
@@ -210,165 +255,247 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         };
     }, [loaded, session]);
 
-    // REAL TIME MISSION HANDLING
-    const handleMissions = (current: GameState, now: number) => {
-        let newMissions = [...current.activeMissions];
-        let newLogs = [...current.missionLogs];
-        let newShips = { ...current.ships };
-        let newResources = { ...current.resources };
-        let missionsChanged = false;
+    // REAL TIME MISSION HANDLING & DATABASE SYNC
 
-        newMissions = newMissions.map(mission => {
-            if (!mission.eventProcessed && now >= mission.arrivalTime) {
-                missionsChanged = true;
+    // Process Mission Arrival (Target reached)
+    const processMissionArrival = async (mission: FleetMission) => {
+        if (mission.eventProcessed) return;
 
-                if (mission.type === MissionType.EXPEDITION) {
-                    const result = generateExpeditionResult(mission);
-                    newLogs.unshift(result.log);
-                    return { ...mission, eventProcessed: true, pendingRewards: result.rewards };
+        let result: any = {};
+        let loot: MissionRewards = {};
+        let survivingAttacker = { ...mission.ships };
+        let survivingDefender = null;
+
+        if (mission.type === MissionType.EXPEDITION) {
+            const hasPioneer = (mission.ships[ShipId.PIONEER] || 0) > 0;
+            let fleetCapacity = 0;
+            Object.entries(mission.ships).forEach(([id, count]) => { fleetCapacity += (SHIPS[id as ShipId].capacity * count); });
+            const roll = Math.random();
+            const baseChance = hasPioneer ? 0.9 : 0.7;
+
+            if (roll < baseChance) {
+                const rewardRoll = Math.random();
+                if (rewardRoll < 0.4) {
+                    const metal = Math.floor(Math.random() * Math.min(20000, fleetCapacity * 0.5)) + 1000;
+                    const crystal = Math.floor(Math.random() * Math.min(10000, fleetCapacity * 0.3)) + 500;
+                    loot = { metal, crystal };
+                    result = { outcome: 'success', message: 'Ekspedycja odkryła złoża.', logs: "Odkryto zasoby." };
+                } else {
+                    result = { outcome: 'neutral', message: 'Pusta przestrzeń.', logs: "Nic nie znaleziono." };
                 }
-                else if (mission.type === MissionType.ATTACK) {
-                    // Calculate Battle (Advanced)
-                    const result = generateBattleResult(mission);
-                    newLogs.unshift(result.log);
-                    // Update mission ships with survivors
-                    return {
-                        ...mission,
-                        ships: result.survivingShips,
-                        eventProcessed: true,
-                        pendingRewards: result.rewards
-                    };
-                }
-
-                return { ...mission, eventProcessed: true };
+            } else {
+                result = { outcome: 'neutral', message: 'Pusta przestrzeń.', logs: "Nic nie znaleziono." };
             }
-            return mission;
+        }
+        else if (mission.type === MissionType.ATTACK) {
+            if (mission.targetUserId) {
+                // PvP
+                const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+                if (targetProfile) {
+                    const battle = generatePvPBattleResult(mission.ships, targetProfile.ships, targetProfile.buildings, targetProfile.research, targetProfile.resources);
+                    result = battle.log;
+                    loot = battle.loot;
+                    survivingAttacker = battle.survivingAttackerShips;
+                    survivingDefender = battle.survivingDefenderShips;
+
+                    // Update Defender (Apply damage)
+                    const newTargetLogs = [
+                        { id: Date.now().toString(), timestamp: Date.now(), title: "ZOSTAŁEŚ ZAATAKOWANY!", message: `Gracz ${session.user.email?.split('@')[0]} zaatakował Cię.\n${battle.log.message}`, outcome: 'danger' },
+                        ...(targetProfile.mission_logs || [])
+                    ].slice(0, 50);
+
+                    await supabase.from('profiles').update({
+                        ships: survivingDefender,
+                        resources: {
+                            ...targetProfile.resources,
+                            metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
+                            crystal: Math.max(0, targetProfile.resources.crystal - (loot.crystal || 0)),
+                            deuterium: Math.max(0, targetProfile.resources.deuterium - (loot.deuterium || 0))
+                        },
+                        mission_logs: newTargetLogs
+                    }).eq('id', mission.targetUserId);
+                }
+            } else {
+                // PvE (Pirates)
+                const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
+                result = battle.log;
+                loot = battle.loot;
+                survivingAttacker = battle.survivingAttackerShips;
+            }
+        }
+
+        // Update Mission in DB (Start Return)
+        const duration = (mission.returnTime - mission.startTime) / 2; // Approximate way home
+
+        await supabase.from('missions').update({
+            status: 'returning',
+            resources: loot, // Attacker carries this
+            ships: survivingAttacker,
+            result: result,
+            return_time: Date.now() + duration
+        }).eq('id', mission.id);
+
+        // Refresh local state
+        fetchMissions();
+    };
+
+    // Process Mission Return (Home reached)
+    const processMissionReturn = async (mission: FleetMission) => {
+        const { data: myProfile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        if (myProfile) {
+            const newShips = { ...myProfile.ships };
+            if (mission.ships) {
+                Object.entries(mission.ships).forEach(([id, count]) => {
+                    newShips[id] = (newShips[id] || 0) + (count as number);
+                });
+            }
+
+            const newRes = { ...myProfile.resources };
+            if (mission.resources) {
+                newRes.metal += (mission.resources.metal || 0);
+                newRes.crystal += (mission.resources.crystal || 0);
+                newRes.deuterium += (mission.resources.deuterium || 0);
+            }
+
+            const newLogs = [
+                { id: Date.now().toString(), timestamp: Date.now(), title: "Powrót Floty", message: `Flota wróciła z misji ${mission.type}.`, outcome: 'success', rewards: mission.resources },
+                ...(myProfile.mission_logs || [])
+            ].slice(0, 50);
+
+            await supabase.from('profiles').update({
+                ships: newShips,
+                resources: newRes,
+                mission_logs: newLogs
+            }).eq('id', session.user.id);
+        }
+
+        // Mark completed
+        await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
+        fetchMissions();
+    };
+
+    const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
+        let attackPower = 0;
+        let defensePower = 0;
+
+        Object.entries(attackerShips).forEach(([id, count]) => {
+            const ship = SHIPS[id as ShipId];
+            if (ship) attackPower += (ship.attack * (count as number));
         });
 
-        // Return Processing
-        const returningMissions = newMissions.filter(m => now >= m.returnTime);
-        if (returningMissions.length > 0) {
-            missionsChanged = true;
-            returningMissions.forEach(m => {
-                // Return Fleet
-                Object.entries(m.ships).forEach(([id, count]) => {
-                    newShips[id as ShipId] += count;
-                });
-
-                // Apply Rewards
-                if (m.pendingRewards) {
-                    if (m.pendingRewards.metal) newResources.metal += m.pendingRewards.metal;
-                    if (m.pendingRewards.crystal) newResources.crystal += m.pendingRewards.crystal;
-                    if (m.pendingRewards.deuterium) newResources.deuterium += m.pendingRewards.deuterium;
-                    if (m.pendingRewards.darkMatter) newResources.darkMatter += m.pendingRewards.darkMatter;
-                    if (m.pendingRewards.ships) {
-                        Object.entries(m.pendingRewards.ships).forEach(([id, count]) => {
-                            newShips[id as ShipId] += count;
-                        });
-                    }
+        // Defender Ships
+        let defenderDefense = 0;
+        let defenderAttack = 0;
+        if (defenderShips) {
+            Object.entries(defenderShips).forEach(([id, count]) => {
+                const ship = SHIPS[id as ShipId];
+                if (ship) {
+                    defenderDefense += (ship.defense * (count as number));
+                    defenderAttack += (ship.attack * (count as number));
                 }
             });
-            newMissions = newMissions.filter(m => now < m.returnTime);
+        }
+
+        // Bot Boost
+        if (isBot) {
+            defenderDefense = Math.max(100, attackPower * 0.8);
+            defenderAttack = Math.max(100, attackPower * 0.5);
+        }
+
+        const attackerWin = attackPower > defenderDefense;
+
+        // Calculate Losses
+        // Simplified: Loser loses 50-100% of fleet, Winner loses 10-30%
+        const attackerLossRatio = attackerWin ? 0.2 : 0.8;
+        const defenderLossRatio = attackerWin ? 0.8 : 0.1;
+
+        const survivingAttackerShips: any = {};
+        let totalAttackerLost = 0;
+        Object.entries(attackerShips).forEach(([id, count]) => {
+            const lost = Math.floor((count as number) * (attackerLossRatio + (Math.random() * 0.2)));
+            const survived = (count as number) - lost;
+            if (survived > 0) survivingAttackerShips[id] = survived;
+            totalAttackerLost += lost;
+        });
+
+        const survivingDefenderShips: any = {};
+        if (defenderShips) {
+            Object.entries(defenderShips).forEach(([id, count]) => {
+                const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
+                const survived = (count as number) - lost;
+                if (survived > 0) survivingDefenderShips[id] = survived;
+            });
+        }
+
+        // Loot
+        let loot = { metal: 0, crystal: 0, deuterium: 0 };
+        if (attackerWin) {
+            // Take 50% of available resources
+            loot.metal = Math.floor((defenderResources.metal || 0) * 0.5);
+            loot.crystal = Math.floor((defenderResources.crystal || 0) * 0.5);
+            loot.deuterium = Math.floor((defenderResources.deuterium || 0) * 0.5);
+
+            // Cap by cargo capacity (Simplified: assumes infinite for now or calculated elsewhere)
+            // Ideally check attacker capacity
         }
 
         return {
-            activeMissions: newMissions,
-            missionLogs: missionsChanged ? newLogs : current.missionLogs,
-            ships: newShips,
-            resources: newResources
-        };
-    };
-
-    const generateBattleResult = (mission: FleetMission): { log: MissionLog, rewards: MissionRewards, survivingShips: Record<ShipId, number> } => {
-        let attackPower = 0;
-        let defensePower = 0; // Shields included effectively
-        let totalShips = 0;
-
-        // Calculate Player Fleet Power
-        Object.entries(mission.ships).forEach(([id, count]) => {
-            const ship = SHIPS[id as ShipId];
-            attackPower += (ship.attack * count);
-            defensePower += (ship.defense * count);
-            totalShips += count;
-        });
-
-        // Generate Pirate/Alien Defense
-        // Pirates strength scales with attacker but has a minimum base
-        // Logic: Pirates are 50% to 150% of attacker strength, but at least 100 dmg
-        const difficultyRoll = 0.5 + Math.random(); // 0.5 - 1.5
-        const pirateAttack = Math.max(100, Math.floor(attackPower * difficultyRoll));
-        const pirateDefense = Math.max(100, Math.floor(defensePower * difficultyRoll * 0.8));
-
-        // Battle Simulation
-        const playerWin = attackPower > pirateDefense;
-        const playerDamageTaken = Math.max(0, pirateAttack - (defensePower * 0.1)); // Defense mitigates some dmg
-
-        // Calculate Losses (Percentage based on damage taken vs total health pool approx)
-        // Simplified: Damage taken / Total Defense = % lost
-        let lossRatio = Math.min(1.0, playerDamageTaken / defensePower);
-
-        // If played won, losses are reduced significantly (morale/tactics)
-        if (playerWin) lossRatio *= 0.3;
-
-        // Apply losses
-        const survivingShips: Record<string, number> = {};
-        const lostShips: Record<string, number> = {};
-        let totalLost = 0;
-
-        Object.entries(mission.ships).forEach(([id, count]) => {
-            // Randomness in losses per ship type
-            const shipLossRatio = Math.min(1, Math.max(0, lossRatio + (Math.random() * 0.2 - 0.1)));
-            const lost = Math.floor(count * shipLossRatio);
-            const survived = count - lost;
-
-            if (survived > 0) survivingShips[id as ShipId] = survived;
-            if (lost > 0) {
-                lostShips[id] = lost;
-                totalLost += lost;
-            }
-        });
-
-        // Rewards
-        let rewards: MissionRewards = {};
-        let message = "";
-        let outcome: 'success' | 'failure' | 'neutral' = 'neutral';
-
-        if (playerWin) {
-            outcome = 'success';
-            const lootFactor = Math.random() * 0.5 + 0.5; // 50-100% efficiency
-            const lootMetal = Math.floor((pirateDefense * 2) * lootFactor) + 1000;
-            const lootCrystal = Math.floor((pirateDefense) * lootFactor) + 500;
-            const lootDeut = Math.floor((pirateDefense * 0.2) * lootFactor);
-
-            rewards = { metal: lootMetal, crystal: lootCrystal, deuterium: lootDeut };
-            message = `Wygrana bitwa z Piratami!\nZniszczono flotę wroga.\nStraty własne: ${totalLost} statków.\nZrabowano: M:${lootMetal} K:${lootCrystal} D:${lootDeut}`;
-        } else {
-            outcome = 'failure';
-            message = `Przegrana bitwa!\nPiraci byli zbyt silni (Atak: ${pirateAttack}).\nTwoja flota została zmuszona do odwrotu.\nStraty własne: ${totalLost} statków.`;
-        }
-
-        // Total wipeout check
-        const returningCount = Object.values(survivingShips).reduce((a, b) => a + b, 0);
-        if (returningCount === 0) {
-            message += "\nCAŁA FLOTA ZOSTAŁA ZNISZCZONA.";
-            outcome = 'failure';
-        }
-
-        return {
+            survivingAttackerShips,
+            survivingDefenderShips,
+            loot,
             log: {
-                id: Date.now().toString(),
-                timestamp: Date.now(),
-                title: playerWin ? "Zwycięstwo w Bitwie" : "Klęska w Bitwie",
-                message: message,
-                outcome: outcome,
-                rewards: rewards
+                title: attackerWin ? "Zwycięstwo!" : "Porażka!",
+                message: `Walka zakończona. Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}. Straty: ${totalAttackerLost} jednostek. Zrabowano: M:${loot.metal} C:${loot.crystal}`,
+                outcome: attackerWin ? 'success' : 'failure'
             },
-            rewards: rewards,
-            survivingShips: survivingShips as Record<ShipId, number>
+            attackerWon: attackerWin
         };
     };
 
-    // ... [Existing calculation code for production/costs/etc remains same] ...
+    // Subscribe to DB changes
+    useEffect(() => {
+        if (!session?.user) return;
+        fetchMissions();
+
+        const channel = supabase
+            .channel('missions-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => {
+                fetchMissions();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [session]);
+
+    // Mission Processing Watcher
+    useEffect(() => {
+        if (!loaded || !session?.user) return;
+
+        const checkMissions = async () => {
+            const now = Date.now();
+            const missions = gameState.activeMissions;
+
+            // Check Arrivals (Only OWNER processes arrival logic to avoid double processing)
+            const arriving = missions.filter(m => m.status === 'flying' && now >= m.arrivalTime && m.ownerId === session.user.id && !m.eventProcessed);
+
+            for (const m of arriving) {
+                // Mark processed locally to prevent race in loop
+                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.map(am => am.id === m.id ? { ...am, eventProcessed: true } : am) }));
+                await processMissionArrival(m);
+            }
+
+            // Check Returns
+            const returning = missions.filter(m => m.status === 'returning' && now >= m.returnTime && m.ownerId === session.user.id);
+            for (const m of returning) {
+                // Mark processed
+                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.filter(am => am.id !== m.id) })); // Optimistic remove
+                await processMissionReturn(m);
+            }
+        };
+
+        const interval = setInterval(checkMissions, 1000);
+        return () => clearInterval(interval);
+    }, [gameState.activeMissions, loaded, session]);
     // Re-implementing helper functions for context clarity
     const getCost = (type: 'building' | 'research', id: string, currentLevel: number) => {
         const def = type === 'building' ? BUILDINGS[id as BuildingId] : RESEARCH[id as ResearchId];
@@ -393,8 +520,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const calculateProduction = (state: GameState) => {
-        // ... (Same production logic as before, omitting for brevity to fit in response, assume valid copy from previous file)
-        // NOTE: Copy the calculateProduction body from the previous GameContext here.
         const settings = state.productionSettings;
         const getPct = (id: BuildingId) => (settings[id] !== undefined ? settings[id]! : 100) / 100;
         const metalLvl = state.buildings[BuildingId.METAL_MINE];
@@ -438,6 +563,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     const generateExpeditionResult = (mission: FleetMission): { log: MissionLog, rewards: MissionRewards } => {
         // ... (Same logic as previous, omitting for brevity)
+        // Replaces generateExpeditionResult logic completely in next steps
+        // Placeholder to keep TS happy until full replace
         const hasPioneer = (mission.ships[ShipId.PIONEER] || 0) > 0;
         let fleetCapacity = 0;
         Object.entries(mission.ships).forEach(([id, count]) => { fleetCapacity += (SHIPS[id as ShipId].capacity * count); });
@@ -479,20 +606,24 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return 'success';
     };
 
-    const sendExpedition = (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
+    const sendExpedition = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
         const duration = 5 * 60 * 1000 / GAME_SPEED;
         const now = Date.now();
+        const missionId = crypto.randomUUID();
 
+        // Optimistic update
         const mission: FleetMission = {
-            id: Date.now().toString(),
+            id: missionId,
             ownerId: session?.user.id,
             type: MissionType.EXPEDITION,
             ships: ships,
             targetCoords: coords,
+            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             startTime: now,
             arrivalTime: now + (duration / 2),
             returnTime: now + duration,
-            eventProcessed: false
+            eventProcessed: false,
+            status: 'flying'
         };
 
         setGameState(prev => {
@@ -500,32 +631,65 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
             return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
         });
+
+        // DB Insert
+        await supabase.from('missions').insert({
+            id: missionId,
+            owner_id: session.user.id,
+            mission_type: MissionType.EXPEDITION,
+            ships: ships,
+            target_coords: coords,
+            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            start_time: now,
+            arrival_time: now + (duration / 2),
+            return_time: now + duration,
+            status: 'flying'
+        });
     };
 
-    const sendAttack = (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        // Attack takes twice as long as expedition
+    const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
         const duration = 10 * 60 * 1000 / GAME_SPEED;
         const now = Date.now();
+        const missionId = crypto.randomUUID();
 
+        // Find if target is a player
+        const targetUserId = await findTargetUser(coords);
+
+        // Optimistic
         const mission: FleetMission = {
-            id: Date.now().toString(),
+            id: missionId,
             ownerId: session?.user.id,
             type: MissionType.ATTACK,
             ships: ships,
             targetCoords: coords,
+            targetUserId: targetUserId,
+            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             startTime: now,
             arrivalTime: now + (duration / 2),
             returnTime: now + duration,
-            eventProcessed: false
+            eventProcessed: false,
+            status: 'flying'
         };
-
-        // In a real backend implementation, we would insert this into the 'missions' table
-        // supabase.from('missions').insert({...})
 
         setGameState(prev => {
             const newShips = { ...prev.ships };
             Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
             return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
+        });
+
+        // DB Insert
+        await supabase.from('missions').insert({
+            id: missionId,
+            owner_id: session.user.id,
+            target_user_id: targetUserId,
+            mission_type: MissionType.ATTACK,
+            ships: ships,
+            target_coords: coords,
+            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            start_time: now,
+            arrival_time: now + (duration / 2),
+            return_time: now + duration,
+            status: 'flying'
         });
     };
 
@@ -679,18 +843,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     if (completed) newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
                 }
 
-                const processedMissionState = handleMissions({ ...prev, activeMissions: prev.activeMissions, missionLogs: prev.missionLogs, ships: newShips, resources: newResources } as GameState, now);
+                // Missions are now handled asynchronously in a separate useEffect
+                // const processedMissionState = handleMissions({ ...prev, activeMissions: prev.activeMissions, missionLogs: prev.missionLogs, ships: newShips, resources: newResources } as GameState, now);
 
                 return {
                     ...prev,
-                    resources: processedMissionState.resources,
+                    resources: {
+                        ...newResources, // Updated resources
+                        storage: production.storage
+                    },
                     buildings: newBuildings,
                     research: newResearch,
-                    ships: processedMissionState.ships,
+                    ships: newShips,
                     constructionQueue: newQueue,
                     shipyardQueue: newShipQueue,
-                    activeMissions: processedMissionState.activeMissions,
-                    missionLogs: processedMissionState.missionLogs,
+                    activeMissions: prev.activeMissions, // Managed by sync
+                    missionLogs: prev.missionLogs,
                     productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
                     lastTick: now
                 };

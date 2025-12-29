@@ -128,15 +128,19 @@ export interface MissionRewards {
 export interface FleetMission {
   id: string;
   ownerId?: string; // Who sent it
-  targetId?: string; // Who is being attacked
+  targetUserId?: string | null; // Who is being attacked
   type: MissionType;
   ships: Record<ShipId, number>;
   targetCoords: { galaxy: number; system: number; position: number };
+  originCoords?: { galaxy: number; system: number; position: number };
   startTime: number;
   arrivalTime: number; // Time when it reaches target (Event happens here)
   returnTime: number; // Time when it returns home (Resources added here)
   eventProcessed: boolean; // Has the expedition event happened yet?
+  status?: 'flying' | 'processing' | 'returning' | 'completed';
   pendingRewards?: MissionRewards; // Rewards carrying back home
+  resources?: MissionRewards; // Resources carried
+  result?: any; // Battle logs etc
 }
 
 export interface MissionLog {
