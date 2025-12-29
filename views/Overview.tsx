@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS } from '../constants';
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType } = useGame();
+    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeConstruction = constructionQueue[0];
     const activeShipBuild = shipyardQueue[0];
@@ -101,7 +101,7 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                 </div>
                                 <div className="flex items-center gap-2 text-[#929bc9] text-sm bg-black/40 px-2 py-1 rounded backdrop-blur-sm w-fit mt-2">
                                     <span className="material-symbols-outlined text-sm">my_location</span>
-                                    [1:1:1]
+                                    [{galaxyCoords?.galaxy || 1}:{galaxyCoords?.system || 1}:{galaxyCoords?.position || 1}]
                                 </div>
                             </div>
                         </div>
