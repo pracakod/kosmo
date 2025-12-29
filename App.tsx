@@ -69,7 +69,7 @@ const App: React.FC = () => {
 
     return (
         <GameProvider session={session}>
-            <Layout currentView={currentView} onViewChange={setCurrentView}>
+            <Layout activeView={currentView} onNavigate={setCurrentView}>
                 {renderView()}
             </Layout>
         </GameProvider>
