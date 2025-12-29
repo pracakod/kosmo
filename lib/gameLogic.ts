@@ -61,12 +61,12 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
     // Determine Event Type
     const eventRoll = Math.random();
 
-    // 40% Resources
-    // 25% Ships
-    // 15% Dark Matter
-    // 20% Anomalies (Flavor neutral or small bonus)
+    // 50% Resources
+    // 30% Ships
+    // 18% Artifacts (Common flavor)
+    // 2% Dark Matter (Very Rare)
 
-    if (eventRoll < 0.40) {
+    if (eventRoll < 0.50) {
         // RESOURCES
         const metal = Math.floor(Math.random() * Math.min(50000, fleetCapacity * 0.6)) + 2000;
         const crystal = Math.floor(Math.random() * Math.min(30000, fleetCapacity * 0.4)) + 1000;
@@ -93,7 +93,7 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
             rewards
         };
 
-    } else if (eventRoll < 0.65) {
+    } else if (eventRoll < 0.80) {
         // SHIPS (Derelicts)
         // Can find small ships usually.
         const possibleShips = [ShipId.LIGHT_FIGHTER, ShipId.HEAVY_FIGHTER, ShipId.SMALL_CARGO, ShipId.ESPIONAGE_PROBE];
@@ -113,21 +113,8 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
             rewards: { ships: { [foundShip]: amount } }
         };
 
-    } else if (eventRoll < 0.80) {
-        // DARK MATTER
-        const dm = Math.floor(Math.random() * 50) + 10;
-        return {
-            log: {
-                ...logBase,
-                title: "Czarna Materia",
-                message: `Eksperymentalne skanery chwyciły ślad rzadkiej anomalii. Skondensowano ${dm} jednostek Czarnej Materii!`,
-                outcome: 'success'
-            },
-            rewards: { darkMatter: dm }
-        };
-
-    } else {
-        // Flavor / Artifacts (Small generic resource bonus for now)
+    } else if (eventRoll < 0.98) {
+        // Flavor / Artifacts (Common bonus)
         const metal = Math.floor(Math.random() * 5000) + 500;
         return {
             log: {
@@ -138,6 +125,19 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
                 rewards: { metal }
             },
             rewards: { metal }
+        };
+
+    } else {
+        // DARK MATTER (Very Rare)
+        const dm = Math.floor(Math.random() * 50) + 10;
+        return {
+            log: {
+                ...logBase,
+                title: "Czarna Materia",
+                message: `Eksperymentalne skanery chwyciły ślad rzadkiej anomalii. Skondensowano ${dm} jednostek Czarnej Materii!`,
+                outcome: 'success'
+            },
+            rewards: { darkMatter: dm }
         };
     }
 };
