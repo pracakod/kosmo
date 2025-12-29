@@ -145,13 +145,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const { data, error } = await supabase
             .from('missions')
             .select('*')
-            .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
+            .or(`owner_id.eq.${session.user.id},target_id.eq.${session.user.id}`);
 
         if (data && !error) {
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
                 id: m.id,
                 ownerId: m.owner_id,
-                targetUserId: m.target_user_id,
+                targetUserId: m.target_id,
                 type: m.mission_type as MissionType,
                 ships: m.ships,
                 targetCoords: m.target_coords,
@@ -248,8 +248,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 shipyard_queue: current.shipyardQueue,
                 production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl, planetType: current.planetType },
                 active_missions: current.activeMissions,
-                mission_logs: current.missionLogs,
-                galaxy_coords: current.galaxyCoords,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
                 points: calculatePoints(current.resources, current.buildings, current.ships),
