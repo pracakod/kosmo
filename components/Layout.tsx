@@ -35,8 +35,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
         { id: 'galaxy', label: 'Galaktyka', icon: 'public' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
         { id: 'alliance', label: 'Sojusz', icon: 'groups' },
-        { id: 'shop', label: 'Sklep Premium', icon: 'shopping_cart' }, // Added
-        { id: 'settings', label: 'Opcje', icon: 'settings' }, // Added
+        { id: 'alliance', label: 'Sojusz', icon: 'groups' },
+        { id: 'shop', label: 'Sklep Premium', icon: 'shopping_cart' },
+        { id: 'ranking', label: 'Ranking', icon: 'leaderboard' }, // Added
+        { id: 'settings', label: 'Opcje', icon: 'settings' },
     ];
 
     const handleMobileNavigate = (view: string) => {
@@ -89,8 +91,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                                 key={item.id}
                                 onClick={() => handleMobileNavigate(item.id)}
                                 className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${activeView === item.id
-                                        ? 'bg-primary/20 border-primary text-white'
-                                        : 'bg-[#1c2136] border-white/5 text-[#929bc9] hover:bg-white/5'
+                                    ? 'bg-primary/20 border-primary text-white'
+                                    : 'bg-[#1c2136] border-white/5 text-[#929bc9] hover:bg-white/5'
                                     }`}
                             >
                                 <span className={`material-symbols-outlined text-3xl mb-2 ${item.id === 'shop' ? 'text-yellow-500' : ''}`}>{item.icon}</span>

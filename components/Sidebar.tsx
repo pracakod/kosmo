@@ -31,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         { id: 'shop', label: 'Sklep', icon: 'shopping_cart' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
         { id: 'alliance', label: 'Sojusz', icon: 'groups' },
+        { id: 'ranking', label: 'Ranking', icon: 'leaderboard' },
         { id: 'settings', label: 'Opcje', icon: 'settings' },
     ];
 

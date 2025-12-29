@@ -109,6 +109,13 @@ const initialState: GameState = {
     lastTick: Date.now(),
 };
 
+const calculatePoints = (resources: any, buildings: any, ships: any) => {
+    const resPoints = Math.floor(((resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0)) / 1000);
+    const buildPoints = Object.values(buildings || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 100, 0);
+    const shipPoints = Object.values(ships || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 50, 0);
+    return Math.floor(resPoints + buildPoints + shipPoints);
+};
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ children, session }) => {
@@ -243,6 +250,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
+                mission_logs: current.missionLogs,
+                galaxy_coords: current.galaxyCoords,
+                points: calculatePoints(current.resources, current.buildings, current.ships),
                 last_updated: Date.now()
             });
         };

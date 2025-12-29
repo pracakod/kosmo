@@ -12,9 +12,9 @@ import Galaxy from './views/Galaxy';
 import Research from './views/Research';
 import Fleet from './views/Fleet';
 import Shop from './views/Shop';
-import Settings from './views/Settings';
+import Ranking from './views/Ranking';
 
-export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'settings';
+export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<any>(null);
@@ -110,6 +110,7 @@ const App: React.FC = () => {
             case 'fleet': return <Fleet />;
             case 'galaxy': return <Galaxy />;
             case 'shop': return <Shop />;
+            case 'ranking': return <Ranking />;
             case 'settings': return <Settings />;
             default: return <Overview onNavigate={setCurrentView} />;
         }
