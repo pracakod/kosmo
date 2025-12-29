@@ -87,7 +87,7 @@ const Settings: React.FC = () => {
                     Gra łączy głęboką strategię ekonomiczną z dynamiczną symulacją walki w czasie rzeczywistym, oferując immersyjne doświadczenie w nowoczesnym wydaniu.
                 </p>
                 <div className="text-xs text-[#555a7a] font-mono">
-                    Wersja: v1.2.0 (PvP & Commander Update)
+                    Wersja: v1.2.5 (Ranking & Security)
                 </div>
             </div>
 
