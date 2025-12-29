@@ -27,7 +27,9 @@ interface GameContextType extends GameState {
     clearLogs: () => void;
     logout: () => void;
     deleteAccount: () => Promise<void>;
+    deleteAccount: () => Promise<void>;
     updateAvatar: (url: string) => void;
+    getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
 }
 
 const initialState: GameState = {
@@ -862,6 +864,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
 
+    const getPlayersInSystem = async (galaxy: number, system: number) => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, planet_name, galaxy_coords, points, production_settings')
+            .contains('galaxy_coords', { galaxy, system });
+
+        if (error) {
+            console.error("Error fetching system users:", error);
+            return [];
+        }
+        return data || [];
+    };
+
     // Main Loop
     useEffect(() => {
         if (!loaded) return;
@@ -942,7 +957,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         clearLogs,
         logout,
         deleteAccount,
-        updateAvatar
+        updateAvatar,
+        getPlayersInSystem
     };
 
     return (
