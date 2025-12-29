@@ -16,13 +16,15 @@ interface SpyReport {
 const Galaxy: React.FC = () => {
     // Start at Galaxy 1, System 1 to see player immediately
     const [coords, setCoords] = useState({ galaxy: 1, system: 1 });
-    const { planetName, ships, sendSpyProbe, sendAttack, galaxyCoords, planetType, getPlayersInSystem, userId } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, galaxyCoords, planetType, getPlayersInSystem, userId } = useGame();
 
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
     const [spyModal, setSpyModal] = useState<{ pos: number, name: string } | null>(null);
     const [attackModal, setAttackModal] = useState<{ pos: number, name: string } | null>(null);
+    const [transportModal, setTransportModal] = useState<{ pos: number, name: string } | null>(null);
     const [selectedShips, setSelectedShips] = useState<Record<string, number>>({});
+    const [selectedResources, setSelectedResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [probeCount, setProbeCount] = useState(1);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -274,7 +276,14 @@ const Galaxy: React.FC = () => {
                                             className="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Atakuj">
                                             <span className="material-symbols-outlined text-lg">swords</span>
                                         </button>
-                                        <button className="w-8 h-8 rounded bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Transportuj">
+                                        <button
+                                            onClick={() => {
+                                                setTransportModal({ pos, name: planet.name });
+                                                setSelectedShips({});
+                                                setSelectedResources({ metal: 0, crystal: 0, deuterium: 0 });
+                                                setStatusMessage(null);
+                                            }}
+                                            className="w-8 h-8 rounded bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Transportuj">
                                             <span className="material-symbols-outlined text-lg">local_shipping</span>
                                         </button>
                                     </div>
@@ -434,6 +443,109 @@ const Galaxy: React.FC = () => {
                                         className="w-full py-4 mt-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-red-900/20 transition-all active:scale-95"
                                     >
                                         Wyślij Atak
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            )
+            }
+
+            {/* Transport Modal */}
+            {
+                transportModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#1c2136] w-full max-w-lg rounded-xl border border-blue-500/50 shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+                            <button onClick={() => setTransportModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+
+                            <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                                <span className="material-symbols-outlined text-blue-500 text-3xl">local_shipping</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">Transportuj Surowce</h3>
+                                    <p className="text-xs text-[#929bc9]">Cel: {transportModal.name} [{coords.galaxy}:{coords.system}:{transportModal.pos}]</p>
+                                </div>
+                            </div>
+
+                            {statusMessage ? (
+                                <div className="text-center py-8">
+                                    <p className={`text-xl font-bold ${statusMessage.includes('Wysyłanie') ? 'text-green-400' : 'text-blue-400'}`}>{statusMessage}</p>
+                                    {statusMessage.includes('Wysyłanie') && (
+                                        <p className="text-sm text-[#929bc9] mt-2">Dostawa dotrze za 5 minut.</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-6">
+                                    {/* Ships Selection */}
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white mb-2">Wybierz Statki</h4>
+                                        <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2 bg-[#111422] p-2 rounded-lg border border-white/5">
+                                            {Object.entries(ships).map(([id, count]) => {
+                                                if (count <= 0 || id === 'solarSatellite' || id === 'crawlers' || id === 'espionageProbe') return null;
+                                                const current = selectedShips[id] || 0;
+                                                return (
+                                                    <div key={id} className="flex items-center justify-between p-2 rounded hover:bg-white/5">
+                                                        <span className="text-xs text-[#929bc9] font-bold capitalize">{id.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-[#555a7a] mr-1">Max: {count}</span>
+                                                            <input
+                                                                type="number"
+                                                                max={count}
+                                                                min={0}
+                                                                value={current}
+                                                                onChange={(e) => {
+                                                                    const val = Math.min(count, Math.max(0, parseInt(e.target.value) || 0));
+                                                                    setSelectedShips(prev => ({ ...prev, [id]: val }));
+                                                                }}
+                                                                className="w-16 bg-black/20 border border-white/10 rounded px-1 py-1 text-right text-xs text-white focus:outline-none focus:border-blue-500"
+                                                            />
+                                                            <button onClick={() => setSelectedShips(prev => ({ ...prev, [id]: count }))} className="text-[10px] text-blue-400 hover:text-white px-1 font-bold">ALL</button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                            {Object.values(ships).every(c => !c) && <p className="text-center text-white/20 italic text-xs">Brak dostępnych transporterów.</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Resources Selection */}
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white mb-2">Załaduj Surowce</h4>
+                                        <div className="flex flex-col gap-2">
+                                            {['metal', 'crystal', 'deuterium'].map(res => (
+                                                <div key={res} className="flex items-center gap-3">
+                                                    <div className="w-20 text-xs uppercase font-bold text-[#929bc9]">{res === 'metal' ? 'Metal' : (res === 'crystal' ? 'Kryształ' : 'Deuter')}</div>
+                                                    <input
+                                                        type="number"
+                                                        value={selectedResources[res as keyof typeof selectedResources] || 0}
+                                                        onChange={(e) => setSelectedResources(prev => ({ ...prev, [res]: parseInt(e.target.value) || 0 }))}
+                                                        className="flex-1 bg-[#111422] border border-white/10 rounded px-3 py-2 text-white font-mono text-sm focus:border-blue-500 outline-none"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            const hasShips = Object.values(selectedShips).some(v => v > 0);
+                                            if (!hasShips) {
+                                                setStatusMessage("Wybierz statki transportowe!");
+                                                return;
+                                            }
+                                            // TODO: Check cargo capacity vs resources
+                                            sendTransport(selectedShips as Record<ShipId, number>, selectedResources, { galaxy: coords.galaxy, system: coords.system, position: transportModal.pos });
+                                            setStatusMessage("Wysyłanie floty transportowej...");
+                                            setTimeout(() => setTransportModal(null), 2000);
+                                        }}
+                                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+                                    >
+                                        Wyślij Transport
                                     </button>
                                 </div>
                             )}

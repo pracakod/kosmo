@@ -17,6 +17,7 @@ interface GameContextType extends GameState {
     buildShip: (shipId: ShipId, amount: number) => void;
     sendExpedition: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
     sendAttack: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
+    sendTransport: (ships: Record<ShipId, number>, resources: { metal: number, crystal: number, deuterium: number }, coords: { galaxy: number, system: number, position: number }) => void;
     cancelMission: (missionId: string) => Promise<void>;
     sendSpyProbe: (amount: number, coords: { galaxy: number, system: number, position: number }) => Promise<boolean>;
     buyPremium: (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }) => TransactionStatus;
@@ -393,6 +394,32 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             } else {
                 // PvE Spy?
                 result = { outcome: 'success', title: 'Raport', message: 'Opuszczona planeta. Brak oznak życia.' };
+            }
+        } else if (mission.type === MissionType.TRANSPORT) {
+            if (mission.targetUserId) {
+                // Transfer to another player
+                const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+                if (targetProfile) {
+                    const newRes = {
+                        metal: (targetProfile.resources?.metal || 0) + (mission.resources?.metal || 0),
+                        crystal: (targetProfile.resources?.crystal || 0) + (mission.resources?.crystal || 0),
+                        deuterium: (targetProfile.resources?.deuterium || 0) + (mission.resources?.deuterium || 0),
+                    };
+
+                    // Log for receiver
+                    const newTargetLogs = [
+                        { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz dostarczył: M:${mission.resources?.metal} C:${mission.resources?.crystal} D:${mission.resources?.deuterium}`, outcome: 'success' },
+                        ...(targetProfile.mission_logs || [])
+                    ].slice(0, 50);
+
+                    await supabase.from('profiles').update({ resources: newRes, mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
+                    result = { outcome: 'success', title: 'Transport', message: 'Surowce dostarczone.' };
+                }
+            } else {
+                // Transport to empty space / colonization attempt / or simply drop off?
+                // For now, if no user, it just returns with resources (failed transport)
+                result = { outcome: 'neutral', title: 'Transport', message: 'Nie znaleziono kolonii docelowej. Flota zawraca.' };
+                loot = mission.resources || {}; // Bring back resources
             }
         }
 
