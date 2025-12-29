@@ -849,6 +849,88 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return true;
     };
 
+    const sendTransport = async (ships: Record<ShipId, number>, resources: MissionRewards, coords: { galaxy: number, system: number, position: number }) => {
+        const duration = 5 * 60 * 1000; // 5 minutes fixed
+        const now = Date.now();
+        const missionId = crypto.randomUUID();
+        const targetUserId = await findTargetUser(coords);
+
+        // Optimistic update
+        const mission: FleetMission = {
+            id: missionId,
+            ownerId: session?.user.id,
+            type: MissionType.TRANSPORT,
+            ships: ships,
+            resources: resources,
+            targetCoords: coords,
+            targetUserId: targetUserId,
+            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            startTime: now,
+            arrivalTime: now + (duration / 2),
+            returnTime: now + duration,
+            eventProcessed: false,
+            status: 'flying'
+        };
+
+        setGameState(prev => {
+            const newShips = { ...prev.ships };
+            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] = (newShips[id as ShipId] || 0) - count; });
+            return {
+                ...prev,
+                ships: newShips,
+                resources: {
+                    ...prev.resources,
+                    metal: prev.resources.metal - (resources.metal || 0),
+                    crystal: prev.resources.crystal - (resources.crystal || 0),
+                    deuterium: prev.resources.deuterium - (resources.deuterium || 0)
+                },
+                activeMissions: [...prev.activeMissions, mission]
+            };
+        });
+
+        // DB Insert
+        await supabase.from('missions').insert({
+            id: missionId,
+            owner_id: session.user.id,
+            target_user_id: targetUserId,
+            mission_type: MissionType.TRANSPORT,
+            ships: ships,
+            resources: resources,
+            target_coords: coords,
+            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+            start_time: now,
+            arrival_time: now + (duration / 2),
+            return_time: now + duration,
+            status: 'flying'
+        });
+    };
+
+    const cancelMission = async (missionId: string) => {
+        const mission = gameState.activeMissions.find(m => m.id === missionId);
+        if (!mission || mission.status !== 'flying') return;
+
+        const now = Date.now();
+        const timeTraveled = now - mission.startTime;
+        const newReturnTime = now + timeTraveled;
+
+        // Optimistic update
+        setGameState(prev => ({
+            ...prev,
+            activeMissions: prev.activeMissions.map(m =>
+                m.id === missionId
+                    ? { ...m, status: 'returning', returnTime: newReturnTime, arrivalTime: now }
+                    : m
+            )
+        }));
+
+        // DB Update
+        await supabase.from('missions').update({
+            status: 'returning',
+            return_time: newReturnTime,
+            arrival_time: now
+        }).eq('id', missionId);
+    };
+
     // Upgrades
     const upgradeBuilding = (buildingId: BuildingId) => {
         const currentLevel = gameState.buildings[buildingId];
