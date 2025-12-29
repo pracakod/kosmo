@@ -687,7 +687,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const sendExpedition = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        const duration = 5 * 60 * 1000 / GAME_SPEED;
+        const duration = 5 * 60 * 1000; // 5 minutes fixed
+
         const now = Date.now();
         const missionId = crypto.randomUUID();
 
@@ -728,7 +729,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        const duration = 10 * 60 * 1000 / GAME_SPEED;
+        const duration = 5 * 60 * 1000; // 5 minutes fixed
+
         const now = Date.now();
         const missionId = crypto.randomUUID();
 
@@ -777,7 +779,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if ((gameState.ships[ShipId.ESPIONAGE_PROBE] || 0) < amount) return false;
 
         const now = Date.now();
-        const duration = 2 * 60 * 1000 / GAME_SPEED; // Probes are fast
+        const duration = 30 * 1000; // 30 seconds for spy probe
+
         const missionId = crypto.randomUUID();
         const targetUserId = await findTargetUser(coords);
 
