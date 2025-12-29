@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS } from '../constants';
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions } = useGame();
+    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, cancelMission } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeConstruction = constructionQueue[0];
     const activeShipBuild = shipyardQueue[0];
@@ -214,6 +214,56 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                 <div className="mt-4 flex justify-end">
                     <button onClick={() => onNavigate('shipyard')} className="text-primary text-sm font-bold hover:text-white transition-colors">Do Stoczni &rarr;</button>
                 </div>
+            </div>
+
+            {/* Active Missions List */}
+            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined">radar</span>
+                    Aktywne Misje
+                </h3>
+                {activeMissions.length === 0 ? (
+                    <p className="text-[#929bc9] text-sm text-center py-4">Brak aktywnych misji.</p>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                        {activeMissions.map((mission) => {
+                            const isReturn = mission.status === 'returning';
+                            const dest = mission.targetCoords;
+                            const missionName = mission.type === 'attack' ? 'Atak' : (mission.type === 'spy' ? 'Szpiegowanie' : (mission.type === 'expedition' ? 'Ekspedycja' : 'Misja'));
+
+                            return (
+                                <div key={mission.id} className="bg-[#111422] p-4 rounded-lg border border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isReturn ? 'bg-blue-500/20 text-blue-400' : (mission.type === 'attack' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400')}`}>
+                                            <span className="material-symbols-outlined">{isReturn ? 'keyboard_return' : (mission.type === 'attack' ? 'swords' : 'visibility')}</span>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-white">{isReturn ? `Powrót z ${missionName}` : missionName}</div>
+                                            <div className="text-xs text-[#929bc9]">Cel: [{dest.galaxy}:{dest.system}:{dest.position}]</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right">
+                                            <div className="text-xs text-[#929bc9]">Czas do celu</div>
+                                            <div className="font-mono text-white font-bold">
+                                                {formatTime(Math.max(0, ((isReturn ? mission.returnTime : mission.arrivalTime) - Date.now()) / 1000))}
+                                            </div>
+                                        </div>
+                                        {mission.status === 'flying' && (
+                                            <button
+                                                onClick={() => cancelMission(mission.id)}
+                                                className="px-3 py-1 bg-red-900/40 hover:bg-red-900/60 text-red-400 border border-red-500/30 rounded text-sm transition-colors uppercase font-bold tracking-wider"
+                                            >
+                                                Odwołaj
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );

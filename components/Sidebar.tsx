@@ -48,6 +48,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     </div>
                 </div>
             </div>
+        </div>
+
+            {/* Attack Alert */ }
+    {
+        game.incomingMissions && game.incomingMissions.length > 0 && (
+            <div className="mx-4 mt-4 p-3 bg-red-900/50 border border-red-500 rounded-lg animate-pulse flex items-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                <span className="material-symbols-outlined text-red-500 animate-bounce">warning</span>
+                <div>
+                    <div className="text-red-400 text-xs font-bold uppercase tracking-wider">Uwaga!</div>
+                    <div className="text-white text-xs font-medium">Nadciąga Wróg!</div>
+                </div>
+            </div>
+        )
+    }
 
             <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
                 {navItems.map((item) => {
@@ -78,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                 </div>
                 <div className="text-[#555a7a] text-xs font-mono">v1.2.5 (Ranking & Security)</div>
             </div>
-        </aside>
+        </aside >
     );
 };
 
