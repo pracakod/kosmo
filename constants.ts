@@ -56,9 +56,9 @@ export const IMAGES = {
   destroyer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8", // Heavy dark ship
   deathStar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc", // Planet-like
   smallCargo: "https://lh3.googleusercontent.com/aida-public/AB6AXuDRSU7R7iNG5erlv5BC4D3tevSXb0oHxJBNQhnfOmlJLcH2XYG3Z7KlFDuWM1814zQAKi3dEFatilogq6SxoaGVsGsHQosk3QnETGAa0cwDXIO9bjWHURnJbj27LQ7dS5ZzG7ez6APcjQ2MfPujA0P3prhUxW25qFIkBs9_-XDm0G8lgzSf2Bg3g7A8fLt2DMsGj1AeeKuLD8_QW19c634ft78Xeil2MkjidH3CL-CGpkcy2nCNrED8WlZyvkHNjoO1LgdBWsb3jf4",
-  mediumCargo: "/ships/medium_cargo.png",
-  hugeCargo: "/ships/huge_cargo.png",
-  colonyShip: "/ships/colony_ship.png",
+  mediumCargo: "/kosmo/ships/medium_cargo.png",
+  hugeCargo: "/kosmo/ships/huge_cargo.png",
+  colonyShip: "/kosmo/ships/colony_ship.png",
   espionageProbe: "https://lh3.googleusercontent.com/aida-public/AB6AXuAuzcKCcqW_Uwb_MHjDE4UnIS9iufqeQRG-ox9HOxWuvVuHaPFUOrPzlXsVC7PfwZ7MI1K-xoYXSIRYGuCSJskYUnvKDvMxqvSe3Gia4Hb2MB3OLyt_tMwvU9qvxgjTrPmM6wQypgXYMFoiUUJMXWeDDfXxHDYHBm1mxGIFog5PovvrH7Zb2U4gFbh_HAslZUcihLWiSiQi2WAG8mGqDZzKh4eaLLLitm105RayEmmJXCGVObylA3o_oKyx4bVz44Os-zM8jsZ59ng",
   pioneer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tcscmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc" // Research ship look
 };
