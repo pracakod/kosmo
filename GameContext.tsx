@@ -29,7 +29,7 @@ interface GameContextType extends GameState {
 }
 
 const initialState: GameState = {
-    avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU",
+    avatarUrl: "/kosmo/avatars/avatar_default.png",
     planetName: "Nowa Kolonia",
     resources: {
         metal: 500,

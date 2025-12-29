@@ -58,7 +58,7 @@ const Settings: React.FC = () => {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { name: "Domyślny", url: "https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU" },
+                        { name: "Pomocnik", url: "/kosmo/avatars/avatar_default.png" },
                         { name: "Major (M)", url: "/kosmo/avatars/avatar_major.png" },
                         { name: "Major (K)", url: "/kosmo/avatars/avatar_female.png" },
                         { name: "Cyborg", url: "/kosmo/avatars/avatar_cyber.png" }
