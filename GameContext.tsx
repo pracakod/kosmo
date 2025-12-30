@@ -206,6 +206,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ children, session }) => {
     const [gameState, setGameState] = useState<GameState>({ ...initialState, userId: session?.user.id });
     const [loaded, setLoaded] = useState(false);
+    const [isSyncPaused, setIsSyncPaused] = useState(false); // Circuit breaker for Auth errors
     const gameStateRef = useRef(gameState);
 
     // Keep ref synchronized
@@ -215,7 +216,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Debug version
     useEffect(() => {
-        console.log('🚀 GameContext v2.0 LOADED - New Query Logic Active');
+        console.log('🚀 GameContext v2.1 (Hotfix) LOADED - Auto-Save Circuit Breaker Active');
     }, []);
 
     const findTargetUser = async (coords: { galaxy: number, system: number, position: number }) => {
@@ -242,7 +243,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Replace fetching activeMissions from profile with fetching from 'missions' table
     const fetchMissions = async () => {
-        if (!session?.user) return;
+        if (!session?.user || isSyncPaused) return;
 
         // Fetch missions where I am owner OR target
         const { data, error } = await supabase
@@ -251,8 +252,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
 
         if (data && !error) {
-            console.log('📡 FETCH MISSIONS - Total fetched:', data.length, 'for user:', session.user.id);
-            console.log('📡 Raw missions data:', data);
+            // ... (rest of mapping logic same as before, simplified for brevity in this tool call context, but I must preserve it)
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
                 id: m.id,
                 ownerId: m.owner_id,
@@ -264,8 +264,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 startTime: m.start_time,
                 arrivalTime: m.arrival_time,
                 returnTime: m.return_time,
-                eventProcessed: m.status !== 'flying', // simplified mechanism
-                status: m.status, // 'flying', 'returning', 'completed'
+                eventProcessed: m.status !== 'flying',
+                status: m.status,
                 resources: m.resources,
                 result: m.result
             }));
@@ -282,6 +282,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }));
         } else if (error) {
             console.error('Error fetching missions:', error);
+            if (error.code === '401' || error.code === '403' || error.message.includes('JWT')) {
+                console.error("🛑 CRITICAL: Pausing Sync due to Auth Error. Please run SQL RLS script.");
+                setIsSyncPaused(true);
+            }
         }
     };
 
@@ -318,6 +322,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 lastTick: Date.now()
             }));
         } else {
+            if (error && (error.code === '401' || error.code === '403')) {
+                console.error("🛑 PROFILE LOAD FLOP: RLS Policy Missing");
+                setIsSyncPaused(true);
+            }
             // Fallback to localstorage only if user IDs match (security)
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
@@ -325,10 +333,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     const parsed = JSON.parse(saved);
                     // SECURITY CHECK: Only load if saved state belongs to this user
                     if (parsed.userId && parsed.userId === session.user.id) {
-                        // The instruction snippet for `data.active_missions` etc. here is incorrect as `data` is from Supabase, not local storage.
-                        // Assuming the intent was to load these from `parsed` if they exist, or to ensure they are not overwritten by old local storage.
-                        // For now, I'll apply the nickname part as per instruction, assuming other fields are handled by the spread operator.
-                        if (parsed.production_settings?.nickname) parsed.nickname = parsed.production_settings.nickname; // Assuming production_settings might be in local storage
+                        if (parsed.production_settings?.nickname) parsed.nickname = parsed.production_settings.nickname;
 
                         setGameState(prev => ({
                             ...prev,
@@ -337,10 +342,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             lastTick: Date.now()
                         }));
                     } else {
-                        // Data belongs to another user or is legacy (unsafe to import automatically)
                         console.warn("Cleared mismatching local storage data");
                         localStorage.removeItem(STORAGE_KEY);
-                        // Ensure we rely on initial state
                         setGameState(prev => ({ ...initialState, userId: session.user.id }));
                     }
                 } catch (e) {
@@ -359,16 +362,17 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Auto-save loop (Interval instead of debounce to prevent starvation by ticks)
     useEffect(() => {
-        if (!loaded || !session?.user) return;
+        if (!loaded || !session?.user || isSyncPaused) return;
 
         const save = async () => {
+            if (isSyncPaused) return;
             const current = gameStateRef.current;
 
             // Save to LocalStorage
             localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
 
             // Save to Supabase
-            await supabase.from('profiles').upsert({
+            const { error } = await supabase.from('profiles').upsert({
                 id: session.user.id,
                 planet_name: current.planetName,
                 // nickname removed from root level, stored in production_settings
@@ -385,6 +389,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 points: calculatePoints(current.resources, current.buildings, current.ships),
                 last_updated: Date.now()
             });
+
+            if (error) {
+                if (error.code === '401' || error.code === '403' || error.message.includes('JWT')) {
+                    console.error("🛑 AUTO-SAVE DISABLED: 401 Unauthorized. Stopping loop.");
+                    setIsSyncPaused(true);
+                } else {
+                    console.error("Save error:", error.message);
+                }
+            }
         };
 
         const interval = setInterval(save, 5000); // Save every 5 seconds
