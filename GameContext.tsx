@@ -1443,59 +1443,73 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }).eq('id', session.user.id);
 
         if (error) {
-            console.error("Building upgrade failed:", error);
-            refreshProfile(); // Revert
+            console.error("Upgrade failed", error);
+            refreshProfile();
         }
     };
 
     const cancelConstruction = async (constructionId: string) => {
-        setGameState(current => {
-            const itemIndex = current.constructionQueue.findIndex(i => i.id === constructionId);
-            if (itemIndex === -1) return current;
+        // Use current state from closure (fresh enough) to calculate
+        const itemIndex = gameState.constructionQueue.findIndex(i => i.id === constructionId);
+        if (itemIndex === -1) return;
 
-            const item = current.constructionQueue[itemIndex];
-            const cost = getCost(item.type, item.itemId, item.targetLevel - 1); // Cost of level we are building
+        const item = gameState.constructionQueue[itemIndex];
 
-            // Refund (100% since it's canceled)
-            const newResources = {
-                ...current.resources,
-                metal: current.resources.metal + cost.metal,
-                crystal: current.resources.crystal + cost.crystal,
-                deuterium: current.resources.deuterium + cost.deuterium
+        // Safety checks
+        if (item.type !== 'building' && item.type !== 'research') {
+            console.error("Cannot cancel item of type:", item.type);
+            return;
+        }
+
+        const costLevel = (item.targetLevel || 1) - 1;
+        const cost = getCost(item.type, item.itemId as any, costLevel);
+
+        // Refund resources safely
+        const refundMetal = Math.floor(cost.metal || 0);
+        const refundCrystal = Math.floor(cost.crystal || 0);
+        const refundDeuterium = Math.floor(cost.deuterium || 0);
+
+        const newResources = {
+            ...gameState.resources,
+            metal: (gameState.resources.metal || 0) + refundMetal,
+            crystal: (gameState.resources.crystal || 0) + refundCrystal,
+            deuterium: (gameState.resources.deuterium || 0) + refundDeuterium
+        };
+
+        const newQueue = [...gameState.constructionQueue];
+        newQueue.splice(itemIndex, 1);
+
+        // Recalculate times for subsequent items
+        for (let i = itemIndex; i < newQueue.length; i++) {
+            const prevItem = i > 0 ? newQueue[i - 1] : null;
+            const startTime = prevItem ? prevItem.endTime : Date.now();
+            const duration = newQueue[i].endTime - newQueue[i].startTime;
+            newQueue[i] = {
+                ...newQueue[i],
+                startTime: startTime,
+                endTime: startTime + duration
             };
+        }
 
-            const newQueue = [...current.constructionQueue];
-            newQueue.splice(itemIndex, 1);
+        // Apply State Locally
+        setGameState(current => ({
+            ...current,
+            resources: newResources,
+            constructionQueue: newQueue
+        }));
 
-            // Recalculate times for subsequent items
-            // If we removed the first item (active), the next one starts NOW.
-            // If we removed a middle item, the next one starts when the previous one ends.
-
-            for (let i = itemIndex; i < newQueue.length; i++) {
-                const prevItem = i > 0 ? newQueue[i - 1] : null;
-                const startTime = prevItem ? prevItem.endTime : Date.now();
-                const duration = newQueue[i].endTime - newQueue[i].startTime; // Persist original duration
-                newQueue[i] = {
-                    ...newQueue[i],
-                    startTime: startTime,
-                    endTime: startTime + duration
-                };
-            }
-
-            // Sync with Supabase
-            supabase.from('profiles').update({
+        // Sync with Supabase
+        try {
+            const { error } = await supabase.from('profiles').update({
                 resources: newResources,
                 construction_queue: newQueue
-            }).eq('id', session.user.id).then(({ error }) => {
-                if (error) console.error("Cancel construction failed:", error);
-            });
+            }).eq('id', session.user.id);
 
-            return {
-                ...current,
-                resources: newResources,
-                constructionQueue: newQueue
-            };
-        });
+            if (error) throw error;
+        } catch (error) {
+            console.error("Cancel constr sync failed:", error);
+            refreshProfile(); // Revert on failure
+        }
     };
 
     const upgradeResearch = async (researchId: ResearchId) => {
@@ -1504,6 +1518,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
         // Check if research is already in progress
         if (gameState.constructionQueue.some(q => q.type === 'research')) return;
+
+        const researchDef = RESEARCH[researchId];
+        if (researchDef.maxLevel && currentLevel >= researchDef.maxLevel) return; // Cap
 
         const labLevel = gameState.buildings[BuildingId.RESEARCH_LAB];
         if (labLevel === 0) return;

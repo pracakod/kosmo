@@ -95,6 +95,7 @@ export interface ResearchDef {
   image: string;
   buildTimeBase: number; // in seconds
   requirements?: Requirement[];
+  maxLevel?: number;
 }
 
 export interface ShipDef {

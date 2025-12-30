@@ -172,7 +172,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 0, crystal: 800, deuterium: 400 },
     image: IMAGES.techEnergy,
     buildTimeBase: 40,
-    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 1 }]
+    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 1 }],
+    maxLevel: 20
   },
   [ResearchId.LASER_TECH]: {
     id: ResearchId.LASER_TECH,
@@ -181,7 +182,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 200, crystal: 100, deuterium: 0 },
     image: IMAGES.techLaser,
     buildTimeBase: 20,
-    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 1 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 2 }]
+    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 1 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 2 }],
+    maxLevel: 20
   },
   [ResearchId.ION_TECH]: {
     id: ResearchId.ION_TECH,
@@ -190,7 +192,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 1000, crystal: 300, deuterium: 100 },
     image: IMAGES.techIon,
     buildTimeBase: 60,
-    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 4 }, { type: 'research', id: ResearchId.LASER_TECH, level: 5 }]
+    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 4 }, { type: 'research', id: ResearchId.LASER_TECH, level: 5 }],
+    maxLevel: 20
   },
   [ResearchId.HYPERSPACE_TECH]: {
     id: ResearchId.HYPERSPACE_TECH,
@@ -199,7 +202,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 0, crystal: 4000, deuterium: 2000 },
     image: IMAGES.techHyper,
     buildTimeBase: 120,
-    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 7 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 5 }]
+    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 7 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 5 }],
+    maxLevel: 20
   },
   [ResearchId.COMBUSTION_DRIVE]: {
     id: ResearchId.COMBUSTION_DRIVE,
@@ -208,7 +212,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 400, crystal: 0, deuterium: 600 },
     image: IMAGES.techCombustion,
     buildTimeBase: 30,
-    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 1 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 1 }]
+    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 1 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 1 }],
+    maxLevel: 20
   },
   [ResearchId.IMPULSE_DRIVE]: {
     id: ResearchId.IMPULSE_DRIVE,
@@ -217,7 +222,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 2000, crystal: 4000, deuterium: 600 },
     image: IMAGES.techImpulse,
     buildTimeBase: 80,
-    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 2 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 1 }]
+    requirements: [{ type: 'building', id: BuildingId.RESEARCH_LAB, level: 2 }, { type: 'research', id: ResearchId.ENERGY_TECH, level: 1 }],
+    maxLevel: 20
   },
   [ResearchId.HYPERSPACE_DRIVE]: {
     id: ResearchId.HYPERSPACE_DRIVE,
@@ -226,15 +232,16 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     baseCost: { metal: 10000, crystal: 20000, deuterium: 6000 },
     image: IMAGES.techHyperDrive,
     buildTimeBase: 200,
-    requirements: [{ type: 'research', id: ResearchId.HYPERSPACE_TECH, level: 3 }]
+    requirements: [{ type: 'research', id: ResearchId.HYPERSPACE_TECH, level: 3 }],
+    maxLevel: 20
   },
-  [ResearchId.PLASMA_TECH]: { id: ResearchId.PLASMA_TECH, name: "Technologia Plazmowa", description: "", baseCost: { metal: 2000, crystal: 4000, deuterium: 1000 }, image: IMAGES.techPlasma, buildTimeBase: 100 },
-  [ResearchId.ESPIONAGE_TECH]: { id: ResearchId.ESPIONAGE_TECH, name: "Technologia Szpiegowska", description: "", baseCost: { metal: 200, crystal: 1000, deuterium: 200 }, image: IMAGES.techEspionage, buildTimeBase: 40 },
-  [ResearchId.COMPUTER_TECH]: { id: ResearchId.COMPUTER_TECH, name: "Technologia Komputerowa", description: "", baseCost: { metal: 0, crystal: 400, deuterium: 600 }, image: IMAGES.techComputer, buildTimeBase: 50 },
-  [ResearchId.ASTROPHYSICS]: { id: ResearchId.ASTROPHYSICS, name: "Astrofizyka", description: "", baseCost: { metal: 4000, crystal: 8000, deuterium: 4000 }, image: IMAGES.techAstro, buildTimeBase: 100 },
-  [ResearchId.WEAPON_TECH]: { id: ResearchId.WEAPON_TECH, name: "Technologia Bojowa", description: "", baseCost: { metal: 800, crystal: 200, deuterium: 0 }, image: IMAGES.techWeapon, buildTimeBase: 60 },
-  [ResearchId.SHIELDING_TECH]: { id: ResearchId.SHIELDING_TECH, name: "Technologia Ochronna", description: "", baseCost: { metal: 200, crystal: 600, deuterium: 0 }, image: IMAGES.techShield, buildTimeBase: 60 },
-  [ResearchId.ARMOUR_TECH]: { id: ResearchId.ARMOUR_TECH, name: "Opancerzenie", description: "", baseCost: { metal: 1000, crystal: 0, deuterium: 0 }, image: IMAGES.techArmour, buildTimeBase: 60 },
+  [ResearchId.PLASMA_TECH]: { id: ResearchId.PLASMA_TECH, name: "Technologia Plazmowa", description: "", baseCost: { metal: 2000, crystal: 4000, deuterium: 1000 }, image: IMAGES.techPlasma, buildTimeBase: 100, maxLevel: 20 },
+  [ResearchId.ESPIONAGE_TECH]: { id: ResearchId.ESPIONAGE_TECH, name: "Technologia Szpiegowska", description: "", baseCost: { metal: 200, crystal: 1000, deuterium: 200 }, image: IMAGES.techEspionage, buildTimeBase: 40, maxLevel: 20 },
+  [ResearchId.COMPUTER_TECH]: { id: ResearchId.COMPUTER_TECH, name: "Technologia Komputerowa", description: "", baseCost: { metal: 0, crystal: 400, deuterium: 600 }, image: IMAGES.techComputer, buildTimeBase: 50, maxLevel: 25 },
+  [ResearchId.ASTROPHYSICS]: { id: ResearchId.ASTROPHYSICS, name: "Astrofizyka", description: "", baseCost: { metal: 4000, crystal: 8000, deuterium: 4000 }, image: IMAGES.techAstro, buildTimeBase: 100, maxLevel: 30 },
+  [ResearchId.WEAPON_TECH]: { id: ResearchId.WEAPON_TECH, name: "Technologia Bojowa", description: "", baseCost: { metal: 800, crystal: 200, deuterium: 0 }, image: IMAGES.techWeapon, buildTimeBase: 60, maxLevel: 50 },
+  [ResearchId.SHIELDING_TECH]: { id: ResearchId.SHIELDING_TECH, name: "Technologia Ochronna", description: "", baseCost: { metal: 200, crystal: 600, deuterium: 0 }, image: IMAGES.techShield, buildTimeBase: 60, maxLevel: 50 },
+  [ResearchId.ARMOUR_TECH]: { id: ResearchId.ARMOUR_TECH, name: "Opancerzenie", description: "", baseCost: { metal: 1000, crystal: 0, deuterium: 0 }, image: IMAGES.techArmour, buildTimeBase: 60, maxLevel: 50 },
 };
 
 export const SHIPS: Record<ShipId, ShipDef> = {
