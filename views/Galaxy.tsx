@@ -63,11 +63,9 @@ const Galaxy: React.FC = () => {
             const pType = otherPlayer.production_settings?.planetType === 'ice' ? "Lodowa" : (otherPlayer.production_settings?.planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
             const avatar = otherPlayer.production_settings?.avatarUrl || "/kosmo/avatars/avatar_default.png";
 
-            // Calculate level from buildings
-            const buildings = otherPlayer.buildings || {};
-            const buildingLevels = Object.values(buildings) as number[];
-            const totalLevels = buildingLevels.reduce((sum, level) => sum + (Number(level) || 0), 0);
-            const playerLevel = Math.max(1, Math.floor(totalLevels / 3)); // Rough level estimate
+            // Standardize level calculation
+            const points = otherPlayer.points || 0;
+            const playerLevel = Math.floor(points / 100) + 1;
 
             return {
                 name: otherPlayer.planet_name || "Nieznana Kolonia",
