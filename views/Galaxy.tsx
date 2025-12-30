@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useGame } from '../GameContext';
-import { IMAGES, SHIPS } from '../constants';
+import { IMAGES, SHIPS, PLANET_IMAGES } from '../constants';
 import { ShipId } from '../types';
 
 interface SpyReport {
@@ -57,7 +57,7 @@ const Galaxy: React.FC = () => {
                 name: planetName,
                 player: "Ty",
                 rank: myLevel,
-                img: IMAGES.planet,
+                img: PLANET_IMAGES[planetType] || IMAGES.planet,
                 type: pType,
                 isPlayer: true,
                 activity: ""
@@ -77,8 +77,8 @@ const Galaxy: React.FC = () => {
             return {
                 name: otherPlayer.planet_name || "Nieznana Kolonia",
                 player: otherPlayer.production_settings?.nickname || "Gracz",
-                rank: playerLevel, // Now shows player level instead of dummy rank
-                img: IMAGES.planet, // Use generic planet or specific if user saved it
+                rank: playerLevel,
+                img: PLANET_IMAGES[otherPlayer.production_settings?.planetType] || IMAGES.planet,
                 type: pType,
                 isPlayer: false,
                 isBot: false,
