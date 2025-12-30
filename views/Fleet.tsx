@@ -94,63 +94,112 @@ const Fleet: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                 {/* Left Col: Ship Selector */}
-                <div className="lg:col-span-7 flex flex-col gap-4">
-                    <div className="bg-[#1c2136] rounded-xl border border-white/10 p-4 md:p-6 shadow-lg">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-xl font-bold text-white">Wybierz Statki</h3>
-                            <button
-                                onClick={handleSelectAll}
-                                className="text-xs font-bold text-primary hover:text-white uppercase tracking-wider border border-primary/30 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors"
-                            >
-                                Wybierz wszystkie
-                            </button>
+                <div className="lg:col-span-7 space-y-6">
+                    {/* Fleet Stats Dashboard */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {(() => {
+                            let totalCount = 0;
+                            let firePower = 0;
+                            let defensePower = 0;
+                            let totalCap = 0;
+
+                            Object.entries(ships).forEach(([id, count]) => {
+                                const def = SHIPS[id as ShipId];
+                                if (count > 0 && def) {
+                                    totalCount += count;
+                                    firePower += count * def.attack;
+                                    defensePower += count * def.defense;
+                                    totalCap += count * def.capacity;
+                                }
+                            });
+
+                            return (
+                                <>
+                                    <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 shadow-lg">
+                                        <div className="text-[#929bc9] text-[10px] uppercase font-bold mb-1">Liczebność Floty</div>
+                                        <div className="text-white text-xl font-mono font-bold">{totalCount}</div>
+                                    </div>
+                                    <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 shadow-lg">
+                                        <div className="text-[#929bc9] text-[10px] uppercase font-bold mb-1">Siła Ognia</div>
+                                        <div className="text-red-400 text-xl font-mono font-bold">{firePower.toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 shadow-lg">
+                                        <div className="text-[#929bc9] text-[10px] uppercase font-bold mb-1">Wytrzymałość</div>
+                                        <div className="text-green-400 text-xl font-mono font-bold">{defensePower.toLocaleString()}</div>
+                                    </div>
+                                    <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 shadow-lg">
+                                        <div className="text-[#929bc9] text-[10px] uppercase font-bold mb-1">Ładowność (Całk.)</div>
+                                        <div className="text-blue-400 text-xl font-mono font-bold">{totalCap.toLocaleString()}</div>
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+
+                    <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary">rocket_launch</span>
+                                Dostępna Flota
+                            </h3>
+                            <button onClick={() => setSelectedShips({})} className="text-xs text-[#929bc9] hover:text-white underline">Zeruj wybór</button>
                         </div>
 
-                        <div className="space-y-3">
-                            {Object.values(SHIPS).map(ship => {
-                                const available = ships[ship.id] || 0;
-                                const count = getSelectedCount(ship.id);
-                                if (available === 0 && count === 0) return null;
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {Object.entries(ships).map(([id, count]) => {
+                                const shipDef = SHIPS[id as ShipId];
+                                if (count <= 0) return null;
+
+                                const isSelected = selectedShips[id as ShipId] > 0;
 
                                 return (
-                                    <div key={ship.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#111422] p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-cover bg-center rounded-md border border-white/10 flex-shrink-0" style={{ backgroundImage: `url(${ship.image})` }}></div>
-                                            <div>
-                                                <div className="text-white font-bold text-sm">{ship.name}</div>
-                                                <div className="text-[#929bc9] text-xs">Dostępne: <span className="text-white font-mono">{available}</span></div>
+                                    <div key={id} className={`p-4 rounded-xl border transition-all ${isSelected ? 'bg-primary/5 border-primary/30 shadow-lg shadow-primary/5' : 'bg-[#1c2136] border-white/5 hover:border-white/10'}`}>
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-12 rounded-lg bg-[#111422] flex items-center justify-center border border-white/10">
+                                                    <span className="material-symbols-outlined text-primary text-2xl">{shipDef.image || 'rocket'}</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-white font-bold">{shipDef.name}</h4>
+                                                    <div className="flex gap-2 text-[10px] mt-1">
+                                                        <span className="text-[#929bc9] bg-white/5 px-1.5 py-0.5 rounded">Dostępne: <span className="text-white font-mono">{count}</span></span>
+                                                        <span className="text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">Ład.: {(shipDef.capacity || 0).toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <div className="text-[10px] text-[#555a7a] uppercase font-bold">Wybierz</div>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={count}
+                                                    value={selectedShips[id as ShipId] || ''}
+                                                    onChange={(e) => handleSelectShip(id as ShipId, e.target.value)}
+                                                    className="w-20 bg-[#111422] border border-white/10 rounded px-2 py-1 text-right text-white font-mono text-sm focus:border-primary focus:outline-none"
+                                                    placeholder="0"
+                                                />
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-end gap-2">
-                                            {/* +/- Controls */}
-                                            <div className="flex items-center bg-[#0b0d17] rounded-lg border border-white/10 overflow-hidden">
-                                                <button
-                                                    onClick={() => updateShipCount(ship.id, -1)}
-                                                    className="w-10 h-10 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors border-r border-white/5"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">remove</span>
-                                                </button>
-                                                <input
-                                                    type="number"
-                                                    className="w-14 bg-transparent text-center text-white text-sm font-mono font-bold focus:outline-none appearance-none"
-                                                    value={count > 0 ? count : ''}
-                                                    placeholder="0"
-                                                    onChange={(e) => handleSelectShip(ship.id, e.target.value)}
-                                                />
-                                                <button
-                                                    onClick={() => updateShipCount(ship.id, 1)}
-                                                    className="w-10 h-10 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors border-l border-white/5"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">add</span>
-                                                </button>
-                                            </div>
-
+                                        {/* Quick Select Buttons */}
+                                        <div className="grid grid-cols-4 gap-2">
                                             <button
-                                                onClick={() => handleMax(ship.id)}
-                                                className="h-10 px-3 text-xs uppercase font-bold text-[#929bc9] hover:text-primary border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+                                                onClick={() => handleSelectShip(id as ShipId, "0")}
+                                                className="h-8 text-[10px] uppercase font-bold text-[#555a7a] hover:text-white border border-white/5 hover:bg-white/5 rounded transition-colors"
                                             >
-                                                Max
+                                                0
+                                            </button>
+                                            <button
+                                                onClick={() => handleSelectShip(id as ShipId, Math.max(0, Math.floor(count / 2)).toString())}
+                                                className="h-8 text-[10px] uppercase font-bold text-[#929bc9] hover:text-white border border-white/5 hover:bg-white/5 rounded transition-colors"
+                                            >
+                                                50%
+                                            </button>
+                                            <button
+                                                onClick={() => handleSelectShip(id as ShipId, count.toString())}
+                                                className="col-span-2 h-8 text-[10px] uppercase font-bold text-primary hover:text-white border border-primary/20 hover:bg-primary/20 rounded transition-colors"
+                                            >
+                                                MAX ({count})
                                             </button>
                                         </div>
                                     </div>
@@ -368,14 +417,30 @@ const ActiveMissionItem: React.FC<{ mission: FleetMission, onCancel: (id: string
             </div>
 
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/5 pt-3">
-                <div className="flex items-center gap-3">
-                    <div>
+                <div className="flex flex-col gap-1 w-full md:w-auto">
+                    <div className="flex items-center gap-3">
                         <div className="text-white font-bold text-sm">Cel: [1:{mission.targetCoords.system}:{mission.targetCoords.position}]</div>
-                        <div className="text-[#929bc9] text-xs">Flota: {Object.values(mission.ships).reduce((a: number, b: number) => a + b, 0)} jednostek</div>
+                        <div className="text-[#929bc9] text-xs">Flota: {Object.values(mission.ships).reduce((a: number, b: number) => a + Number(b), 0)} jedn.</div>
+                    </div>
+
+                    {/* Detailed Cargo/Ships View */}
+                    <div className="text-[10px] text-[#555a7a] flex flex-wrap gap-2 mt-1">
+                        {mission.type === 'transport' && mission.resources && (
+                            <div className="flex gap-2 bg-[#0b0d17] px-2 py-1 rounded border border-white/5">
+                                {mission.resources.metal > 0 && <span className="text-blue-400">M: {Math.floor(mission.resources.metal).toLocaleString()}</span>}
+                                {mission.resources.crystal > 0 && <span className="text-purple-400">C: {Math.floor(mission.resources.crystal).toLocaleString()}</span>}
+                                {mission.resources.deuterium > 0 && <span className="text-green-400">D: {Math.floor(mission.resources.deuterium).toLocaleString()}</span>}
+                            </div>
+                        )}
+                        <div className="flex gap-2 bg-[#0b0d17] px-2 py-1 rounded border border-white/5 overflow-x-auto max-w-[300px] scrollbar-hide">
+                            {Object.entries(mission.ships).map(([id, count]) => count > 0 && (
+                                <span key={id} className="text-white whitespace-nowrap">{SHIPS[id as ShipId]?.name}: {count}</span>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                <div className="text-right flex items-center gap-3">
+                <div className="text-right flex items-center gap-3 md:shrink-0">
                     <div>
                         <div className="text-white font-mono font-bold">{timeLeft}</div>
                         <div className={`text-xs animate-pulse ${status === 'outbound' ? (isAttack ? 'text-red-400' : 'text-primary') : 'text-green-400'}`}>

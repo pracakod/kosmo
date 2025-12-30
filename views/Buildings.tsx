@@ -51,9 +51,25 @@ const Buildings: React.FC = () => {
             return { text: `Energia: +${(next - current).toLocaleString()}`, type: 'energy' };
         }
         if (buildingId === BuildingId.FUSION_REACTOR) {
-             const current = Math.floor(30 * currentLevel * Math.pow(1.05, currentLevel));
-             const next = Math.floor(30 * (currentLevel + 1) * Math.pow(1.05, currentLevel + 1));
-             return { text: `Energia: +${(next - current).toLocaleString()}`, type: 'energy' };
+            const current = Math.floor(30 * currentLevel * Math.pow(1.05, currentLevel));
+            const next = Math.floor(30 * (currentLevel + 1) * Math.pow(1.05, currentLevel + 1));
+            return { text: `Energia: +${(next - current).toLocaleString()}`, type: 'energy' };
+        }
+        // Storage Previews
+        if (buildingId === BuildingId.METAL_STORAGE) {
+            const current = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel));
+            const next = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel + 1));
+            return { text: `Pojemność: ${(current / 1000).toFixed(0)}k -> ${(next / 1000).toFixed(0)}k`, type: 'capacity' };
+        }
+        if (buildingId === BuildingId.CRYSTAL_STORAGE) {
+            const current = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel));
+            const next = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel + 1));
+            return { text: `Pojemność: ${(current / 1000).toFixed(0)}k -> ${(next / 1000).toFixed(0)}k`, type: 'capacity' };
+        }
+        if (buildingId === BuildingId.DEUTERIUM_TANK) {
+            const current = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel));
+            const next = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel + 1));
+            return { text: `Pojemność: ${(current / 1000).toFixed(0)}k -> ${(next / 1000).toFixed(0)}k`, type: 'capacity' };
         }
         return null;
     }
@@ -68,7 +84,7 @@ const Buildings: React.FC = () => {
                     Infrastruktura
                 </h2>
                 <div className="flex gap-2">
-                     <span className="text-sm text-[#929bc9]">Kolejka: {constructionQueue.filter(x => x.type === 'building').length} / 2</span>
+                    <span className="text-sm text-[#929bc9]">Kolejka: {constructionQueue.filter(x => x.type === 'building').length} / 2</span>
                 </div>
             </div>
 
@@ -89,11 +105,11 @@ const Buildings: React.FC = () => {
                                     <span className="truncate">{BUILDINGS[bid].name}</span>
                                     <span className="font-bold text-white">{setting}%</span>
                                 </div>
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="100" 
-                                    step="10" 
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="10"
                                     value={setting}
                                     onChange={(e) => updateProductionSetting(bid, parseInt(e.target.value))}
                                     className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
@@ -104,7 +120,7 @@ const Buildings: React.FC = () => {
                 </div>
             </div>
 
-             {/* Storage Info */}
+            {/* Storage Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
                 <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
                     <span className="text-[#929bc9] text-xs uppercase font-bold">Magazyn Metalu</span>
@@ -112,15 +128,15 @@ const Buildings: React.FC = () => {
                         {Math.floor(resources.metal).toLocaleString()} / {(resources.storage.metal / 1000).toFixed(0)}k
                     </span>
                 </div>
-                 <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
+                <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
                     <span className="text-[#929bc9] text-xs uppercase font-bold">Magazyn Kryształu</span>
                     <span className={`text-sm font-mono ${resources.crystal >= resources.storage.crystal ? 'text-red-400 font-bold' : 'text-white'}`}>
                         {Math.floor(resources.crystal).toLocaleString()} / {(resources.storage.crystal / 1000).toFixed(0)}k
                     </span>
                 </div>
-                 <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
+                <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
                     <span className="text-[#929bc9] text-xs uppercase font-bold">Zbiornik Deuteru</span>
-                     <span className={`text-sm font-mono ${resources.deuterium >= resources.storage.deuterium ? 'text-red-400 font-bold' : 'text-white'}`}>
+                    <span className={`text-sm font-mono ${resources.deuterium >= resources.storage.deuterium ? 'text-red-400 font-bold' : 'text-white'}`}>
                         {Math.floor(resources.deuterium).toLocaleString()} / {(resources.storage.deuterium / 1000).toFixed(0)}k
                     </span>
                 </div>
@@ -130,19 +146,19 @@ const Buildings: React.FC = () => {
                 {buildingList.map((building) => {
                     const level = buildings[building.id];
                     const cost = getCost('building', building.id, level);
-                    const canAfford = 
-                        resources.metal >= cost.metal && 
-                        resources.crystal >= cost.crystal && 
+                    const canAfford =
+                        resources.metal >= cost.metal &&
+                        resources.crystal >= cost.crystal &&
                         resources.deuterium >= cost.deuterium;
-                    
+
                     const isThisBuilding = activeBuild?.itemId === building.id;
                     const isAnyBuilding = !!activeBuild;
                     const isUnlocked = checkRequirements(building.requirements);
-                    
+
                     const totalRes = cost.metal + cost.crystal;
                     const buildTimeMs = ((totalRes / 2500) * 3600 * 1000) / (robotLevel + 1) / GAME_SPEED;
                     const buildTimeSeconds = Math.max(1, Math.floor(buildTimeMs / 1000));
-                    
+
                     const prodInfo = getProductionInfo(building.id, level);
 
                     return (
@@ -161,11 +177,11 @@ const Buildings: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            
+
                             <div className="p-4 flex flex-col flex-1">
                                 <h4 className="text-lg font-bold text-white mb-1 group-hover:text-primary transition-colors">{building.name}</h4>
                                 <p className="text-xs text-[#929bc9] mb-4 line-clamp-2 min-h-[32px]">{building.description}</p>
-                                
+
                                 {prodInfo && (
                                     <div className={`mb-3 text-xs font-bold ${prodInfo.type === 'energy' ? 'text-yellow-400' : 'text-green-400'}`}>
                                         {prodInfo.text}
@@ -174,32 +190,32 @@ const Buildings: React.FC = () => {
 
                                 <div className="grid grid-cols-3 gap-2 text-xs mb-4">
                                     <div className={`flex items-center gap-1 ${resources.metal < cost.metal ? 'text-red-400' : 'text-[#929bc9]'}`}>
-                                        <span className="material-symbols-outlined text-[14px]">handyman</span> 
-                                        {cost.metal >= 1000 ? `${(cost.metal/1000).toFixed(1)}k` : cost.metal}
+                                        <span className="material-symbols-outlined text-[14px]">handyman</span>
+                                        {cost.metal >= 1000 ? `${(cost.metal / 1000).toFixed(1)}k` : cost.metal}
                                     </div>
                                     <div className={`flex items-center gap-1 ${resources.crystal < cost.crystal ? 'text-red-400' : 'text-[#929bc9]'}`}>
-                                        <span className="material-symbols-outlined text-[14px]">diamond</span> 
-                                        {cost.crystal >= 1000 ? `${(cost.crystal/1000).toFixed(1)}k` : cost.crystal}
+                                        <span className="material-symbols-outlined text-[14px]">diamond</span>
+                                        {cost.crystal >= 1000 ? `${(cost.crystal / 1000).toFixed(1)}k` : cost.crystal}
                                     </div>
                                     <div className={`flex items-center gap-1 ${resources.deuterium < cost.deuterium ? 'text-red-400' : 'text-[#929bc9]'}`}>
-                                        <span className="material-symbols-outlined text-[14px]">propane</span> 
-                                        {cost.deuterium >= 1000 ? `${(cost.deuterium/1000).toFixed(1)}k` : cost.deuterium}
+                                        <span className="material-symbols-outlined text-[14px]">propane</span>
+                                        {cost.deuterium >= 1000 ? `${(cost.deuterium / 1000).toFixed(1)}k` : cost.deuterium}
                                     </div>
                                 </div>
 
                                 {isUnlocked ? (
                                     <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
                                         <span className="text-xs text-[#929bc9] flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-sm">schedule</span> 
+                                            <span className="material-symbols-outlined text-sm">schedule</span>
                                             {formatTime(buildTimeSeconds)}
                                         </span>
-                                        
-                                        <button 
+
+                                        <button
                                             onClick={() => upgradeBuilding(building.id)}
                                             disabled={!canAfford || isAnyBuilding}
                                             className={`px-4 py-2 rounded text-xs font-bold uppercase transition-all shadow-lg
-                                                ${!canAfford || isAnyBuilding 
-                                                    ? 'bg-[#232948] text-[#929bc9]/50 cursor-not-allowed' 
+                                                ${!canAfford || isAnyBuilding
+                                                    ? 'bg-[#232948] text-[#929bc9]/50 cursor-not-allowed'
                                                     : 'bg-primary hover:bg-blue-600 text-white hover:shadow-primary/30'
                                                 }
                                             `}
@@ -209,8 +225,8 @@ const Buildings: React.FC = () => {
                                     </div>
                                 ) : (
                                     <div className="mt-auto pt-3 border-t border-red-500/20">
-                                         <p className="text-red-400 text-xs font-bold mb-1">Wymagania:</p>
-                                         <div className="flex flex-col gap-1">
+                                        <p className="text-red-400 text-xs font-bold mb-1">Wymagania:</p>
+                                        <div className="flex flex-col gap-1">
                                             {building.requirements?.map((req, i) => {
                                                 const name = req.type === 'building' ? BUILDINGS[req.id as BuildingId].name : RESEARCH[req.id as ResearchId].name;
                                                 const current = req.type === 'building' ? buildings[req.id as BuildingId] : research[req.id as ResearchId];
@@ -220,7 +236,7 @@ const Buildings: React.FC = () => {
                                                     </div>
                                                 )
                                             })}
-                                         </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>

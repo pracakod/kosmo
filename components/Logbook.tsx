@@ -11,8 +11,8 @@ const Logbook: React.FC = () => {
     // Helpers
     const getLogType = (log: MissionLog): 'attack' | 'spy' | 'expedition' | 'transport' | 'other' => {
         const t = log.title?.toLowerCase() || '';
-        if (t.includes('bojowy') || t.includes('atak')) return 'attack';
         if (t.includes('szpieg') || t.includes('skan')) return 'spy';
+        if (t.includes('bojowy') || t.includes('atak')) return 'attack';
         if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez') || t.includes('statki') || t.includes('artefakt') || t.includes('materia')) return 'expedition';
         if (t.includes('transport') || t.includes('dostarcz') || t.includes('surow')) return 'transport';
         return 'other';
@@ -195,8 +195,8 @@ const DetailModal: React.FC<{ log: MissionLog, onClose: () => void }> = ({ log, 
             <div className="bg-[#1c2136] w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="sticky top-0 bg-[#1c2136] border-b border-white/10 p-4 flex justify-between items-center z-10">
                     <h3 className="text-white font-bold flex items-center gap-2">
-                        <span className={`material-symbols-outlined ${log.title?.includes("Szpieg") ? 'text-blue-400' : log.title?.includes("Transport") || log.title?.includes("Dostawa") ? 'text-green-400' : log.title?.includes("Bojowy") ? 'text-red-500' : 'text-purple-400'}`}>
-                            {log.title?.includes("Szpieg") ? 'visibility' : log.title?.includes("Transport") || log.title?.includes("Dostawa") ? 'local_shipping' : log.title?.includes("Bojowy") ? 'swords' : 'public'}
+                        <span className={`material-symbols-outlined ${log.title?.toLowerCase().includes("szpieg") ? 'text-blue-400' : (log.title?.toLowerCase().includes("transport") || log.title?.toLowerCase().includes("dostawa")) ? 'text-green-400' : (log.title?.toLowerCase().includes("bojowy") || log.title?.toLowerCase().includes("pirat")) ? 'text-red-500' : 'text-purple-400'}`}>
+                            {log.title?.toLowerCase().includes("szpieg") ? 'visibility' : (log.title?.toLowerCase().includes("transport") || log.title?.toLowerCase().includes("dostawa")) ? 'local_shipping' : (log.title?.toLowerCase().includes("bojowy") || log.title?.toLowerCase().includes("pirat")) ? 'swords' : 'public'}
                         </span>
                         {log.title}
                     </h3>
