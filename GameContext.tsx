@@ -1226,7 +1226,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const updatePlanetType = async (type: string) => {
-        setGameState(prev => ({ ...prev, planetType: type }));
+        setGameState(prev => ({ ...prev, planetType: type as "terran" | "desert" | "ice" }));
         const currentSettings = gameState.productionSettings || {};
         await supabase.from('profiles').update({ production_settings: { ...currentSettings, planetType: type } }).eq('id', session.user.id);
     };
