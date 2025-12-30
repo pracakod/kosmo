@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
 import { SHIPS, DEFENSES, formatTime } from '../constants';
 import { ShipId, MissionType, FleetMission, DefenseId } from '../types';
+import Logbook from '../components/Logbook';
 
 const Fleet: React.FC = () => {
     const { ships, sendExpedition, sendAttack, activeMissions, missionLogs, clearLogs, cancelMission } = useGame();
-    const [selectedReport, setSelectedReport] = useState<any>(null);
+    // const [selectedReport, setSelectedReport] = useState<any>(null); // Moved to Logbook
 
     // Selection State
     const [selectedShips, setSelectedShips] = useState<Record<string, number>>({});
@@ -278,184 +279,8 @@ const Fleet: React.FC = () => {
                 </div>
             )}
 
-            {/* Logs */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-white">Dziennik Pokładowy</h3>
-                    {missionLogs.length > 0 && <button onClick={clearLogs} className="text-xs text-red-400 hover:text-white">Wyczyść</button>}
-                </div>
-
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    {missionLogs.length === 0 && <p className="text-[#929bc9] text-sm">Brak wpisów w dzienniku.</p>}
-                    {missionLogs.map(log => (
-                        <div key={log.id} className={`p-4 rounded-lg border ${log.outcome === 'success' ? 'bg-green-500/10 border-green-500/20' :
-                            log.outcome === 'danger' ? 'bg-red-500/10 border-red-500/20' :
-                                'bg-[#111422] border-white/5'
-                            }`}>
-                            <div className="flex items-center justify-between mb-1">
-                                <span className={`font-bold text-sm ${log.outcome === 'success' ? 'text-green-400' :
-                                    log.outcome === 'danger' ? 'text-red-400' : 'text-blue-300'
-                                    }`}>{log.title}</span>
-                                <span className="text-[10px] text-[#929bc9]">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                            </div>
-                            <p className="text-sm text-[#cdd6f7]">{log.message}</p>
-
-                            {/* Render Report Button */}
-                            {log.report && (
-                                <button
-                                    onClick={() => setSelectedReport(log.report)}
-                                    className="mt-2 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                                >
-                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                    Zobacz Raport Bojowy
-                                </button>
-                            )}
-
-                            {/* Render Rewards in Log */}
-                            {log.rewards && (
-                                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                                    {log.rewards.metal ? (
-                                        <span className="bg-[#1c2136] px-2 py-1 rounded border border-white/10 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[10px] text-[#929bc9]">handyman</span>
-                                            <span className="text-white font-mono">{log.rewards.metal}</span>
-                                        </span>
-                                    ) : null}
-                                    {log.rewards.crystal ? (
-                                        <span className="bg-[#1c2136] px-2 py-1 rounded border border-white/10 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[10px] text-[#929bc9]">diamond</span>
-                                            <span className="text-white font-mono">{log.rewards.crystal}</span>
-                                        </span>
-                                    ) : null}
-                                    {log.rewards.deuterium ? (
-                                        <span className="bg-[#1c2136] px-2 py-1 rounded border border-white/10 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[10px] text-[#929bc9]">propane</span>
-                                            <span className="text-white font-mono">{log.rewards.deuterium}</span>
-                                        </span>
-                                    ) : null}
-                                    {log.rewards.darkMatter ? (
-                                        <span className="bg-purple-900/30 px-2 py-1 rounded border border-purple-500/40 flex items-center gap-1 shadow-lg shadow-purple-900/20">
-                                            <span className="material-symbols-outlined text-[10px] text-purple-400">all_inclusive</span>
-                                            <span className="text-purple-300 font-bold font-mono">+{log.rewards.darkMatter} DM</span>
-                                        </span>
-                                    ) : null}
-                                    {log.rewards.items && log.rewards.items.length > 0 ? (
-                                        <span className="bg-yellow-900/30 px-2 py-1 rounded border border-yellow-500/40 flex items-center gap-1 shadow-lg shadow-yellow-900/20">
-                                            <span className="material-symbols-outlined text-[10px] text-yellow-400">stars</span>
-                                            <span className="text-yellow-300 font-bold">{log.rewards.items.join(', ')}</span>
-                                        </span>
-                                    ) : null}
-                                    {log.rewards.ships && Object.keys(log.rewards.ships).length > 0 && (
-                                        <span className="bg-[#1c2136] px-2 py-1 rounded border border-white/10 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[10px] text-[#929bc9]">rocket</span>
-                                            <span className="text-white">
-                                                {Object.entries(log.rewards.ships).map(([id, count]) => `${count}x ${SHIPS[id as ShipId].name}`).join(', ')}
-                                            </span>
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Battle Report Modal */}
-            {selectedReport && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#1c2136] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
-                        <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-[#1c2136] z-10">
-                            <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                                <span className="material-symbols-outlined text-red-500">swords</span>
-                                Raport Bojowy
-                            </h3>
-                            <button onClick={() => setSelectedReport(null)} className="text-[#929bc9] hover:text-white transition-colors">
-                                <span className="material-symbols-outlined">close</span>
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            {/* Summary Stats */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-[#111422] p-4 rounded-xl border border-white/5 text-center">
-                                    <div className="text-[#929bc9] text-xs uppercase font-bold mb-1">Rundy</div>
-                                    <div className="text-xl text-white font-mono">{selectedReport.rounds}</div>
-                                </div>
-                                <div className="bg-[#111422] p-4 rounded-xl border border-white/5 text-center">
-                                    <div className="text-[#929bc9] text-xs uppercase font-bold mb-1">Zrabowane Surowce</div>
-                                    <div className="flex items-center justify-center gap-3 text-sm">
-                                        <span className="text-blue-300">M: {Math.floor(selectedReport.loot.metal)}</span>
-                                        <span className="text-purple-300">C: {Math.floor(selectedReport.loot.crystal)}</span>
-                                        <span className="text-green-300">D: {Math.floor(selectedReport.loot.deuterium)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Attacker Losses */}
-                            <div>
-                                <h4 className="text-red-400 font-bold mb-3 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                                    Straty Agresora
-                                </h4>
-                                {Object.keys(selectedReport.attackerLosses).length === 0 ? (
-                                    <p className="text-green-400 text-sm italic">Brak strat.</p>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {Object.entries(selectedReport.attackerLosses).map(([id, count]) => (
-                                            <div key={id} className="bg-[#111422] px-3 py-2 rounded border border-white/5 flex justify-between items-center">
-                                                <span className="text-[#cdd6f7] text-sm">{SHIPS[id as ShipId]?.name || id}</span>
-                                                <span className="text-red-400 font-mono font-bold">-{count as number}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Defender Losses */}
-                            <div>
-                                <h4 className="text-blue-400 font-bold mb-3 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-sm">shield</span>
-                                    Straty Obrońcy
-                                </h4>
-                                <div className="space-y-4">
-                                    {/* Ships */}
-                                    <div>
-                                        <div className="text-xs text-[#929bc9] uppercase font-bold mb-2">Flota</div>
-                                        {Object.keys(selectedReport.defenderLosses).length === 0 ? (
-                                            <p className="text-green-400 text-sm italic">Brak strat we flocie.</p>
-                                        ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {Object.entries(selectedReport.defenderLosses).map(([id, count]) => (
-                                                    <div key={id} className="bg-[#111422] px-3 py-2 rounded border border-white/5 flex justify-between items-center">
-                                                        <span className="text-[#cdd6f7] text-sm">{SHIPS[id as ShipId]?.name || id}</span>
-                                                        <span className="text-red-400 font-mono font-bold">-{count as number}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Defenses */}
-                                    <div>
-                                        <div className="text-xs text-[#929bc9] uppercase font-bold mb-2">Obrona</div>
-                                        {Object.keys(selectedReport.defenderDefensesLost || {}).length === 0 ? (
-                                            <p className="text-green-400 text-sm italic">Obrona nienaruszona.</p>
-                                        ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {Object.entries(selectedReport.defenderDefensesLost).map(([id, count]) => (
-                                                    <div key={id} className="bg-[#111422] px-3 py-2 rounded border border-white/5 flex justify-between items-center">
-                                                        <span className="text-[#cdd6f7] text-sm">{DEFENSES[id as DefenseId]?.name || id}</span>
-                                                        <span className="text-red-400 font-mono font-bold">-{count as number}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Logs / Logbook */}
+            <Logbook />
         </div>
     );
 };

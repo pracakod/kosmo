@@ -11,6 +11,7 @@ interface RankedPlayer {
     planet_name?: string;
     nickname?: string;
     galaxy_coords?: { galaxy: number; system: number; position: number };
+    last_updated?: number;
 }
 
 const Ranking: React.FC = () => {
@@ -22,11 +23,9 @@ const Ranking: React.FC = () => {
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('id, points, production_settings, planet_name, galaxy_coords, nickname')
+                    .select('id, points, production_settings, planet_name, galaxy_coords, nickname, last_updated')
                     .order('points', { ascending: false })
                     .limit(50);
-
-                console.log('Ranking data:', data, 'error:', error);
 
                 if (data && !error) {
                     // Map data to extract avatar and user info
@@ -36,7 +35,8 @@ const Ranking: React.FC = () => {
                         avatar_url: p.production_settings?.avatarUrl || IMAGES.avatar,
                         planet_name: p.planet_name || 'Nieznana Planeta',
                         nickname: p.nickname || p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`,
-                        galaxy_coords: p.galaxy_coords
+                        galaxy_coords: p.galaxy_coords,
+                        last_updated: p.last_updated
                     }));
                     setPlayers(mapped);
                 } else if (error) {
@@ -94,6 +94,10 @@ const Ranking: React.FC = () => {
                                 const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-[#929bc9]';
                                 const level = Math.floor(player.points / 1000) + 1;
 
+                                // Online status check (5 minutes threshold)
+                                const now = Date.now();
+                                const isOnline = player.last_updated && (now - player.last_updated) < 5 * 60 * 1000;
+
                                 return (
                                     <tr key={player.id} className="hover:bg-white/5 transition-colors group">
                                         <td className={`p-4 text-center font-bold ${rankColor} text-lg`}>
@@ -101,16 +105,23 @@ const Ranking: React.FC = () => {
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="size-10 rounded-full border border-white/10 overflow-hidden bg-[#111422]">
-                                                    <img
-                                                        src={player.avatar_url}
-                                                        alt="Avatar"
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => { e.currentTarget.src = '/kosmo/avatars/avatar_default.png'; }}
-                                                    />
+                                                <div className="relative">
+                                                    <div className="size-10 rounded-full border border-white/10 overflow-hidden bg-[#111422]">
+                                                        <img
+                                                            src={player.avatar_url}
+                                                            alt="Avatar"
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => { e.currentTarget.src = '/kosmo/avatars/avatar_default.png'; }}
+                                                        />
+                                                    </div>
+                                                    {/* Online Status Indicator */}
+                                                    <div
+                                                        className={`absolute bottom-0 right-0 size-3 rounded-full border-2 border-[#1c2136] ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-500'}`}
+                                                        title={isOnline ? "Online" : "Offline"}
+                                                    ></div>
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-white group-hover:text-primary transition-colors">
+                                                    <span className="font-bold text-white group-hover:text-primary transition-colors flex items-center gap-2">
                                                         {player.nickname}
                                                     </span>
                                                     <span className="text-xs text-[#929bc9] md:hidden">{player.planet_name}</span>

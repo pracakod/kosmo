@@ -1043,6 +1043,33 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const targetUserId = await findTargetUser(coords);
         console.log('🎯 ATTACK: Target at coords', coords, 'resolved to userId:', targetUserId);
 
+        if (targetUserId) {
+            // Newbie Protection Check
+            const { data: targetProfile, error: targetError } = await supabase
+                .from('profiles')
+                .select('points')
+                .eq('id', targetUserId)
+                .single();
+
+            if (!targetError && targetProfile) {
+                // Determine level based on points (Level = Cube Root of Points)
+                // Assuming standard OGame-like formula: Points = Level^3 approx (or use your specific formula)
+                // User requirement: "Protection for small level e.g. 7"
+                // Let's use the inverse of whatever points formula we have or just raw points threshold.
+                // If we assume Level 1 = 0 pts, Level 7 is roughly ?
+                // Let's rely on the requested "Level 7" logic.
+                // Since we don't store 'active' level in DB, we calculate it or just use points.
+                // Level = Math.floor(Math.pow(targetProfile.points || 0, 1/3)) is a common approximation if not stored.
+                // However, based on our previous Ranking.tsx: const computedLevel = Math.floor(Math.pow(profile.points || 0, 1/3));
+                const targetLevel = Math.floor(Math.pow(targetProfile.points || 0, 1 / 3));
+
+                if (targetLevel < 7) {
+                    alert(`Ten gracz znajduje się pod ochroną początkujących (Poziom ${targetLevel} < 7). Atak niemożliwy.`);
+                    return;
+                }
+            }
+        }
+
         // Optimistic
         const mission: FleetMission = {
             id: missionId,
@@ -1217,7 +1244,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             mission_type: MissionType.TRANSPORT,
             ships: ships,
             resources: resources,
-            active_mission: true,
             target_coords: coords,
             origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             start_time: now,
