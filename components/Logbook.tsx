@@ -268,7 +268,8 @@ const DetailModal: React.FC<{ log: MissionLog, onClose: () => void }> = ({ log, 
                     )}
                 </div>
             </div>
-            );
+        </div>
+    );
 };
 
-            export default Logbook;
+export default Logbook;
