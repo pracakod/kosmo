@@ -13,6 +13,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isAlertCollapsed, setIsAlertCollapsed] = useState(false); // Collapsible alert state
 
     const game = useGame();
     const logout = game?.logout || (() => window.location.reload());
@@ -62,20 +63,38 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
 
                 {/* Global Attack Alert - visible on ALL pages */}
                 {incomingMissions && incomingMissions.length > 0 && (
-                    <div className="mx-2 md:mx-6 lg:mx-8 mt-2 bg-red-900/80 border-2 border-red-500 rounded-xl p-4 flex items-center justify-between animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.5)]">
-                        <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined text-red-500 text-4xl animate-bounce">warning</span>
-                            <div>
-                                <h3 className="text-red-400 font-bold text-lg uppercase tracking-wider">⚠️ WYKRYTO ZAGROŻENIE!</h3>
-                                <p className="text-red-200 text-sm">
-                                    {incomingMissions.length} wroga flota nadciąga! Przygotuj obronę!
-                                </p>
+                    <div className={`mx-2 md:mx-6 lg:mx-8 mt-2 transition-all duration-300 ${isAlertCollapsed ? 'bg-red-900/40 border-red-900/50' : 'bg-red-900/80 border-red-500 animate-pulse'} border-2 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.2)]`}>
+                        <div
+                            className="p-2 px-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                            onClick={() => setIsAlertCollapsed(!isAlertCollapsed)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className={`material-symbols-outlined text-red-500 ${!isAlertCollapsed && 'animate-bounce'}`}>warning</span>
+                                <div>
+                                    <h3 className="text-red-400 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                                        ⚠️ WYKRYTO ZAGROŻENIE!
+                                        <span className="text-xs font-normal text-red-300 normal-case hidden sm:inline">
+                                            ({incomingMissions.length} {incomingMissions.length === 1 ? 'flota' : 'floty'})
+                                        </span>
+                                    </h3>
+                                    {!isAlertCollapsed && (
+                                        <p className="text-red-200 text-xs hidden sm:block">
+                                            Nadciąga wroga flota! Przygotuj obronę!
+                                        </p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-red-300 text-xs uppercase">Kontakt za:</div>
-                            <div className="text-red-400 font-bold text-xl font-mono">
-                                {formatTime(Math.max(0, (incomingMissions[0].arrivalTime - Date.now()) / 1000))}
+
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <div className="text-red-300 text-[10px] uppercase">Kontakt za:</div>
+                                    <div className="text-red-400 font-bold text-lg font-mono leading-none">
+                                        {formatTime(Math.max(0, (incomingMissions[0].arrivalTime - Date.now()) / 1000))}
+                                    </div>
+                                </div>
+                                <span className="material-symbols-outlined text-red-400 transition-transform duration-300" style={{ transform: isAlertCollapsed ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                    expand_less
+                                </span>
                             </div>
                         </div>
                     </div>
