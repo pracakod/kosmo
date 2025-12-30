@@ -172,18 +172,18 @@ const initialState: GameState = {
         [ResearchId.ARMOUR_TECH]: 0,
     },
     ships: {
-        [ShipId.LIGHT_FIGHTER]: 10,
+        [ShipId.LIGHT_FIGHTER]: 0,
         [ShipId.HEAVY_FIGHTER]: 0,
         [ShipId.CRUISER]: 0,
         [ShipId.BATTLESHIP]: 0,
         [ShipId.DESTROYER]: 0,
         [ShipId.DEATH_STAR]: 0,
-        [ShipId.SMALL_CARGO]: 10,
+        [ShipId.SMALL_CARGO]: 0,
         [ShipId.MEDIUM_CARGO]: 0,
         [ShipId.HUGE_CARGO]: 0,
         [ShipId.COLONY_SHIP]: 0,
-        [ShipId.ESPIONAGE_PROBE]: 5,
-        [ShipId.PIONEER]: 0,
+        [ShipId.ESPIONAGE_PROBE]: 0,
+        [ShipId.PIONEER]: 1,
     },
     constructionQueue: [],
     shipyardQueue: [],
@@ -1162,7 +1162,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }));
     };
 
-    const renamePlanet = (newName: string) => { setGameState(prev => ({ ...prev, planetName: newName })); };
+    const renamePlanet = async (newName: string) => {
+        setGameState(prev => ({ ...prev, planetName: newName }));
+        await supabase.from('profiles').update({ planet_name: newName }).eq('id', session.user.id);
+    };
     const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
     const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
     const clearLogs = () => { setGameState(prev => ({ ...prev, missionLogs: [] })); };
@@ -1186,7 +1189,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }
     };
 
-    const updateAvatar = (url: string) => { setGameState(prev => ({ ...prev, avatarUrl: url })); };
+    const updateAvatar = async (url: string) => {
+        setGameState(prev => ({ ...prev, avatarUrl: url }));
+        const currentSettings = gameState.productionSettings || {};
+        await supabase.from('profiles').update({ production_settings: { ...currentSettings, avatarUrl: url } }).eq('id', session.user.id);
+    };
 
     const getPlayersInSystem = async (galaxy: number, system: number) => {
         const { data, error } = await supabase
