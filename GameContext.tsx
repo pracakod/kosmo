@@ -156,6 +156,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
 
         if (data && !error) {
+            // console.log('All missions data:', data); // DEBUG
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
                 id: m.id,
                 ownerId: m.owner_id,
@@ -173,18 +174,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 result: m.result
             }));
 
-            // Filter out completed missions that are already returned? 
-            // Ideally we keep them for log but remove from active. 
-            // For now, let's just set activeMissions
-
             const myMissions = mappedMissions.filter(m => m.ownerId === session.user.id && m.status !== 'completed');
             const incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying');
+
+            if (incoming.length > 0) console.log('Incoming Attacks Detected:', incoming);
 
             setGameState(prev => ({
                 ...prev,
                 activeMissions: myMissions,
                 incomingMissions: incoming
             }));
+        } else if (error) {
+            console.error('Error fetching missions:', error);
         }
     };
 
