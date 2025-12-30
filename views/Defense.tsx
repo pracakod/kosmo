@@ -7,8 +7,17 @@ import { DefenseId } from '../types';
 const DEFENSE_LIST = Object.values(DEFENSES);
 
 const Defense: React.FC = () => {
-    const { resources, buildings, buildDefense } = useGame();
+    const { resources, buildings, buildDefense, defenses, shipyardQueue } = useGame();
     const shipyardLevel = buildings?.shipyard || 0;
+
+    const formatTime = (seconds: number) => {
+        if (seconds < 60) return `${seconds}s`;
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}m ${s}s`;
+    };
+
+    const defenseQueue = shipyardQueue.filter(item => item.type === 'defense');
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -23,72 +32,134 @@ const Defense: React.FC = () => {
                     <p className="text-[#929bc9]">Zbuduj Stocznię (poziom 1), aby odblokować systemy obronne.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {DEFENSE_LIST.map((def) => {
-                        const canAfford = resources.metal >= def.cost.metal && resources.crystal >= def.cost.crystal && resources.deuterium >= def.cost.deuterium;
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Main Defense Grid */}
+                    <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {DEFENSE_LIST.map((def) => {
+                            const canAfford = resources.metal >= def.cost.metal && resources.crystal >= def.cost.crystal && resources.deuterium >= def.cost.deuterium;
+                            const currentAmount = defenses[def.id as DefenseId] || 0;
+                            const buildTime = Math.floor((def.buildTime * 1000) / (shipyardLevel + 1) / 100 / 1000); // Correct formula from Context (GAME_SPEED assumed 100)
 
-                        return (
-                            <div key={def.id} className="bg-[#1c2136] rounded-xl border border-white/5 p-4 hover:border-primary/30 transition-all group">
-                                <div className="flex items-start gap-4">
-                                    <div className="size-14 rounded-xl bg-[#111422] flex items-center justify-center border border-white/10 group-hover:border-primary/50 transition-colors">
-                                        <span className="material-symbols-outlined text-primary text-2xl">{def.icon}</span>
+                            return (
+                                <div key={def.id} className="bg-[#1c2136] rounded-xl border border-white/5 p-4 hover:border-primary/30 transition-all group relative overflow-hidden">
+                                    {/* Amount Badge */}
+                                    <div className="absolute top-2 right-2 bg-[#111422]/80 backdrop-blur-sm border border-white/10 px-2 py-1 rounded text-xs text-white font-mono z-10">
+                                        Ilość: <span className="text-primary font-bold">{currentAmount}</span>
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-white font-bold mb-1">{def.name}</h3>
-                                        <p className="text-[#929bc9] text-xs mb-3 line-clamp-2">{def.desc}</p>
 
-                                        <div className="flex gap-3 text-xs mb-3">
-                                            <div className="flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-red-500 text-sm">swords</span>
-                                                <span className="text-white font-mono">{def.attack}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-blue-500 text-sm">shield</span>
-                                                <span className="text-white font-mono">{def.defense}</span>
-                                            </div>
+                                    <div className="flex items-start gap-4">
+                                        <div className="size-16 rounded-xl bg-[#111422] flex items-center justify-center border border-white/10 group-hover:border-primary/50 transition-colors shrink-0">
+                                            <span className="material-symbols-outlined text-primary text-3xl">{def.icon}</span>
                                         </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-white font-bold mb-1 truncate">{def.name}</h3>
+                                            <p className="text-[#929bc9] text-[10px] mb-2 leading-tight h-8 overflow-hidden">{def.desc}</p>
 
-                                        <div className="flex flex-wrap gap-2 text-[10px] mb-3">
-                                            <span className={`px-2 py-1 rounded ${resources.metal >= def.cost.metal ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                M: {def.cost.metal.toLocaleString()}
-                                            </span>
-                                            <span className={`px-2 py-1 rounded ${resources.crystal >= def.cost.crystal ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                C: {def.cost.crystal.toLocaleString()}
-                                            </span>
-                                            {def.cost.deuterium > 0 && (
-                                                <span className={`px-2 py-1 rounded ${resources.deuterium >= def.cost.deuterium ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                    D: {def.cost.deuterium.toLocaleString()}
+                                            <div className="flex gap-2 text-[10px] mb-2">
+                                                <div className="flex items-center gap-1 bg-red-500/10 px-1.5 py-0.5 rounded text-red-400">
+                                                    <span className="material-symbols-outlined text-[10px]">swords</span>
+                                                    <span>{def.attack}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1 bg-blue-500/10 px-1.5 py-0.5 rounded text-blue-400">
+                                                    <span className="material-symbols-outlined text-[10px]">shield</span>
+                                                    <span>{def.defense}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1 bg-gray-500/10 px-1.5 py-0.5 rounded text-gray-400">
+                                                    <span className="material-symbols-outlined text-[10px]">timer</span>
+                                                    <span>{formatTime(buildTime)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-1 text-[10px] mb-3">
+                                                <span className={`px-1.5 py-0.5 rounded ${resources.metal >= def.cost.metal ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                    M: {def.cost.metal.toLocaleString()}
                                                 </span>
-                                            )}
-                                        </div>
+                                                <span className={`px-1.5 py-0.5 rounded ${resources.crystal >= def.cost.crystal ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                    C: {def.cost.crystal.toLocaleString()}
+                                                </span>
+                                                {def.cost.deuterium > 0 && (
+                                                    <span className={`px-1.5 py-0.5 rounded ${resources.deuterium >= def.cost.deuterium ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                        D: {def.cost.deuterium.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                        <button
-                                            onClick={() => buildDefense(def.id as any, 1)}
-                                            disabled={!canAfford}
-                                            className={`w-full py-2 rounded-lg font-bold text-sm uppercase tracking-wider transition-all ${canAfford ? 'bg-primary hover:bg-blue-600 text-white' : 'bg-[#111422] text-[#555a7a] cursor-not-allowed'}`}
-                                        >
-                                            {canAfford ? 'Buduj' : 'Brak zasobów'}
-                                        </button>
+                                            <button
+                                                onClick={() => buildDefense(def.id as any, 1)}
+                                                disabled={!canAfford}
+                                                className={`w-full py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${canAfford ? 'bg-primary hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-[#111422] text-[#555a7a] cursor-not-allowed'}`}
+                                            >
+                                                {canAfford ? (
+                                                    <>
+                                                        <span className="material-symbols-outlined text-sm">build</span>
+                                                        Buduj
+                                                    </>
+                                                ) : 'Brak zasobów'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
+
+                    {/* Right Column: Queue & Info */}
+                    <div className="lg:col-span-1 space-y-4">
+                        {/* Queue Panel */}
+                        <div className="bg-[#1c2136] rounded-xl border border-white/5 p-4 flex flex-col h-fit">
+                            <h3 className="text-white font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-yellow-500 text-sm">pending_actions</span>
+                                Kolejka Budowy ({defenseQueue.length})
+                            </h3>
+
+                            {defenseQueue.length === 0 ? (
+                                <div className="text-[#555a7a] text-xs text-center py-4 italic">Brak zadań w kolejce.</div>
+                            ) : (
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                    {defenseQueue.map((item, idx) => {
+                                        const def = DEFENSES[item.itemId as keyof typeof DEFENSES];
+                                        return (
+                                            <div key={item.id} className="bg-[#111422] p-2 rounded border border-white/5 flex items-center gap-2 relative overflow-hidden">
+                                                {/* Progress Bar Background (Simple visual for first item) */}
+                                                {idx === 0 && (
+                                                    <div className="absolute bottom-0 left-0 h-0.5 bg-green-500 animate-pulse w-full"></div>
+                                                )}
+
+                                                <div className="size-8 rounded bg-[#1c2136] flex items-center justify-center text-primary">
+                                                    <span className="material-symbols-outlined text-sm">{def?.icon || 'help'}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-white text-xs font-bold truncate">{def?.name || item.itemId}</span>
+                                                        <span className="text-xs text-yellow-500">x{item.quantity}</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-[#555a7a]">
+                                                        {idx === 0 ? 'W trakcie...' : 'Oczekuje'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Info Panel */}
+                        <div className="bg-[#1c2136]/50 rounded-xl border border-white/5 p-4">
+                            <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-blue-400 text-sm">info</span>
+                                Info
+                            </h3>
+                            <ul className="text-[#929bc9] text-[11px] space-y-1.5 list-disc pl-3">
+                                <li><strong>Obrona</strong> jest kluczowa, by chronić surowce przed grabieżą.</li>
+                                <li>Zniszczone jednostki mają <strong>70% szans</strong> na naprawę.</li>
+                                <li>Czas budowy zależy od poziomu <strong>Stoczni</strong>.</li>
+                                <li>Obrona nie zużywa deuteru do utrzymania.</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             )}
-
-            <div className="mt-8 bg-[#1c2136]/50 rounded-xl border border-white/5 p-6">
-                <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-yellow-500">info</span>
-                    Informacje o Obronie
-                </h3>
-                <ul className="text-[#929bc9] text-sm space-y-2">
-                    <li>• Jednostki obronne są stacjonarne i bronią Twojej planety przed atakami.</li>
-                    <li>• Po zniszczeniu, jednostki mają 70% szans na naprawę po bitwie.</li>
-                    <li>• Tarcze absorbują obrażenia przed trafieniem innych jednostek.</li>
-                    <li>• Nie możesz wysyłać jednostek obronnych na misje.</li>
-                </ul>
-            </div>
         </div>
     );
 };
