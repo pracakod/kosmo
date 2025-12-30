@@ -16,7 +16,7 @@ interface SpyReport {
 const Galaxy: React.FC = () => {
     // Start at Galaxy 1, System 1 to see player immediately
     const [coords, setCoords] = useState({ galaxy: 1, system: 1 });
-    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, resources, galaxyCoords, planetType, getPlayersInSystem, userId } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, resources, galaxyCoords, planetType, getPlayersInSystem, userId, buildings } = useGame();
 
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
