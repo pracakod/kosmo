@@ -5,7 +5,7 @@ import { calculateExpeditionOutcome } from './lib/gameLogic';
 import { GameState, BuildingId, ResearchId, ShipId, DefenseId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
 import { BUILDINGS, RESEARCH, SHIPS, DEFENSES } from './constants';
 
-const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
+const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderDefenses: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
     let attackPower = 0;
     let defensePower = 0;
 
@@ -14,15 +14,26 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         if (ship) attackPower += (ship.attack * (count as number));
     });
 
-    // Defender Ships
+    // Defender Power (Ships + Defenses)
     let defenderDefense = 0;
     let defenderAttack = 0;
+
     if (defenderShips) {
         Object.entries(defenderShips).forEach(([id, count]) => {
             const ship = SHIPS[id as ShipId];
             if (ship) {
                 defenderDefense += (ship.defense * (count as number));
                 defenderAttack += (ship.attack * (count as number));
+            }
+        });
+    }
+
+    if (defenderDefenses) {
+        Object.entries(defenderDefenses).forEach(([id, count]) => {
+            const defense = DEFENSES[id as DefenseId];
+            if (defense) {
+                defenderDefense += (defense.defense * (count as number));
+                defenderAttack += (defense.attack * (count as number));
             }
         });
     }
@@ -58,6 +69,27 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         });
     }
 
+    const survivingDefenderDefenses: any = {};
+    if (defenderDefenses) {
+        Object.entries(defenderDefenses).forEach(([id, count]) => {
+            // Defenses have 70% repair chance if destroyed (classic 30% perm loss), but for simplicity applying simple loss ratio first
+            // Let's stick to simple loss ratio for now matching ships, as per implementation plan "Defenses will be lost in battle similar to ships"
+            // User feedback said "Po zniszczeniu, jednostki mają 70% szans na naprawę po bitwie" in Defense.tsx hint.
+            // Let's implement that: Loss ratio applies, but then we "repair" 70% of the LOST units.
+            // Actually, standard is: Destroyed units have 70% chance to revive.
+            // Let's stick to the current simpler logic: Just apply loss ratio.
+            // If defender loses: 80% loss. If defender wins: 10% loss.
+            const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
+
+            // Repair chance mechanism (70% of lost units are recovered)
+            const repaired = Math.floor(lost * 0.7);
+            const actuallyLost = lost - repaired;
+
+            const survived = (count as number) - actuallyLost;
+            if (survived > 0) survivingDefenderDefenses[id] = survived;
+        });
+    }
+
     // Loot
     let loot = { metal: 0, crystal: 0, deuterium: 0 };
     if (attackerWin) {
@@ -70,6 +102,7 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
     return {
         survivingAttackerShips,
         survivingDefenderShips,
+        survivingDefenderDefenses,
         loot,
         log: {
             id: Date.now().toString(),
@@ -471,6 +504,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         const battle = generatePvPBattleResult(
                             mission.ships,
                             targetProfile.ships,
+                            targetProfile.defenses || {}, // Pass defenses
                             targetProfile.buildings,
                             targetProfile.research,
                             targetProfile.resources
@@ -480,6 +514,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         loot = battle.loot;
                         survivingAttacker = battle.survivingAttackerShips;
                         const survivingDefender = battle.survivingDefenderShips;
+                        const survivingDefenses = battle.survivingDefenderDefenses;
 
                         // Update Defender (Apply damage)
                         const newTargetLogs = [
@@ -489,6 +524,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                         await supabase.from('profiles').update({
                             ships: survivingDefender,
+                            defenses: survivingDefenses, // Update defenses
                             resources: {
                                 ...targetProfile.resources,
                                 metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
@@ -500,7 +536,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     }
                 } else {
                     // PvE (Pirates)
-                    const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
+                    const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
                     result = battle.log;
                     loot = battle.loot;
                     survivingAttacker = battle.survivingAttackerShips;
