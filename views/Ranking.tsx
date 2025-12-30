@@ -9,7 +9,7 @@ interface RankedPlayer {
     avatar_url?: string;
     production_settings?: any;
     planet_name?: string;
-    user_id?: string;
+    nickname?: string;
 }
 
 const Ranking: React.FC = () => {
