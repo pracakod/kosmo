@@ -1206,7 +1206,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }));
     };
 
-    const buildShip = (shipId: ShipId, amount: number) => {
+    const buildShip = async (shipId: ShipId, amount: number) => {
         const ship = SHIPS[shipId];
         const totalCost = { metal: ship.baseCost.metal * amount, crystal: ship.baseCost.crystal * amount, deuterium: ship.baseCost.deuterium * amount };
         if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
@@ -1227,6 +1227,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             endTime: startTime + (singleBuildTime * amount)
         };
 
+        const newQueue = [...gameState.shipyardQueue, newItem];
+
         setGameState(prev => ({
             ...prev,
             resources: {
@@ -1235,11 +1237,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 crystal: prev.resources.crystal - totalCost.crystal,
                 deuterium: prev.resources.deuterium - totalCost.deuterium
             },
-            shipyardQueue: [...prev.shipyardQueue, newItem]
+            shipyardQueue: newQueue
         }));
+
+        await supabase.from('profiles').update({
+            resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
+            shipyard_queue: newQueue
+        }).eq('id', session.user.id);
     };
 
-    const buildDefense = (defenseId: DefenseId, amount: number) => {
+    const buildDefense = async (defenseId: DefenseId, amount: number) => {
         const defense = DEFENSES[defenseId as keyof typeof DEFENSES];
         if (!defense) return;
         const totalCost = { metal: defense.cost.metal * amount, crystal: defense.cost.crystal * amount, deuterium: defense.cost.deuterium * amount };
@@ -1272,6 +1279,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             },
             shipyardQueue: [...prev.shipyardQueue, newItem]
         }));
+
+        await supabase.from('profiles').update({
+            resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
+            shipyard_queue: [...gameState.shipyardQueue, newItem]
+        }).eq('id', session.user.id);
     };
 
     const renamePlanet = async (newName: string) => {
