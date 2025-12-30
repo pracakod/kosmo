@@ -789,8 +789,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             targetUserId: targetUserId,
             originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             startTime: now,
-            arrivalTime: now + (duration / 2),
-            returnTime: now + duration,
+            arrivalTime: now + duration, // Duration is ONE WAY flight time
+            returnTime: now + (duration * 2), // Round trip = 2x one-way
             eventProcessed: false,
             status: 'flying'
         };
@@ -811,8 +811,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             target_coords: coords,
             origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             start_time: now,
-            arrival_time: now + (duration / 2),
-            return_time: now + duration,
+            arrival_time: now + duration, // ONE WAY
+            return_time: now + (duration * 2), // Round trip
             status: 'flying'
         });
     };
