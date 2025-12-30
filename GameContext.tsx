@@ -198,7 +198,7 @@ const calculatePoints = (resources: any, buildings: any, ships: any) => {
     const resPoints = Math.floor(((Number(r.metal) || 0) + (Number(r.crystal) || 0) + (Number(r.deuterium) || 0)) / 1000);
     const buildPoints = Object.values(buildings || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 100, 0);
     const shipPoints = Object.values(ships || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 50, 0);
-    return Math.floor(resPoints + buildPoints + shipPoints);
+    return Math.floor(Number(resPoints) + Number(buildPoints) + Number(shipPoints));
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -648,11 +648,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return () => { supabase.removeChannel(channel); };
     }, [session]);
 
-    // Use Ref to access latest state inside interval without triggering re-effects
-    const gameStateRef = React.useRef(gameState);
-    useEffect(() => {
-        gameStateRef.current = gameState;
-    }, [gameState]);
+
 
     // Mission Processing Watcher
     useEffect(() => {
