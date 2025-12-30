@@ -12,9 +12,9 @@ const Logbook: React.FC = () => {
     const getLogType = (log: MissionLog): 'attack' | 'spy' | 'expedition' | 'transport' | 'other' => {
         const t = log.title?.toLowerCase() || '';
         if (t.includes('bojowy') || t.includes('atak')) return 'attack';
-        if (t.includes('szpieg')) return 'spy';
-        if (t.includes('ekspedycja') || t.includes('przestrzeń')) return 'expedition';
-        if (t.includes('transport') || t.includes('dostarcz')) return 'transport';
+        if (t.includes('szpieg') || t.includes('skan')) return 'spy';
+        if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez')) return 'expedition';
+        if (t.includes('transport') || t.includes('dostarcz') || t.includes('surow')) return 'transport';
         return 'other';
     };
 
@@ -105,7 +105,8 @@ const LogCard: React.FC<{ log: MissionLog, type: string, onDetail: () => void }>
                 <div className="p-3">
                     <p className="text-sm text-[#cdd6f7] mb-2">{log.message}</p>
                     {/* Simplified Resource Preview if available in message parsing or extending log structure later */}
-                    <button className="w-full mt-2 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 text-xs font-bold rounded border border-orange-500/20 transition-colors flex items-center justify-center gap-1">
+                    {/* Simplified Resource Preview if available in message parsing or extending log structure later */}
+                    <button onClick={onDetail} className="w-full mt-2 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 text-xs font-bold rounded border border-orange-500/20 transition-colors flex items-center justify-center gap-1">
                         Pełny Raport
                     </button>
                 </div>

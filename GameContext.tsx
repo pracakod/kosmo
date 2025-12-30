@@ -659,7 +659,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             timestamp: Date.now(),
                             outcome: 'success' as 'success',
                             title: 'Raport Szpiegowski',
-                            message: `Skan planety [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\nZasoby: M:${Math.floor(targetProfile.resources?.metal || 0)} C:${Math.floor(targetProfile.resources?.crystal || 0)} D:${Math.floor(targetProfile.resources?.deuterium || 0)}\nBudynki: (Ukryte przez technologię szpiegowską level 0)\nFlota: ${Object.keys(targetProfile.ships || {}).length > 0 ? 'Wykryto sygnatury floty' : 'Brak floty'}.`
+                            message: `Cel: ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\nZasoby: M:${Math.floor(targetProfile.resources?.metal || 0)} C:${Math.floor(targetProfile.resources?.crystal || 0)} D:${Math.floor(targetProfile.resources?.deuterium || 0)}\nBudynki: (Ukryte)\nFlota: ${Object.keys(targetProfile.ships || {}).length > 0 ? 'Wykryto sygnatury' : 'Brak'}.`
                         };
 
                         const newTargetLogs = [

@@ -356,12 +356,14 @@ const ActiveMissionItem: React.FC<{ mission: FleetMission, onCancel: (id: string
                 </div>
 
                 <div className="flex flex-col items-center z-10">
-                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${status === 'inbound' ? 'bg-green-500/20 border-green-500' : (isAttack ? 'bg-red-500/20 border-red-500' : 'bg-white/5 border-white/20')}`}>
-                        <span className={`material-symbols-outlined text-sm ${status === 'inbound' ? 'text-green-400' : (isAttack ? 'text-red-400' : 'text-[#929bc9]')}`}>
-                            {isAttack ? 'swords' : 'public'}
+                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${status === 'inbound' ? 'bg-green-500/20 border-green-500' : (isAttack ? 'bg-red-500/20 border-red-500' : mission.type === 'transport' ? 'bg-blue-500/20 border-blue-500' : 'bg-white/5 border-white/20')}`}>
+                        <span className={`material-symbols-outlined text-sm ${status === 'inbound' ? 'text-green-400' : (isAttack ? 'text-red-400' : mission.type === 'transport' ? 'text-blue-400' : 'text-[#929bc9]')}`}>
+                            {isAttack ? 'swords' : mission.type === 'transport' ? 'local_shipping' : mission.type === 'spy' ? 'visibility' : 'public'}
                         </span>
                     </div>
-                    <span className="text-[10px] text-[#929bc9] mt-1">{isAttack ? 'Bitwa' : 'Ekspedycja'}</span>
+                    <span className="text-[10px] text-[#929bc9] mt-1">
+                        {isAttack ? 'Bitwa' : mission.type === 'transport' ? 'Transport' : mission.type === 'spy' ? 'Szpieg' : 'Ekspedycja'}
+                    </span>
                 </div>
             </div>
 
