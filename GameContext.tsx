@@ -296,7 +296,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const { data, error } = await supabase
             .from('missions')
             .select('*')
-            .or(`owner_id.eq.${session.user.id}, target_user_id.eq.${session.user.id} `);
+            .or(`owner_id.eq.${session.user.id}, target_user_id.eq.${session.user.id}`);
 
         if (data && !error) {
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
