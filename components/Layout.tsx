@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import ResourceHeader from './ResourceHeader';
 import { useGame } from '../GameContext';
+import { formatTime } from '../constants';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -15,6 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
 
     const game = useGame();
     const logout = game?.logout || (() => window.location.reload());
+    const incomingMissions = game?.incomingMissions || [];
 
     const bottomNavItems = [
         { id: 'overview', icon: 'dashboard', label: 'Podgląd' },
@@ -57,6 +59,28 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
 
             <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden mb-16 lg:mb-0">
                 <ResourceHeader />
+
+                {/* Global Attack Alert - visible on ALL pages */}
+                {incomingMissions && incomingMissions.length > 0 && (
+                    <div className="mx-2 md:mx-6 lg:mx-8 mt-2 bg-red-900/80 border-2 border-red-500 rounded-xl p-4 flex items-center justify-between animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.5)]">
+                        <div className="flex items-center gap-3">
+                            <span className="material-symbols-outlined text-red-500 text-4xl animate-bounce">warning</span>
+                            <div>
+                                <h3 className="text-red-400 font-bold text-lg uppercase tracking-wider">⚠️ WYKRYTO ZAGROŻENIE!</h3>
+                                <p className="text-red-200 text-sm">
+                                    {incomingMissions.length} wroga flota nadciąga! Przygotuj obronę!
+                                </p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-red-300 text-xs uppercase">Kontakt za:</div>
+                            <div className="text-red-400 font-bold text-xl font-mono">
+                                {formatTime(Math.max(0, (incomingMissions[0].arrivalTime - Date.now()) / 1000))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto p-2 md:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-primary scrollbar-track-background-dark">
                     <div className="max-w-[1400px] mx-auto pb-20 lg:pb-0">
                         {children}
