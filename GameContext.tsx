@@ -1111,7 +1111,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 crystal: prev.resources.crystal - cost.crystal,
                 deuterium: prev.resources.deuterium - cost.deuterium
             },
-            constructionQueue: [{
+            constructionQueue: [...prev.constructionQueue, {
                 id: now.toString(),
                 type: 'building',
                 itemId: buildingId,
@@ -1147,7 +1147,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 crystal: prev.resources.crystal - cost.crystal,
                 deuterium: prev.resources.deuterium - cost.deuterium
             },
-            constructionQueue: [{
+            constructionQueue: [...prev.constructionQueue, {
                 id: now.toString(),
                 type: 'research',
                 itemId: researchId,
