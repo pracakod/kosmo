@@ -653,8 +653,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 fetchMissions(); // Refresh both active and incoming missions
             }
 
-            // Check Arrivals (Only OWNER processes arrival logic to avoid double processing)
-            const arriving = missions.filter(m => m.status === 'flying' && now >= m.arrivalTime && m.ownerId === session.user.id && !m.eventProcessed);
+            // Check Arrivals (OWNER processes normally, TARGET processes if stuck > 10s)
+            const arriving = missions.filter(m =>
+                m.status === 'flying' &&
+                now >= m.arrivalTime &&
+                !m.eventProcessed &&
+                (m.ownerId === session.user.id || (m.targetUserId === session.user.id && now > m.arrivalTime + 10000))
+            );
 
             for (const m of arriving) {
                 // Mark processed locally to prevent race in loop
