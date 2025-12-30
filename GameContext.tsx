@@ -52,41 +52,38 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
     const defenderLossRatio = attackerWin ? 0.8 : 0.1;
 
     const survivingAttackerShips: any = {};
+    const attackerLosses: any = {};
     let totalAttackerLost = 0;
     Object.entries(attackerShips).forEach(([id, count]) => {
         const lost = Math.floor((count as number) * (attackerLossRatio + (Math.random() * 0.2)));
         const survived = (count as number) - lost;
         if (survived > 0) survivingAttackerShips[id] = survived;
+        attackerLosses[id] = lost;
         totalAttackerLost += lost;
     });
 
     const survivingDefenderShips: any = {};
+    const defenderLosses: any = {};
     if (defenderShips) {
         Object.entries(defenderShips).forEach(([id, count]) => {
             const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
             const survived = (count as number) - lost;
             if (survived > 0) survivingDefenderShips[id] = survived;
+            defenderLosses[id] = lost;
         });
     }
 
     const survivingDefenderDefenses: any = {};
+    const defenderDefensesLost: any = {};
     if (defenderDefenses) {
         Object.entries(defenderDefenses).forEach(([id, count]) => {
-            // Defenses have 70% repair chance if destroyed (classic 30% perm loss), but for simplicity applying simple loss ratio first
-            // Let's stick to simple loss ratio for now matching ships, as per implementation plan "Defenses will be lost in battle similar to ships"
-            // User feedback said "Po zniszczeniu, jednostki mają 70% szans na naprawę po bitwie" in Defense.tsx hint.
-            // Let's implement that: Loss ratio applies, but then we "repair" 70% of the LOST units.
-            // Actually, standard is: Destroyed units have 70% chance to revive.
-            // Let's stick to the current simpler logic: Just apply loss ratio.
-            // If defender loses: 80% loss. If defender wins: 10% loss.
             const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
-
-            // Repair chance mechanism (70% of lost units are recovered)
             const repaired = Math.floor(lost * 0.7);
             const actuallyLost = lost - repaired;
 
             const survived = (count as number) - actuallyLost;
             if (survived > 0) survivingDefenderDefenses[id] = survived;
+            defenderDefensesLost[id] = actuallyLost;
         });
     }
 
@@ -103,7 +100,12 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         survivingAttackerShips,
         survivingDefenderShips,
         survivingDefenderDefenses,
+        attackerLosses,
+        defenderLosses,
+        defenderDefensesLost,
         loot,
+        result: attackerWin ? 'attacker_win' : 'defender_win',
+        rounds: 6, // Simulation placeholder
         log: {
             id: Date.now().toString(),
             timestamp: Date.now(),
@@ -500,6 +502,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                     if (targetError) throw new Error(`Target profile fetch error: ${targetError.message}`);
 
+
                     if (targetProfile) {
                         const battle = generatePvPBattleResult(
                             mission.ships,
@@ -510,17 +513,52 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             targetProfile.resources
                         );
 
-                        result = battle.log;
+                        result = {
+                            id: `${mission.id}-result`, // Deterministic ID to avoid duplicates
+                            timestamp: Date.now(),
+                            title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
+                            message: `Walka zakończona. Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}. Straty: ${Object.values(battle.attackerLosses).reduce((a, b) => a + b, 0)} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)}`,
+                            outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
+                            rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
+                            report: {
+                                rounds: battle.rounds,
+                                attackerLosses: battle.attackerLosses,
+                                defenderLosses: battle.defenderLosses,
+                                defenderDefensesLost: battle.defenderDefensesLost,
+                                finalAttackerShips: battle.survivingAttackerShips,
+                                finalDefenderShips: battle.survivingDefenderShips,
+                                finalDefenderDefenses: battle.survivingDefenderDefenses,
+                                loot: battle.loot
+                            }
+                        };
+
                         loot = battle.loot;
                         survivingAttacker = battle.survivingAttackerShips;
                         const survivingDefender = battle.survivingDefenderShips;
                         const survivingDefenses = battle.survivingDefenderDefenses;
 
-                        // Update Defender (Apply damage)
+                        // Update Defender (Apply damage) only if timestamp check allows (idempotency check improved by DB constraint but here logic helps too)
+                        // Note: For duplicate log prevention on defender side, we use a deterministic ID logic or check existing
                         const newTargetLogs = [
-                            { id: Date.now().toString(), timestamp: Date.now(), title: "ZOSTAŁEŚ ZAATAKOWANY!", message: `Gracz ${session.user.email?.split('@')[0]} zaatakował Cię.\n${battle.log.message}`, outcome: 'danger' as 'danger' },
+                            {
+                                id: `${mission.id}-def-log`, // Deterministic ID
+                                timestamp: Date.now(),
+                                title: "ZOSTAŁEŚ ZAATAKOWANY!",
+                                message: `Gracz ${session.user.email?.split('@')[0]} zaatakował Cię.\n${battle.log.message}`,
+                                outcome: 'danger' as 'danger',
+                                report: {
+                                    rounds: battle.rounds,
+                                    attackerLosses: battle.attackerLosses,
+                                    defenderLosses: battle.defenderLosses,
+                                    defenderDefensesLost: battle.defenderDefensesLost,
+                                    finalAttackerShips: battle.survivingAttackerShips,
+                                    finalDefenderShips: battle.survivingDefenderShips,
+                                    finalDefenderDefenses: battle.survivingDefenderDefenses,
+                                    loot: battle.loot
+                                }
+                            },
                             ...(targetProfile.mission_logs || [])
-                        ].slice(0, 50);
+                        ].filter((log, index, self) => index === self.findIndex(t => t.id === log.id)).slice(0, 50);
 
                         await supabase.from('profiles').update({
                             ships: survivingDefender,
@@ -537,7 +575,24 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 } else {
                     // PvE (Pirates)
                     const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
-                    result = battle.log;
+                    result = {
+                        id: `${mission.id}-pve-result`,
+                        timestamp: Date.now(),
+                        title: 'Bitwa z Piratami',
+                        message: battle.log.message,
+                        outcome: 'success',
+                        rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
+                        report: {
+                            rounds: battle.rounds,
+                            attackerLosses: battle.attackerLosses,
+                            defenderLosses: battle.defenderLosses,
+                            defenderDefensesLost: battle.defenderDefensesLost,
+                            finalAttackerShips: battle.survivingAttackerShips,
+                            finalDefenderShips: battle.survivingDefenderShips,
+                            finalDefenderDefenses: battle.survivingDefenderDefenses,
+                            loot: battle.loot
+                        }
+                    };
                     loot = battle.loot;
                     survivingAttacker = battle.survivingAttackerShips;
                 }

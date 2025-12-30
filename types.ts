@@ -162,6 +162,16 @@ export interface MissionLog {
   message: string;
   outcome: 'success' | 'neutral' | 'failure' | 'danger';
   rewards?: MissionRewards;
+  report?: {
+    rounds: number;
+    attackerLosses: Record<string, number>;
+    defenderLosses: Record<string, number>;
+    defenderDefensesLost: Record<string, number>;
+    finalAttackerShips: Record<string, number>;
+    finalDefenderShips: Record<string, number>;
+    finalDefenderDefenses: Record<string, number>;
+    loot: Cost;
+  };
 }
 
 export interface GameState {
