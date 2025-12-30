@@ -986,7 +986,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         });
 
         // DB Insert
-        await supabase.from('missions').insert({
+        const { error: insertError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
             mission_type: MissionType.EXPEDITION,
@@ -998,6 +998,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return_time: now + duration,
             status: 'flying'
         });
+
+        if (insertError) {
+            console.error("Failed to start expedition:", insertError);
+            alert("Błąd wysyłania ekspedycji. Spróbuj ponownie.");
+            fetchMissions(); // Revert optimistic update
+            refreshProfile(); // Revert ships
+            return;
+        }
 
         // Update Profile (Deduct Ships)
         const currentShips = { ...gameState.ships };
@@ -1074,6 +1082,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         if (insertError) {
             console.error('❌ ATTACK INSERT ERROR:', insertError);
+            alert("Błąd wysyłania ataku.");
+            fetchMissions();
+            refreshProfile();
+            return;
+        }
+
+        if (insertError) {
+            console.error('❌ ATTACK INSERT ERROR:', insertError);
         } else {
             console.log('✅ ATTACK INSERTED:', insertedData);
 
@@ -1121,7 +1137,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }));
 
         // DB Insert
-        await supabase.from('missions').insert({
+        const { error: insertError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
             target_user_id: targetUserId,
@@ -1134,6 +1150,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return_time: now + duration,
             status: 'flying'
         });
+
+        if (insertError) {
+            console.error("Failed to send spy probe:", insertError);
+            alert("Błąd wysyłania sondy.");
+            fetchMissions();
+            refreshProfile();
+            return false;
+        }
 
         // Update Profile (Deduct Probes)
         const currentShips = { ...gameState.ships };
@@ -1202,6 +1226,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             status: 'flying'
         });
 
+        if (error) {
+            console.error("Error sending transport:", error);
+            alert("Błąd wysyłania transportu.");
+            fetchMissions();
+            refreshProfile();
+            return;
+        }
+
         if (error) console.error("Error sending transport:", error);
         else {
             // Update Profile (Deduct Ships & Resources)
@@ -1241,11 +1273,17 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }));
 
         // DB Update
-        await supabase.from('missions').update({
+        const { error } = await supabase.from('missions').update({
             status: 'returning',
             return_time: newReturnTime,
             arrival_time: now
         }).eq('id', missionId);
+
+        if (error) {
+            console.error("Failed to cancel mission:", error);
+            alert("Błąd anulowania misji.");
+            fetchMissions();
+        }
     };
 
     // Upgrades
@@ -1281,7 +1319,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }]
         }));
 
-        await supabase.from('profiles').update({
+        const { error } = await supabase.from('profiles').update({
             resources: {
                 ...gameState.resources,
                 metal: gameState.resources.metal - cost.metal,
@@ -1297,6 +1335,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 endTime: now + buildTime
             }]
         }).eq('id', session.user.id);
+
+        if (error) {
+            console.error("Building upgrade failed:", error);
+            refreshProfile(); // Revert
+        }
     };
 
     const upgradeResearch = async (researchId: ResearchId) => {
@@ -1498,81 +1541,80 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         const tick = () => {
             const now = Date.now();
-            setGameState(prev => {
-                const production = calculateProduction(prev);
-                const secondsPassed = (now - prev.lastTick) / 1000;
-                if (secondsPassed <= 0) return prev;
+            const prev = gameStateRef.current; // Use Ref for current state to avoid side-effects in setter
 
-                const newResources = { ...prev.resources };
-                newResources.metal = Math.min(newResources.storage.metal, newResources.metal + (production.metal * secondsPassed));
-                newResources.crystal = Math.min(newResources.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
-                newResources.deuterium = Math.min(newResources.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
-                newResources.energy = production.energy;
-                newResources.maxEnergy = production.maxEnergy;
-                newResources.storage = production.storage;
+            const production = calculateProduction(prev);
+            const secondsPassed = (now - prev.lastTick) / 1000;
+            if (secondsPassed <= 0) return;
 
-                let newBuildings = { ...prev.buildings };
-                let newResearch = { ...prev.research };
-                let newQueue = [...prev.constructionQueue];
+            const newResources = { ...prev.resources };
+            newResources.metal = Math.min(newResources.storage.metal, newResources.metal + (production.metal * secondsPassed));
+            newResources.crystal = Math.min(newResources.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
+            newResources.deuterium = Math.min(newResources.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
+            newResources.energy = production.energy;
+            newResources.maxEnergy = production.maxEnergy;
+            newResources.storage = production.storage;
 
-                // Process ALL finished items (Parallel Queues)
-                const finished = newQueue.filter(q => now >= q.endTime);
-                const active = newQueue.filter(q => now < q.endTime);
+            let newBuildings = { ...prev.buildings };
+            let newResearch = { ...prev.research };
+            let newQueue = [...prev.constructionQueue];
 
-                if (finished.length > 0) {
-                    finished.forEach(item => {
-                        if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
-                        else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
-                    });
-                    newQueue = active;
-                }
+            // Process ALL finished items (Parallel Queues)
+            const finished = newQueue.filter(q => now >= q.endTime);
+            const active = newQueue.filter(q => now < q.endTime);
 
-                let newShips = { ...prev.ships };
-                let newDefenses = { ...prev.defenses };
-                let newShipQueue = [...prev.shipyardQueue];
-                while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
-                    const completed = newShipQueue.shift();
-                    if (completed) {
-                        if (completed.type === 'defense') {
-                            newDefenses[completed.itemId as DefenseId] = (newDefenses[completed.itemId as DefenseId] || 0) + (completed.quantity || 0);
-                        } else {
-                            newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
-                        }
+            if (finished.length > 0) {
+                finished.forEach(item => {
+                    if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
+                    else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
+                });
+                newQueue = active;
+            }
+
+            let newShips = { ...prev.ships };
+            let newDefenses = { ...prev.defenses };
+            let newShipQueue = [...prev.shipyardQueue];
+            while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
+                const completed = newShipQueue.shift();
+                if (completed) {
+                    if (completed.type === 'defense') {
+                        newDefenses[completed.itemId as DefenseId] = (newDefenses[completed.itemId as DefenseId] || 0) + (completed.quantity || 0);
+                    } else {
+                        newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
                     }
                 }
-                // Persist completed items to Supabase
-                if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length)) {
-                    supabase.from('profiles').update({
-                        buildings: newBuildings,
-                        research: newResearch,
-                        ships: newShips,
-                        defenses: newDefenses,
-                        shipyard_queue: newShipQueue,
-                        construction_queue: newQueue,
-                        points: calculatePoints(newResources, newBuildings, newShips)
-                    }).eq('id', session.user.id).then(({ error }) => {
-                        if (error) console.error("Auto-save error:", error);
-                    });
-                }
+            }
 
-                return {
-                    ...prev,
-                    resources: {
-                        ...newResources, // Updated resources
-                        storage: production.storage
-                    },
+            // Persist completed items to Supabase (Side effect OUTSIDE of setter)
+            if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length)) {
+                supabase.from('profiles').update({
                     buildings: newBuildings,
                     research: newResearch,
                     ships: newShips,
                     defenses: newDefenses,
-                    constructionQueue: newQueue,
-                    shipyardQueue: newShipQueue,
-                    activeMissions: prev.activeMissions, // Managed by sync
-                    missionLogs: prev.missionLogs,
-                    productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
-                    lastTick: now
-                };
-            });
+                    shipyard_queue: newShipQueue,
+                    construction_queue: newQueue,
+                    points: calculatePoints(newResources, newBuildings, newShips)
+                }).eq('id', session.user.id).then(({ error }) => {
+                    if (error) console.error("Auto-save error:", error);
+                });
+            }
+
+            setGameState(current => ({
+                ...current,
+                resources: {
+                    ...newResources,
+                    storage: production.storage
+                },
+                buildings: newBuildings,
+                research: newResearch,
+                ships: newShips,
+                defenses: newDefenses,
+                constructionQueue: newQueue,
+                shipyardQueue: newShipQueue,
+                productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
+                lastTick: now
+            }));
         };
 
         const interval = setInterval(tick, TICK_RATE);
