@@ -13,7 +13,7 @@ const Logbook: React.FC = () => {
         const t = log.title?.toLowerCase() || '';
         if (t.includes('bojowy') || t.includes('atak')) return 'attack';
         if (t.includes('szpieg') || t.includes('skan')) return 'spy';
-        if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez')) return 'expedition';
+        if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez') || t.includes('statki') || t.includes('artefakt') || t.includes('materia')) return 'expedition';
         if (t.includes('transport') || t.includes('dostarcz') || t.includes('surow')) return 'transport';
         return 'other';
     };
@@ -186,7 +186,8 @@ const LogCard: React.FC<{ log: MissionLog, type: string, onDetail: () => void }>
 
 // Detail Modal (extracted from Fleet.tsx and polished)
 const DetailModal: React.FC<{ log: MissionLog, onClose: () => void }> = ({ log, onClose }) => {
-    if (!log.report) return null;
+    // If no report object, we might still want to show details (e.g. Spy Report parsed from message)
+    // or just show the full message in a nice way.
     const report = log.report;
 
     return (
@@ -194,8 +195,10 @@ const DetailModal: React.FC<{ log: MissionLog, onClose: () => void }> = ({ log, 
             <div className="bg-[#1c2136] w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="sticky top-0 bg-[#1c2136] border-b border-white/10 p-4 flex justify-between items-center z-10">
                     <h3 className="text-white font-bold flex items-center gap-2">
-                        <span className="material-symbols-outlined text-red-500">swords</span>
-                        Raport Bojowy
+                        <span className="material-symbols-outlined text-red-500">
+                            {log.title?.includes("Szpieg") ? 'visibility' : 'swords'}
+                        </span>
+                        {log.title}
                     </h3>
                     <button onClick={onClose} className="text-[#929bc9] hover:text-white">
                         <span className="material-symbols-outlined">close</span>
@@ -203,62 +206,69 @@ const DetailModal: React.FC<{ log: MissionLog, onClose: () => void }> = ({ log, 
                 </div>
 
                 <div className="p-4 space-y-6">
-                    {/* Loot */}
-                    <div className="bg-[#111422] rounded-xl p-4 border border-white/5">
-                        <div className="text-xs text-[#555a7a] uppercase font-bold mb-3 text-center">Zrabowane Surowce</div>
-                        <div className="flex justify-around">
-                            <div className="text-center">
-                                <div className="text-blue-400 font-bold font-mono">{Math.floor(report.loot.metal)}</div>
-                                <div className="text-[10px] text-[#929bc9]">Metal</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-purple-400 font-bold font-mono">{Math.floor(report.loot.crystal)}</div>
-                                <div className="text-[10px] text-[#929bc9]">Kryształ</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-green-400 font-bold font-mono">{Math.floor(report.loot.deuterium)}</div>
-                                <div className="text-[10px] text-[#929bc9]">Deutery</div>
-                            </div>
+                    {!report ? (
+                        <div className="text-[#cdd6f7] text-sm whitespace-pre-wrap leading-relaxed bg-[#111422] p-4 rounded-lg border border-white/5">
+                            {log.message}
                         </div>
-                    </div>
-
-                    {/* Losses Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <div className="text-red-400 font-bold text-xs uppercase border-b border-red-500/20 pb-1">Agresor (Ty)</div>
-                            {Object.entries(report.attackerLosses).length === 0 ? <div className="text-green-500 text-xs">Brak strat</div> :
-                                Object.entries(report.attackerLosses).map(([id, n]) => (
-                                    <div key={id} className="flex justify-between text-xs text-[#929bc9]">
-                                        <span>{SHIPS[id as ShipId]?.name}</span>
-                                        <span className="text-red-400">-{n}</span>
+                    ) : (
+                        <>
+                            {/* Loot */}
+                            <div className="bg-[#111422] rounded-xl p-4 border border-white/5">
+                                <div className="text-xs text-[#555a7a] uppercase font-bold mb-3 text-center">Zrabowane Surowce</div>
+                                <div className="flex justify-around">
+                                    <div className="text-center">
+                                        <div className="text-blue-400 font-bold font-mono">{Math.floor(report.loot.metal)}</div>
+                                        <div className="text-[10px] text-[#929bc9]">Metal</div>
                                     </div>
-                                ))
-                            }
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-blue-400 font-bold text-xs uppercase border-b border-blue-500/20 pb-1">Obrońca</div>
-                            {Object.entries(report.defenderLosses).length === 0 && Object.entries(report.defenderDefensesLost || {}).length === 0 ? <div className="text-green-500 text-xs">Brak strat</div> : (
-                                <>
-                                    {Object.entries(report.defenderLosses).map(([id, n]) => (
-                                        <div key={id} className="flex justify-between text-xs text-[#929bc9]">
-                                            <span>{SHIPS[id as ShipId]?.name}</span>
-                                            <span className="text-red-400">-{n}</span>
-                                        </div>
-                                    ))}
-                                    {Object.entries(report.defenderDefensesLost || {}).map(([id, n]) => (
-                                        <div key={id} className="flex justify-between text-xs text-[#929bc9]">
-                                            <span>{DEFENSES[id as DefenseId]?.name}</span>
-                                            <span className="text-red-400">-{n}</span>
-                                        </div>
-                                    ))}
-                                </>
-                            )}
-                        </div>
-                    </div>
+                                    <div className="text-center">
+                                        <div className="text-purple-400 font-bold font-mono">{Math.floor(report.loot.crystal)}</div>
+                                        <div className="text-[10px] text-[#929bc9]">Kryształ</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-green-400 font-bold font-mono">{Math.floor(report.loot.deuterium)}</div>
+                                        <div className="text-[10px] text-[#929bc9]">Deutery</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Losses Grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <div className="text-red-400 font-bold text-xs uppercase border-b border-red-500/20 pb-1">Agresor (Ty)</div>
+                                    {Object.entries(report.attackerLosses).length === 0 ? <div className="text-green-500 text-xs">Brak strat</div> :
+                                        Object.entries(report.attackerLosses).map(([id, n]) => (
+                                            <div key={id} className="flex justify-between text-xs text-[#929bc9]">
+                                                <span>{SHIPS[id as ShipId]?.name}</span>
+                                                <span className="text-red-400">-{n}</span>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="text-blue-400 font-bold text-xs uppercase border-b border-blue-500/20 pb-1">Obrońca</div>
+                                    {Object.entries(report.defenderLosses).length === 0 && Object.entries(report.defenderDefensesLost || {}).length === 0 ? <div className="text-green-500 text-xs">Brak strat</div> : (
+                                        <>
+                                            {Object.entries(report.defenderLosses).map(([id, n]) => (
+                                                <div key={id} className="flex justify-between text-xs text-[#929bc9]">
+                                                    <span>{SHIPS[id as ShipId]?.name}</span>
+                                                    <span className="text-red-400">-{n}</span>
+                                                </div>
+                                            ))}
+                                            {Object.entries(report.defenderDefensesLost || {}).map(([id, n]) => (
+                                                <div key={id} className="flex justify-between text-xs text-[#929bc9]">
+                                                    <span>{DEFENSES[id as DefenseId]?.name}</span>
+                                                    <span className="text-red-400">-{n}</span>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
-        </div>
-    );
+            );
 };
 
-export default Logbook;
+            export default Logbook;
