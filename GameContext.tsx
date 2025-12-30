@@ -598,7 +598,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: `${mission.id}-def-log`, // Deterministic ID
                                 timestamp: Date.now(),
                                 title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${session.user.email?.split('@')[0]} zaatakował Cię.\n${battle.log.message}`,
+                                message: `Gracz ${gameState.nickname || 'Nieznany'} [${mission.startCoords.galaxy}:${mission.startCoords.system}:${mission.startCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(battle.attackerShips).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.outcome === 'success' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${battle.attackerLosses} | Twoje Straty: ${battle.defenderLosses}.`,
                                 outcome: 'danger' as 'danger',
                                 report: {
                                     rounds: battle.rounds,
@@ -700,7 +700,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         };
 
                         const newTargetLogs = [
-                            { id: Date.now().toString(), timestamp: Date.now(), title: "Wykryto Skanowanie!", message: `Obca sonda przeskanowała Twoją planetę.`, outcome: 'danger' as 'danger' },
+                            {
+                                id: Date.now().toString(),
+                                timestamp: Date.now(),
+                                title: "Wykryto Skanowanie!",
+                                message: `Gracz ${gameState.nickname || 'Nieznany'} [${mission.startCoords.galaxy}:${mission.startCoords.system}:${mission.startCoords.position}] przeskanował Twoją planetę.`,
+                                outcome: 'danger' as 'danger'
+                            },
                             ...(targetProfile.mission_logs || [])
                         ].slice(0, 50);
 
@@ -1348,6 +1354,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return_time: newReturnTime,
             arrival_time: now
         }).eq('id', missionId);
+
+        // Notify Target about cancellation (if Attack)
+        if (mission.type === 'attack' && mission.targetUserId) {
+            const { data: targetProfile } = await supabase.from('profiles').select('mission_logs').eq('id', mission.targetUserId).single();
+            if (targetProfile) {
+                const newLog = {
+                    id: Date.now().toString(),
+                    timestamp: Date.now(),
+                    title: 'Atak Anulowany',
+                    message: `Gracz ${gameState.nickname || 'Nieznany'} [${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}] zawrócił flotę tuż przed atakiem.`,
+                    outcome: 'info' as 'info' // Or 'success' as it's good news? Let's use info or success. 'success' is usually green.
+                };
+                const updatedLogs = [newLog, ...(targetProfile.mission_logs || [])].slice(0, 50);
+                await supabase.from('profiles').update({ mission_logs: updatedLogs }).eq('id', mission.targetUserId);
+            }
+        }
 
         if (error) {
             console.error("Failed to cancel mission:", error);

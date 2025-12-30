@@ -95,9 +95,9 @@ const LogCard: React.FC<{ log: MissionLog, type: string, onDetail: () => void }>
     // Custom logic per type
     if (type === 'spy') {
         return (
-            <div className="bg-[#1c2136] border border-white/10 rounded-lg overflow-hidden group hover:border-primary/50 transition-colors">
-                <div className="bg-[#111422] p-3 border-b border-white/5 flex justify-between items-center">
-                    <span className="text-orange-400 font-bold text-sm flex items-center gap-2">
+            <div className={`${isDanger ? 'bg-red-900/20 border-red-500/30' : 'bg-[#1c2136] border-white/10'} border rounded-lg overflow-hidden group hover:border-primary/50 transition-colors`}>
+                <div className={`${isDanger ? 'bg-red-900/30 border-red-500/20' : 'bg-[#111422] border-white/5'} p-3 border-b flex justify-between items-center`}>
+                    <span className={`${isDanger ? 'text-red-400' : 'text-orange-400'} font-bold text-sm flex items-center gap-2`}>
                         <span className="material-symbols-outlined text-sm">visibility</span>
                         {log.title}
                     </span>
