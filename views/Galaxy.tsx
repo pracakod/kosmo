@@ -208,11 +208,12 @@ const Galaxy: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Action Button */}
+                    {/* Action Button - Hidden for now
                     <button className="w-full md:w-auto h-10 md:h-12 px-8 bg-primary hover:bg-blue-600 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 text-sm md:text-base">
                         <span className="material-symbols-outlined text-lg">rocket_launch</span>
                         <span>Skanuj Układ</span>
                     </button>
+                    */}
                 </div>
             </div>
 
