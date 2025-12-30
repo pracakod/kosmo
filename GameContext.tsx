@@ -619,7 +619,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 ...localMission,
                 resources: missionData.resources,
                 result: missionData.result,
-                type: missionData.mission_type as MissionType
+                ships: missionData.ships || localMission.ships, // CRITICAL: Use DB ships (contains battle losses)
+                type: missionData.mission_type as MissionType,
+                startTime: missionData.start_time,
+                returnTime: missionData.return_time
             } : localMission;
 
             const { data: myProfile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
