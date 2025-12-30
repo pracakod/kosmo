@@ -4,11 +4,10 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS, DEFENSES } from '../constants
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, cancelMission } = useGame();
+    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
-    const activeConstruction = constructionQueue[0];
     const activeShipBuild = shipyardQueue[0];
-    const [timeLeft, setTimeLeft] = useState('');
+    const [queueTimes, setQueueTimes] = useState<Record<string, string>>({});
     const [shipTimeLeft, setShipTimeLeft] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [tempName, setTempName] = useState(planetName);
@@ -21,12 +20,12 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
         const tick = () => {
             const now = Date.now();
 
-            if (activeConstruction) {
-                const diff = Math.max(0, Math.floor((activeConstruction.endTime - now) / 1000));
-                setTimeLeft(formatTime(diff));
-            } else {
-                setTimeLeft('');
-            }
+            const newTimes: Record<string, string> = {};
+            constructionQueue.forEach(item => {
+                const diff = Math.max(0, Math.floor((item.endTime - now) / 1000));
+                newTimes[item.id] = formatTime(diff);
+            });
+            setQueueTimes(newTimes);
 
             if (activeShipBuild) {
                 const diff = Math.max(0, Math.floor((activeShipBuild.endTime - now) / 1000));
@@ -39,7 +38,7 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
         tick();
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [activeConstruction, activeShipBuild]);
+    }, [constructionQueue, activeShipBuild]);
 
     const handleSaveName = () => {
         if (tempName.trim().length > 0) {
@@ -62,7 +61,7 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
     const totalShips = Object.values(ships).reduce((a: number, b: number) => a + b, 0);
 
     return (
-        <div className="flex flex-col gap-8">
+        <div className="space-y-6">
             {/* Incoming Attack Alert */}
             {incomingMissions.length > 0 && (
                 <div className="bg-red-900/50 border border-red-500 rounded-xl p-4 flex items-center justify-between animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]">
@@ -79,24 +78,33 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Planet Card */}
                 <div className="lg:col-span-5 xl:col-span-4">
-                    <div className="bg-[#1c2136] rounded-xl border border-white/10 overflow-hidden h-full shadow-2xl">
-                        <div className="relative h-64 bg-cover bg-center group" style={{ backgroundImage: `url("${planetImage}")` }}>
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#1c2136] to-transparent"></div>
-                            <div className="absolute bottom-4 left-4 w-full pr-8">
+                    <div className="bg-[#161b2e] rounded-2xl overflow-hidden border border-white/10 shadow-xl relative group">
+                        <div className="relative h-48 overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#161b2e] via-transparent to-transparent z-10"></div>
+                            <img src={planetImage} alt="Planet" className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 opacity-80" />
+
+                            {/* Coordinates Badge */}
+                            <div className="absolute top-4 right-4 z-20 flex flex-col items-end">
+                                <div className="flex items-center gap-2 text-[#929bc9] text-sm bg-black/40 px-2 py-1 rounded backdrop-blur-sm">
+                                    <span className="material-symbols-outlined text-sm">my_location</span>
+                                    [{galaxyCoords?.galaxy || 1}:{galaxyCoords?.system || 1}:{galaxyCoords?.position || 1}]
+                                </div>
+                            </div>
+
+                            <div className="absolute bottom-4 left-4 w-full pr-8 z-20">
                                 <div className="flex items-center gap-2 h-10">
                                     {isEditing ? (
-                                        <div className="flex items-center gap-2 bg-black/50 backdrop-blur rounded p-1">
+                                        <div className="flex items-center gap-2 bg-black/60 rounded p-1 backdrop-blur-md">
                                             <input
-                                                type="text"
-                                                value={tempName}
-                                                maxLength={20}
-                                                onChange={(e) => setTempName(e.target.value)}
-                                                onKeyDown={handleKeyDown}
                                                 autoFocus
-                                                className="bg-transparent border-none text-white text-xl font-bold focus:ring-0 focus:outline-none w-48"
+                                                value={tempName}
+                                                onChange={(e) => setTempName(e.target.value)}
+                                                onBlur={handleSaveName}
+                                                onKeyDown={handleKeyDown}
+                                                className="bg-transparent border-b border-primary text-white font-bold text-xl w-32 focus:outline-none"
                                             />
                                             <button onClick={handleSaveName} className="text-green-400 hover:text-green-300">
-                                                <span className="material-symbols-outlined">check</span>
+                                                <span className="material-symbols-outlined text-lg">check</span>
                                             </button>
                                         </div>
                                     ) : (
@@ -111,10 +119,6 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                             </button>
                                         </>
                                     )}
-                                </div>
-                                <div className="flex items-center gap-2 text-[#929bc9] text-sm bg-black/40 px-2 py-1 rounded backdrop-blur-sm w-fit mt-2">
-                                    <span className="material-symbols-outlined text-sm">my_location</span>
-                                    [{galaxyCoords?.galaxy || 1}:{galaxyCoords?.system || 1}:{galaxyCoords?.position || 1}]
                                 </div>
                             </div>
                         </div>
@@ -149,7 +153,8 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                             const buildPoints = Object.values(buildings).reduce((a, b) => a + (b || 0) * 100, 0);
                                             const shipPoints = Object.values(ships).reduce((a, b) => a + (b || 0) * 50, 0);
                                             const totalPoints = resPoints + buildPoints + shipPoints;
-                                            return Math.floor(totalPoints / 1000) + 1;
+                                            // FIX: Use getLevel to respect Level 16 Lock
+                                            return getLevel ? getLevel(totalPoints, productionSettings) : (Math.floor(totalPoints / 1000) + 1);
                                         })()}
                                     </div>
                                     <div className="text-[#929bc9] text-xs uppercase">Poziom</div>
@@ -178,22 +183,34 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                     </div>
 
                     {/* Building Queue */}
-                    {activeConstruction ? (
-                        <div className="bg-[#232948] border border-primary/50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group shadow-[0_0_15px_rgba(19,55,236,0.1)]">
-                            <div className="absolute top-0 left-0 bottom-0 w-1 bg-primary animate-pulse"></div>
-                            <div className="size-20 rounded-xl bg-[#111422] shrink-0 flex items-center justify-center border border-white/10">
-                                <span className="material-symbols-outlined text-4xl text-primary animate-spin-slow" style={{ animationDuration: '3s' }}>construction</span>
-                            </div>
-                            <div className="flex-1 min-w-0 w-full text-center md:text-left">
-                                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                    <h4 className="text-white font-bold text-xl truncate">Rozbudowa w toku</h4>
-                                    <span className="px-2 py-0.5 rounded text-xs bg-primary/20 text-primary border border-primary/20 font-bold">Lvl {activeConstruction.targetLevel}</span>
-                                </div>
-                                <div className="flex items-center gap-4 justify-center md:justify-start text-sm text-[#929bc9]">
-                                    <span className="text-primary font-medium animate-pulse">Pozostały czas:</span>
-                                    <span className="text-2xl font-mono text-white font-bold">{timeLeft}</span>
-                                </div>
-                            </div>
+                    {constructionQueue.length > 0 ? (
+                        <div className="space-y-4">
+                            {constructionQueue.map((item, index) => {
+                                const isNext = index === 0; // First item is always active/next
+                                return (
+                                    <div key={item.id} className={`bg-[#232948] border ${isNext ? 'border-primary/50' : 'border-white/10'} rounded-xl p-4 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group shadow-[0_0_15px_rgba(19,55,236,0.1)]`}>
+                                        {isNext && <div className="absolute top-0 left-0 bottom-0 w-1 bg-primary animate-pulse"></div>}
+                                        <div className="size-16 rounded-xl bg-[#111422] shrink-0 flex items-center justify-center border border-white/10">
+                                            <span className={`material-symbols-outlined text-3xl ${isNext ? 'text-primary animate-spin-slow' : 'text-[#929bc9]'}`} style={{ animationDuration: '3s' }}>construction</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0 w-full text-center md:text-left">
+                                            <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                                                <h4 className="text-white font-bold text-lg truncate flex items-center gap-2">
+                                                    {isNext ? 'Rozbudowa w toku' : 'W kolejce'}
+                                                    {!isNext && <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-[#929bc9]">#{index + 1}</span>}
+                                                </h4>
+                                                <span className="px-2 py-0.5 rounded text-xs bg-primary/20 text-primary border border-primary/20 font-bold">Lvl {item.targetLevel}</span>
+                                            </div>
+                                            <div className="flex items-center gap-4 justify-center md:justify-start text-sm text-[#929bc9]">
+                                                <span className={isNext ? "text-primary font-medium animate-pulse" : ""}>{isNext ? 'Pozostały czas:' : 'Start za:'}</span>
+                                                <span className={`text-2xl font-mono ${isNext ? 'text-white font-bold' : 'text-[#929bc9]'}`}>
+                                                    {queueTimes[item.id] || '...'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="bg-[#1c2136] border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center gap-2 text-center h-28">

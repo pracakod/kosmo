@@ -147,6 +147,7 @@ interface GameContextType extends GameState {
     updatePlanetType: (type: string) => void;
     getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
     renameUser: (name: string) => void;
+    getLevel: (points: number, settings?: any) => number;
 }
 
 const initialState: GameState = {
@@ -986,6 +987,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         };
     };
 
+    const getLevel = (points: number, settings?: any) => {
+        const rawLevel = Math.floor(points / 1000) + 1;
+        if (settings?.reachedLevel16) {
+            return Math.max(16, rawLevel);
+        }
+        return rawLevel;
+    };
 
 
     // Actions
@@ -1429,8 +1437,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 type: 'building',
                 itemId: buildingId,
                 targetLevel: currentLevel + 1,
-                startTime: now,
-                endTime: now + buildTime
+                startTime: startTime,
+                endTime: endTime
             }]
         }).eq('id', session.user.id);
 
@@ -1683,8 +1691,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 }
             }
 
-            // Persist completed items to Supabase (Side effect OUTSIDE of setter)
-            if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length)) {
+            // Level 16 Lock Logic
+            const currentPoints = calculatePoints(newResources, newBuildings, newShips);
+            const currentLevel = Math.floor(currentPoints / 1000) + 1;
+            let updatedSettings = { ...prev.productionSettings };
+            let settingsChanged = false;
+
+            if (currentLevel >= 16 && !updatedSettings.reachedLevel16) {
+                updatedSettings.reachedLevel16 = true;
+                settingsChanged = true;
+            }
+
+            // Persist completed items or settings to Supabase
+            if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length) || settingsChanged) {
                 supabase.from('profiles').update({
                     buildings: newBuildings,
                     research: newResearch,
@@ -1692,7 +1711,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     defenses: newDefenses,
                     shipyard_queue: newShipQueue,
                     construction_queue: newQueue,
-                    points: calculatePoints(newResources, newBuildings, newShips)
+                    production_settings: settingsChanged ? updatedSettings : updatedSettings, // Correctly save settings
+                    points: currentPoints
                 }).eq('id', session.user.id).then(({ error }) => {
                     if (error) console.error("Auto-save error:", error);
                 });
@@ -1700,6 +1720,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             setGameState(current => ({
                 ...current,
+                productionSettings: settingsChanged ? updatedSettings : current.productionSettings,
                 resources: {
                     ...newResources,
                     storage: production.storage
@@ -1742,7 +1763,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         updateAvatar,
         updatePlanetType,
         getPlayersInSystem,
-        renameUser
+        renameUser,
+        getLevel
     };
 
     return (

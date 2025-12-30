@@ -93,7 +93,8 @@ const Ranking: React.FC = () => {
                             {players.map((player, index) => {
                                 const isTop3 = index < 3;
                                 const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-[#929bc9]';
-                                const level = Math.floor(player.points / 1000) + 1;
+                                const rawLevel = Math.floor(player.points / 1000) + 1;
+                                const level = (player.production_settings?.reachedLevel16) ? Math.max(16, rawLevel) : rawLevel;
 
                                 // Online status check (5 minutes threshold)
                                 const now = Date.now();
