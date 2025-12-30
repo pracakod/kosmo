@@ -270,9 +270,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }));
 
             const myMissions = mappedMissions.filter(m => m.ownerId === session.user.id && m.status !== 'completed');
-            const incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying');
+            let incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying');
 
-            if (incoming.length > 0) console.log('Incoming Attacks Detected:', incoming);
+            if (incoming.length > 0) {
+                // Fetch attacker nicknames
+                const attackerIds = Array.from(new Set(incoming.map(m => m.ownerId)));
+                const { data: attackers } = await supabase.from('profiles').select('id, nickname').in('id', attackerIds);
+
+                if (attackers) {
+                    const attackerMap = new Map(attackers.map(a => [a.id, a.nickname]));
+                    incoming = incoming.map(m => ({
+                        ...m,
+                        attackerName: attackerMap.get(m.ownerId!) || 'Nieznany'
+                    }));
+                }
+                console.log('Incoming Attacks Detected:', incoming);
+            }
 
             setGameState(prev => ({
                 ...prev,

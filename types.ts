@@ -128,6 +128,7 @@ export interface MissionRewards {
 export interface FleetMission {
   id: string;
   ownerId?: string; // Who sent it
+  attackerName?: string; // Resolved nickname of the attacker
   targetUserId?: string | null; // Who is being attacked
   type: MissionType;
   ships: Record<ShipId, number>;

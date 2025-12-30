@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS } from '../constants';
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, cancelMission } = useGame();
+    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, cancelMission } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeConstruction = constructionQueue[0];
     const activeShipBuild = shipyardQueue[0];
@@ -144,7 +144,13 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-[#111422] rounded-lg p-3 text-center">
                                     <div className="text-yellow-400 font-bold text-2xl">
-                                        {Math.floor(((Object.values(buildings) as number[]).reduce((a, b) => a + b, 0) + totalShips) / 5) + 1}
+                                        {(() => {
+                                            const resPoints = Math.floor(((resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0)) / 1000);
+                                            const buildPoints = Object.values(buildings).reduce((a, b) => a + (b || 0) * 100, 0);
+                                            const shipPoints = Object.values(ships).reduce((a, b) => a + (b || 0) * 50, 0);
+                                            const totalPoints = resPoints + buildPoints + shipPoints;
+                                            return Math.floor(totalPoints / 100) + 1;
+                                        })()}
                                     </div>
                                     <div className="text-[#929bc9] text-xs uppercase">Poziom</div>
                                 </div>

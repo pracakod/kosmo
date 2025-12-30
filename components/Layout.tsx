@@ -79,7 +79,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                                     </h3>
                                     {!isAlertCollapsed && (
                                         <p className="text-red-200 text-xs hidden sm:block">
-                                            Nadciąga wroga flota! Przygotuj obronę!
+                                            {incomingMissions[0].attackerName ? `Atakuje Cię: ${incomingMissions[0].attackerName}` : 'Nadciąga wroga flota! Przygotuj obronę!'}
                                         </p>
                                     )}
                                 </div>
