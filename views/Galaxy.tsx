@@ -412,7 +412,7 @@ const Galaxy: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-4">
-                                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2">
+                                    <div className="grid grid-cols-1 gap-2">
                                         {Object.entries(ships).map(([id, count]) => {
                                             if (count <= 0 || id === 'solarSatellite' || id === 'crawlers') return null; // Skip satellites/crawlers/empty
                                             const current = selectedShips[id] || 0;
@@ -491,7 +491,7 @@ const Galaxy: React.FC = () => {
                                     {/* Ships Selection */}
                                     <div>
                                         <h4 className="text-sm font-bold text-white mb-2">Wybierz Statki</h4>
-                                        <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2 bg-[#111422] p-2 rounded-lg border border-white/5">
+                                        <div className="grid grid-cols-1 gap-2 bg-[#111422] p-2 rounded-lg border border-white/5">
                                             {Object.entries(ships).map(([id, count]) => {
                                                 if (count <= 0 || id === 'solarSatellite' || id === 'crawlers' || id === 'espionageProbe') return null;
                                                 const current = selectedShips[id] || 0;
