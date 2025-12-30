@@ -654,12 +654,49 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 if (mission.targetUserId) {
                     const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
                     if (targetProfile) {
+                        // Espionage Logic
+                        const attackerSpyLevel = research[ResearchId.ESPIONAGE_TECH] || 0;
+                        const defenderSpyLevel = targetProfile.research?.[ResearchId.ESPIONAGE_TECH] || 0;
+                        const spyDiff = attackerSpyLevel - defenderSpyLevel;
+
+                        // Base Info: Resources (always visible if spy successful, maybe chance based later)
+                        let spyMessage = `Cel: ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\n`;
+                        spyMessage += `Zasoby: M:${Math.floor(targetProfile.resources?.metal || 0).toLocaleString()} C:${Math.floor(targetProfile.resources?.crystal || 0).toLocaleString()} D:${Math.floor(targetProfile.resources?.deuterium || 0).toLocaleString()}\n`;
+
+                        // Details based on Tech Difference
+                        // Level Difference >= 2: Show Fleet
+                        if (spyDiff >= 2 || attackerSpyLevel >= 4) { // Allow brute force with high level
+                            const sh = targetProfile.ships || {};
+                            const shipList = Object.entries(sh).map(([id, count]) => `${SHIPS[id as ShipId]?.name || id}: ${count}`).join(', ');
+                            spyMessage += `Flota: ${shipList || 'Brak'}\n`;
+                        } else {
+                            spyMessage += `Flota: (Wymagany wyższy poziom szpiegostwa)\n`;
+                        }
+
+                        // Level Difference >= 3: Show Defense
+                        if (spyDiff >= 3 || attackerSpyLevel >= 6) {
+                            const def = targetProfile.defenses || {};
+                            const defList = Object.entries(def).map(([id, count]) => `${DEFENSES[id as DefenseId]?.name || id}: ${count}`).join(', ');
+                            spyMessage += `Obrona: ${defList || 'Brak'}\n`;
+                        } else {
+                            spyMessage += `Obrona: (Wymagany wyższy poziom szpiegostwa)\n`;
+                        }
+
+                        // Level Difference >= 4: Show Buildings
+                        if (spyDiff >= 4 || attackerSpyLevel >= 8) {
+                            const bld = targetProfile.buildings || {};
+                            const bldList = Object.entries(bld).map(([id, lvl]) => `${BUILDINGS[id as BuildingId]?.name || id} (${lvl})`).join(', ');
+                            spyMessage += `Budynki: ${bldList || 'Brak'}\n`;
+                        } else {
+                            spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa)\n`;
+                        }
+
                         result = {
                             id: Date.now().toString(),
                             timestamp: Date.now(),
                             outcome: 'success' as 'success',
                             title: 'Raport Szpiegowski',
-                            message: `Cel: ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\nZasoby: M:${Math.floor(targetProfile.resources?.metal || 0)} C:${Math.floor(targetProfile.resources?.crystal || 0)} D:${Math.floor(targetProfile.resources?.deuterium || 0)}\nBudynki: (Ukryte)\nFlota: ${Object.keys(targetProfile.ships || {}).length > 0 ? 'Wykryto sygnatury' : 'Brak'}.`
+                            message: spyMessage
                         };
 
                         const newTargetLogs = [
