@@ -1198,7 +1198,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
     const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
     const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
-    const clearLogs = () => { setGameState(prev => ({ ...prev, missionLogs: [] })); };
+    const clearLogs = async () => {
+        setGameState(prev => ({ ...prev, missionLogs: [] }));
+        await supabase.from('profiles').update({ mission_logs: [] }).eq('id', session.user.id);
+    };
     const logout = async () => {
         localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
         await supabase.auth.signOut();
