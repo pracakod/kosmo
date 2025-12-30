@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../GameContext';
-import { IMAGES, PLANET_IMAGES, formatTime, SHIPS } from '../constants';
+import { IMAGES, PLANET_IMAGES, formatTime, SHIPS, DEFENSES } from '../constants';
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
@@ -203,25 +203,37 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                     )}
 
                     {/* Shipyard Queue */}
+                    {/* Shipyard Queue */}
                     {activeShipBuild ? (
-                        <div className="bg-[#2a2d40] border border-white/10 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 bottom-0 w-1 bg-orange-500 animate-pulse"></div>
-                            <div className="size-20 rounded-xl bg-[#111422] shrink-0 flex items-center justify-center border border-white/10">
-                                <span className="material-symbols-outlined text-4xl text-orange-500 animate-pulse">rocket</span>
-                            </div>
-                            <div className="flex-1 min-w-0 w-full text-center md:text-left">
-                                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                    <h4 className="text-white font-bold text-xl truncate">Produkcja Floty</h4>
-                                    <span className="px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-500 border border-orange-500/20 font-bold">
-                                        {SHIPS[activeShipBuild.itemId as ShipId].name}
-                                    </span>
+                        (() => {
+                            const isDefense = activeShipBuild.type === 'defense';
+                            // @ts-ignore
+                            const itemDef = isDefense ? DEFENSES[activeShipBuild.itemId] : SHIPS[activeShipBuild.itemId as ShipId];
+                            const itemName = itemDef?.name || activeShipBuild.itemId;
+                            // @ts-ignore
+                            const itemIcon = itemDef?.icon || (isDefense ? 'shield' : 'rocket');
+
+                            return (
+                                <div className="bg-[#2a2d40] border border-white/10 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
+                                    <div className={`absolute top-0 left-0 bottom-0 w-1 ${isDefense ? 'bg-blue-500' : 'bg-orange-500'} animate-pulse`}></div>
+                                    <div className="size-20 rounded-xl bg-[#111422] shrink-0 flex items-center justify-center border border-white/10">
+                                        <span className={`material-symbols-outlined text-4xl ${isDefense ? 'text-blue-500' : 'text-orange-500'} animate-pulse`}>{itemIcon}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0 w-full text-center md:text-left">
+                                        <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                                            <h4 className="text-white font-bold text-xl truncate">{isDefense ? 'Budowa Obrony' : 'Produkcja Floty'}</h4>
+                                            <span className={`px-2 py-0.5 rounded text-xs ${isDefense ? 'bg-blue-500/20 text-blue-500 border-blue-500/20' : 'bg-orange-500/20 text-orange-500 border-orange-500/20'} border font-bold`}>
+                                                {itemName}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 justify-center md:justify-start text-sm text-[#929bc9]">
+                                            <span className={`${isDefense ? 'text-blue-500' : 'text-orange-500'} font-medium`}>x{activeShipBuild.quantity}</span>
+                                            <span className="text-2xl font-mono text-white font-bold">{shipTimeLeft}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-4 justify-center md:justify-start text-sm text-[#929bc9]">
-                                    <span className="text-orange-500 font-medium">x{activeShipBuild.quantity}</span>
-                                    <span className="text-2xl font-mono text-white font-bold">{shipTimeLeft}</span>
-                                </div>
-                            </div>
-                        </div>
+                            );
+                        })()
                     ) : null}
                 </div>
             </div>
