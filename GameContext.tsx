@@ -824,6 +824,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return_time: now + duration,
             status: 'flying'
         });
+
+        // Update Profile (Deduct Ships)
+        const currentShips = { ...gameState.ships };
+        Object.entries(ships).forEach(([id, count]) => {
+            currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
+        });
+
+        await supabase.from('profiles').update({ ships: currentShips }).eq('id', session.user.id);
     };
 
     const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
@@ -891,6 +899,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             console.error('❌ ATTACK INSERT ERROR:', insertError);
         } else {
             console.log('✅ ATTACK INSERTED:', insertedData);
+
+            // Update Profile (Deduct Ships)
+            const currentShips = { ...gameState.ships };
+            Object.entries(ships).forEach(([id, count]) => {
+                currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
+            });
+            await supabase.from('profiles').update({ ships: currentShips }).eq('id', session.user.id);
         }
     };
 
@@ -939,6 +954,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return_time: now + duration,
             status: 'flying'
         });
+
+        // Update Profile (Deduct Probes)
+        const currentShips = { ...gameState.ships };
+        currentShips[ShipId.ESPIONAGE_PROBE] = (currentShips[ShipId.ESPIONAGE_PROBE] || 0) - amount;
+        await supabase.from('profiles').update({ ships: currentShips }).eq('id', session.user.id);
 
         return true;
     };
@@ -1000,6 +1020,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         });
 
         if (error) console.error("Error sending transport:", error);
+        else {
+            // Update Profile (Deduct Ships & Resources)
+            const currentShips = { ...gameState.ships };
+            Object.entries(ships).forEach(([id, count]) => {
+                currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
+            });
+            const currentRes = { ...gameState.resources };
+            currentRes.metal -= (resources.metal || 0);
+            currentRes.crystal -= (resources.crystal || 0);
+            currentRes.deuterium -= (resources.deuterium || 0);
+
+            await supabase.from('profiles').update({ ships: currentShips, resources: currentRes }).eq('id', session.user.id);
+        }
     };
 
     const cancelMission = async (missionId: string) => {
@@ -1158,7 +1191,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const getPlayersInSystem = async (galaxy: number, system: number) => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, planet_name, galaxy_coords, points, production_settings, buildings')
+            .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname')
             .contains('galaxy_coords', { galaxy, system });
 
         if (error) {
@@ -1168,8 +1201,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return data || [];
     };
 
-    const renameUser = (name: string) => {
+    const renameUser = async (name: string) => {
         setGameState(prev => ({ ...prev, nickname: name }));
+        await supabase.from('profiles').update({ nickname: name }).eq('id', session.user.id);
     };
 
     // Main Loop
