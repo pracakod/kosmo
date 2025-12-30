@@ -1383,15 +1383,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const currentLevel = gameState.buildings[buildingId];
         const cost = getCost('building', buildingId, currentLevel);
         if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-        // Check if building is already in progress
-        if (gameState.constructionQueue.some(q => q.type === 'building')) return;
+        // Check queue limit (Max 2 buildings)
+        const currentQueue = gameState.constructionQueue.filter(q => q.type === 'building');
+        if (currentQueue.length >= 2) return;
 
         const totalResources = cost.metal + cost.crystal;
         let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
         buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
         buildTimeMs = buildTimeMs / GAME_SPEED;
         const buildTime = Math.max(1000, buildTimeMs);
-        const now = Date.now();
+
+        // Determine start time (After the last item in queue finishes, or Now)
+        const lastItem = currentQueue.sort((a, b) => b.endTime - a.endTime)[0];
+        const startTime = lastItem ? lastItem.endTime : Date.now();
+        const endTime = startTime + buildTime;
 
         setGameState(prev => ({
             ...prev,
@@ -1402,12 +1407,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 deuterium: prev.resources.deuterium - cost.deuterium
             },
             constructionQueue: [...prev.constructionQueue, {
-                id: now.toString(),
+                id: Date.now().toString(),
                 type: 'building',
                 itemId: buildingId,
                 targetLevel: currentLevel + 1,
-                startTime: now,
-                endTime: now + buildTime
+                startTime: startTime,
+                endTime: endTime
             }]
         }));
 
