@@ -5,6 +5,83 @@ import { calculateExpeditionOutcome } from './lib/gameLogic';
 import { GameState, BuildingId, ResearchId, ShipId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
 import { BUILDINGS, RESEARCH, SHIPS } from './constants';
 
+const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
+    let attackPower = 0;
+    let defensePower = 0;
+
+    Object.entries(attackerShips).forEach(([id, count]) => {
+        const ship = SHIPS[id as ShipId];
+        if (ship) attackPower += (ship.attack * (count as number));
+    });
+
+    // Defender Ships
+    let defenderDefense = 0;
+    let defenderAttack = 0;
+    if (defenderShips) {
+        Object.entries(defenderShips).forEach(([id, count]) => {
+            const ship = SHIPS[id as ShipId];
+            if (ship) {
+                defenderDefense += (ship.defense * (count as number));
+                defenderAttack += (ship.attack * (count as number));
+            }
+        });
+    }
+
+    // Bot Boost
+    if (isBot) {
+        defenderDefense = Math.max(100, attackPower * 0.8);
+        defenderAttack = Math.max(100, attackPower * 0.5);
+    }
+
+    const attackerWin = attackPower > defenderDefense;
+
+    // Calculate Losses
+    // Simplified: Loser loses 50-100% of fleet, Winner loses 10-30%
+    const attackerLossRatio = attackerWin ? 0.2 : 0.8;
+    const defenderLossRatio = attackerWin ? 0.8 : 0.1;
+
+    const survivingAttackerShips: any = {};
+    let totalAttackerLost = 0;
+    Object.entries(attackerShips).forEach(([id, count]) => {
+        const lost = Math.floor((count as number) * (attackerLossRatio + (Math.random() * 0.2)));
+        const survived = (count as number) - lost;
+        if (survived > 0) survivingAttackerShips[id] = survived;
+        totalAttackerLost += lost;
+    });
+
+    const survivingDefenderShips: any = {};
+    if (defenderShips) {
+        Object.entries(defenderShips).forEach(([id, count]) => {
+            const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
+            const survived = (count as number) - lost;
+            if (survived > 0) survivingDefenderShips[id] = survived;
+        });
+    }
+
+    // Loot
+    let loot = { metal: 0, crystal: 0, deuterium: 0 };
+    if (attackerWin) {
+        // Take 50% of available resources
+        loot.metal = Math.floor((defenderResources.metal || 0) * 0.5);
+        loot.crystal = Math.floor((defenderResources.crystal || 0) * 0.5);
+        loot.deuterium = Math.floor((defenderResources.deuterium || 0) * 0.5);
+    }
+
+    return {
+        survivingAttackerShips,
+        survivingDefenderShips,
+        loot,
+        log: {
+            id: Date.now().toString(),
+            timestamp: Date.now(),
+            title: attackerWin ? "Zwycięstwo!" : "Porażka!",
+            message: `Walka zakończona. Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}. Straty: ${totalAttackerLost} jednostek. Zrabowano: M:${loot.metal} C:${loot.crystal}`,
+            outcome: attackerWin ? 'success' : 'failure'
+        },
+        attackerWon: attackerWin
+    };
+};
+
 const TICK_RATE = 1000;
 const GAME_SPEED = 100;
 const STORAGE_KEY = 'cosmos_conquest_save_v1';
@@ -386,6 +463,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
                         if (targetProfile) {
                             result = {
+                                id: Date.now().toString(),
+                                timestamp: Date.now(),
                                 outcome: 'success',
                                 title: 'Raport Szpiegowski',
                                 message: `Skan planety [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\nZasoby: M:${Math.floor(targetProfile.resources?.metal || 0)} C:${Math.floor(targetProfile.resources?.crystal || 0)} D:${Math.floor(targetProfile.resources?.deuterium || 0)}\nBudynki: (Ukryte przez technologię szpiegowską level 0)\nFlota: ${Object.keys(targetProfile.ships || {}).length > 0 ? 'Wykryto sygnatury floty' : 'Brak floty'}.`
@@ -399,7 +478,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             await supabase.from('profiles').update({ mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
                         }
                     } else {
-                        result = { outcome: 'success', title: 'Raport', message: 'Opuszczona planeta. Brak oznak życia.' };
+                        result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'success', title: 'Raport', message: 'Opuszczona planeta. Brak oznak życia.' };
                     }
                 } else if (mission.type === MissionType.TRANSPORT) {
                     // ... Transport logic
@@ -418,10 +497,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             ].slice(0, 50);
 
                             await supabase.from('profiles').update({ resources: newRes, mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
-                            result = { outcome: 'success', title: 'Transport', message: 'Surowce dostarczone.' };
+                            result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'success', title: 'Transport', message: 'Surowce dostarczone.' };
                         }
                     } else {
-                        result = { outcome: 'neutral', title: 'Transport', message: 'Nie znaleziono kolonii docelowej. Flota zawraca.' };
+                        result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'neutral', title: 'Transport', message: 'Nie znaleziono kolonii docelowej. Flota zawraca.' };
                         loot = mission.resources || {};
                     }
                 }
@@ -522,83 +601,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
         };
 
-        const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
-            let attackPower = 0;
-            let defensePower = 0;
 
-            Object.entries(attackerShips).forEach(([id, count]) => {
-                const ship = SHIPS[id as ShipId];
-                if (ship) attackPower += (ship.attack * (count as number));
-            });
-
-            // Defender Ships
-            let defenderDefense = 0;
-            let defenderAttack = 0;
-            if (defenderShips) {
-                Object.entries(defenderShips).forEach(([id, count]) => {
-                    const ship = SHIPS[id as ShipId];
-                    if (ship) {
-                        defenderDefense += (ship.defense * (count as number));
-                        defenderAttack += (ship.attack * (count as number));
-                    }
-                });
-            }
-
-            // Bot Boost
-            if (isBot) {
-                defenderDefense = Math.max(100, attackPower * 0.8);
-                defenderAttack = Math.max(100, attackPower * 0.5);
-            }
-
-            const attackerWin = attackPower > defenderDefense;
-
-            // Calculate Losses
-            // Simplified: Loser loses 50-100% of fleet, Winner loses 10-30%
-            const attackerLossRatio = attackerWin ? 0.2 : 0.8;
-            const defenderLossRatio = attackerWin ? 0.8 : 0.1;
-
-            const survivingAttackerShips: any = {};
-            let totalAttackerLost = 0;
-            Object.entries(attackerShips).forEach(([id, count]) => {
-                const lost = Math.floor((count as number) * (attackerLossRatio + (Math.random() * 0.2)));
-                const survived = (count as number) - lost;
-                if (survived > 0) survivingAttackerShips[id] = survived;
-                totalAttackerLost += lost;
-            });
-
-            const survivingDefenderShips: any = {};
-            if (defenderShips) {
-                Object.entries(defenderShips).forEach(([id, count]) => {
-                    const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
-                    const survived = (count as number) - lost;
-                    if (survived > 0) survivingDefenderShips[id] = survived;
-                });
-            }
-
-            // Loot
-            let loot = { metal: 0, crystal: 0, deuterium: 0 };
-            if (attackerWin) {
-                // Take 50% of available resources
-                loot.metal = Math.floor((defenderResources.metal || 0) * 0.5);
-                loot.crystal = Math.floor((defenderResources.crystal || 0) * 0.5);
-                loot.deuterium = Math.floor((defenderResources.deuterium || 0) * 0.5);
-
-                // Cap by cargo capacity (Simplified: assumes infinite for now or calculated elsewhere)
-                // Ideally check attacker capacity
-            }
-
-            return {
-                survivingAttackerShips,
-                survivingDefenderShips,
-                loot,
-                log: {
-                    title: attackerWin ? "Zwycięstwo!" : "Porażka!",
-                    message: `Walka zakończona. Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}. Straty: ${totalAttackerLost} jednostek. Zrabowano: M:${loot.metal} C:${loot.crystal}`,
-                    outcome: attackerWin ? 'success' : 'failure'
-                },
-                attackerWon: attackerWin
-            };
-        };
 
         // Subscribe to DB changes
         useEffect(() => {
