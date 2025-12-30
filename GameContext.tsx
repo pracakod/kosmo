@@ -968,13 +968,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         });
 
         // DB Insert
-        await supabase.from('missions').insert({
+        const { error } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
             target_user_id: targetUserId,
             mission_type: MissionType.TRANSPORT,
             ships: ships,
             resources: resources,
+            active_mission: true,
             target_coords: coords,
             origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             start_time: now,
@@ -982,6 +983,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return_time: now + duration,
             status: 'flying'
         });
+
+        if (error) console.error("Error sending transport:", error);
     };
 
     const cancelMission = async (missionId: string) => {

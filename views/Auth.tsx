@@ -5,7 +5,7 @@ import { IMAGES } from '../constants';
 
 const Auth: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
-    const [email, setEmail] = useState('');
+    const [nickname, setNickname] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -15,21 +15,30 @@ const Auth: React.FC = () => {
         setLoading(true);
         setError(null);
 
+        // Pseudo-email strategy
+        const fakeEmail = `${nickname.trim()}@kosmo.game`;
+
         try {
             if (isLogin) {
                 const { error } = await supabase.auth.signInWithPassword({
-                    email,
+                    email: fakeEmail,
                     password,
                 });
                 if (error) throw error;
             } else {
                 const { error } = await supabase.auth.signUp({
-                    email,
+                    email: fakeEmail,
                     password,
+                    options: {
+                        data: {
+                            full_name: nickname.trim(), // Save original nick in metadata
+                        },
+                    },
                 });
                 if (error) throw error;
-                alert('Rejestracja udana! Możesz się teraz zalogować.');
-                setIsLogin(true);
+                // Auto-login happens if confirm email is disabled
+                // But we can check session? Usually signInWithPassword isn't needed if signUp AutoSignIn is on.
+                // Assuming "Confirm Email" is disabled in Supabase, user is logged in automatically.
             }
         } catch (err: any) {
             setError(err.message);
@@ -58,7 +67,7 @@ const Auth: React.FC = () => {
                         />
                     </div>
                     <h1 className="text-4xl font-bold text-white tracking-tight uppercase font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary animate-in slide-in-from-top-4 duration-700 delay-150">Kosmo</h1>
-                    <p className="text-gray-500 mt-2 animate-in slide-in-from-top-2 duration-700 delay-200">v1.2.0 (PvP & Commander Update)</p>
+                    <p className="text-gray-500 mt-2 animate-in slide-in-from-top-2 duration-700 delay-200">v1.2.5 (PvP & Commander Update)</p>
                     <p className="text-[#929bc9] text-sm md:text-base text-center mt-2 animate-in slide-in-from-top-2 duration-700 delay-300">Zaloguj się do terminala dowódcy</p>
                 </div>
 
@@ -70,14 +79,14 @@ const Auth: React.FC = () => {
                     )}
 
                     <div className="group">
-                        <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block group-focus-within:text-primary transition-colors">Email</label>
+                        <label className="text-xs font-bold text-[#929bc9] uppercase mb-1 block group-focus-within:text-primary transition-colors">Nick Dowódcy</label>
                         <input
-                            type="email"
+                            type="text"
                             required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={nickname}
+                            onChange={(e) => setNickname(e.target.value)}
                             className="w-full bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-inner"
-                            placeholder="dowodca@flota.pl"
+                            placeholder="Wpisz swój nick..."
                         />
                     </div>
 

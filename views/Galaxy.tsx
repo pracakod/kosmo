@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useGame } from '../GameContext';
-import { IMAGES } from '../constants';
+import { IMAGES, SHIPS } from '../constants';
 import { ShipId } from '../types';
 
 interface SpyReport {
@@ -16,7 +16,7 @@ interface SpyReport {
 const Galaxy: React.FC = () => {
     // Start at Galaxy 1, System 1 to see player immediately
     const [coords, setCoords] = useState({ galaxy: 1, system: 1 });
-    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, galaxyCoords, planetType, getPlayersInSystem, userId } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, resources, galaxyCoords, planetType, getPlayersInSystem, userId } = useGame();
 
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
@@ -517,20 +517,59 @@ const Galaxy: React.FC = () => {
 
                                     {/* Resources Selection */}
                                     <div>
-                                        <h4 className="text-sm font-bold text-white mb-2">Załaduj Surowce</h4>
+                                        <div className="flex justify-between items-end mb-2">
+                                            <h4 className="text-sm font-bold text-white">Załaduj Surowce</h4>
+                                            <span className={`text-xs font-mono ${(selectedResources.metal + selectedResources.crystal + selectedResources.deuterium) > Object.entries(selectedShips).reduce((acc, [id, count]) => acc + (count * (SHIPS[id as ShipId]?.capacity || 0)), 0) ? 'text-red-400' : 'text-blue-400'}`}>
+                                                Ładowność: {(selectedResources.metal + selectedResources.crystal + selectedResources.deuterium).toLocaleString()} / {Object.entries(selectedShips).reduce((acc, [id, count]) => acc + (count * (SHIPS[id as ShipId]?.capacity || 0)), 0).toLocaleString()}
+                                            </span>
+                                        </div>
                                         <div className="flex flex-col gap-2">
-                                            {['metal', 'crystal', 'deuterium'].map(res => (
-                                                <div key={res} className="flex items-center gap-3">
-                                                    <div className="w-20 text-xs uppercase font-bold text-[#929bc9]">{res === 'metal' ? 'Metal' : (res === 'crystal' ? 'Kryształ' : 'Deuter')}</div>
-                                                    <input
-                                                        type="number"
-                                                        value={selectedResources[res as keyof typeof selectedResources] || 0}
-                                                        onChange={(e) => setSelectedResources(prev => ({ ...prev, [res]: parseInt(e.target.value) || 0 }))}
-                                                        className="flex-1 bg-[#111422] border border-white/10 rounded px-3 py-2 text-white font-mono text-sm focus:border-blue-500 outline-none"
-                                                        placeholder="0"
-                                                    />
-                                                </div>
-                                            ))}
+                                            {['metal', 'crystal', 'deuterium'].map(res => {
+                                                const resKey = res as 'metal' | 'crystal' | 'deuterium';
+                                                const totalCapacity = Object.entries(selectedShips).reduce((acc, [id, count]) => acc + (count * (SHIPS[id as ShipId]?.capacity || 0)), 0);
+                                                const currentLoad = selectedResources.metal + selectedResources.crystal + selectedResources.deuterium;
+                                                // Remaining capacity calculated *without* the current resource amount being edited, to find the "headroom" available for THIS resource
+                                                const otherResourcesLoad = currentLoad - (selectedResources[resKey] || 0);
+                                                const remainingCapacityForThisSlot = Math.max(0, totalCapacity - otherResourcesLoad);
+
+                                                const maxAvailable = Math.min(
+                                                    resources[resKey] || 0,
+                                                    remainingCapacityForThisSlot
+                                                );
+
+                                                return (
+                                                    <div key={res} className="flex items-center gap-3">
+                                                        <div className="w-20 text-xs uppercase font-bold text-[#929bc9]">{res === 'metal' ? 'Metal' : (res === 'crystal' ? 'Kryształ' : 'Deuter')}</div>
+                                                        <div className="flex-1 relative">
+                                                            <input
+                                                                type="number"
+                                                                value={selectedResources[resKey] || 0}
+                                                                onChange={(e) => {
+                                                                    const val = Math.max(0, parseInt(e.target.value) || 0);
+                                                                    setSelectedResources(prev => ({ ...prev, [resKey]: val }));
+                                                                }}
+                                                                className={`w-full bg-[#111422] border rounded px-3 py-2 text-white font-mono text-sm focus:border-blue-500 outline-none ${selectedResources[resKey] > (resources[resKey] || 0) ? 'border-red-500 text-red-400' : 'border-white/10'}`}
+                                                                placeholder="0"
+                                                            />
+                                                            <button
+                                                                onClick={() => setSelectedResources(prev => {
+                                                                    const currentVal = prev[resKey];
+                                                                    const others = (prev.metal + prev.crystal + prev.deuterium) - currentVal;
+                                                                    const spaceLeft = Math.max(0, totalCapacity - others);
+                                                                    const newMax = Math.min(resources[resKey] || 0, spaceLeft);
+                                                                    return { ...prev, [resKey]: newMax };
+                                                                })}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-blue-400 hover:text-white font-bold uppercase"
+                                                            >
+                                                                MAX
+                                                            </button>
+                                                        </div>
+                                                        <div className="text-[10px] text-[#929bc9] w-16 text-right">
+                                                            / {(resources[resKey] || 0).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
@@ -541,7 +580,13 @@ const Galaxy: React.FC = () => {
                                                 setStatusMessage("Wybierz statki transportowe!");
                                                 return;
                                             }
-                                            // TODO: Check cargo capacity vs resources
+                                            const totalLoad = selectedResources.metal + selectedResources.crystal + selectedResources.deuterium;
+                                            const totalCapacity = Object.entries(selectedShips).reduce((acc, [id, count]) => acc + (count * (SHIPS[id as ShipId]?.capacity || 0)), 0);
+
+                                            if (totalLoad > totalCapacity) {
+                                                setStatusMessage(`Przeładowanie! (Limit: ${totalCapacity.toLocaleString()})`);
+                                                return;
+                                            }
                                             sendTransport(selectedShips as Record<ShipId, number>, selectedResources, { galaxy: coords.galaxy, system: coords.system, position: transportModal.pos });
                                             setStatusMessage("Wysyłanie floty transportowej...");
                                             setTimeout(() => setTransportModal(null), 2000);
