@@ -648,6 +648,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return () => { supabase.removeChannel(channel); };
     }, [session]);
 
+    // Use Ref to access latest state inside interval without triggering re-effects
+    const gameStateRef = React.useRef(gameState);
+    useEffect(() => {
+        gameStateRef.current = gameState;
+    }, [gameState]);
+
     // Mission Processing Watcher
     useEffect(() => {
         if (!loaded || !session?.user) return;
@@ -655,7 +661,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         const checkMissions = async () => {
             const now = Date.now();
-            const missions = gameState.activeMissions;
+            // Access state via ref to avoid dependency loop
+            const missions = gameStateRef.current.activeMissions;
 
             // Poll for incoming attacks every 30 seconds (backup for Realtime)
             pollCounter++;
@@ -692,7 +699,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         const interval = setInterval(checkMissions, 1000);
         return () => clearInterval(interval);
-    }, [gameState.activeMissions, loaded, session]);
+        // Removed gameState.activeMissions from dependencies to prevent loop
+    }, [loaded, session]);
     // Re-implementing helper functions for context clarity
     const getCost = (type: 'building' | 'research', id: string, currentLevel: number) => {
         const def = type === 'building' ? BUILDINGS[id as BuildingId] : RESEARCH[id as ResearchId];
