@@ -92,7 +92,7 @@ const Ranking: React.FC = () => {
                             {players.map((player, index) => {
                                 const isTop3 = index < 3;
                                 const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-[#929bc9]';
-                                const level = Math.floor(player.points / 100) + 1;
+                                const level = Math.floor(player.points / 1000) + 1;
 
                                 return (
                                     <tr key={player.id} className="hover:bg-white/5 transition-colors group">

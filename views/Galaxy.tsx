@@ -46,10 +46,17 @@ const Galaxy: React.FC = () => {
 
             const pType = planetType === 'ice' ? "Lodowa" : (planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
 
+            // Calculate MY level
+            const resPoints = Math.floor(((resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0)) / 1000);
+            const buildPoints = Object.values(buildings).reduce((a, b) => a + (b || 0) * 100, 0);
+            const shipPoints = Object.values(ships).reduce((a, b) => a + (b || 0) * 50, 0);
+            const totalPoints = resPoints + buildPoints + shipPoints;
+            const myLevel = Math.floor(totalPoints / 1000) + 1;
+
             return {
                 name: planetName,
                 player: "Ty",
-                rank: 1, // TODO: Fetch rank
+                rank: myLevel,
                 img: IMAGES.planet,
                 type: pType,
                 isPlayer: true,
@@ -65,7 +72,7 @@ const Galaxy: React.FC = () => {
 
             // Standardize level calculation
             const points = otherPlayer.points || 0;
-            const playerLevel = Math.floor(points / 100) + 1;
+            const playerLevel = Math.floor(points / 1000) + 1;
 
             return {
                 name: otherPlayer.planet_name || "Nieznana Kolonia",

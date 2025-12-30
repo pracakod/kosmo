@@ -149,7 +149,7 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                             const buildPoints = Object.values(buildings).reduce((a, b) => a + (b || 0) * 100, 0);
                                             const shipPoints = Object.values(ships).reduce((a, b) => a + (b || 0) * 50, 0);
                                             const totalPoints = resPoints + buildPoints + shipPoints;
-                                            return Math.floor(totalPoints / 100) + 1;
+                                            return Math.floor(totalPoints / 1000) + 1;
                                         })()}
                                     </div>
                                     <div className="text-[#929bc9] text-xs uppercase">Poziom</div>
