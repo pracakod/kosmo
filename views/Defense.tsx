@@ -118,6 +118,7 @@ const Defense: React.FC = () => {
                                 <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                                     {defenseQueue.map((item, idx) => {
                                         const def = DEFENSES[item.itemId as keyof typeof DEFENSES];
+                                        if (!def) return null; // Safety check
                                         return (
                                             <div key={item.id} className="bg-[#111422] p-2 rounded border border-white/5 flex items-center gap-2 relative overflow-hidden">
                                                 {/* Progress Bar Background (Simple visual for first item) */}
