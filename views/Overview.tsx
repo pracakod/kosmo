@@ -134,32 +134,32 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Player Stats Card */}
-                    <div className="bg-[#1c2136] rounded-xl border border-white/10 p-4 mt-4">
-                        <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary text-lg">person</span>
-                            Statystyki Dowódcy
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-[#111422] rounded-lg p-3 text-center">
-                                <div className="text-yellow-400 font-bold text-2xl">
-                                    {Math.floor(((Object.values(buildings) as number[]).reduce((a, b) => a + b, 0) + totalShips) / 5) + 1}
+                        {/* Player Stats Card - inside planet section */}
+                        <div className="p-4 border-t border-white/10">
+                            <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary text-lg">person</span>
+                                Statystyki Dowódcy
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-[#111422] rounded-lg p-3 text-center">
+                                    <div className="text-yellow-400 font-bold text-2xl">
+                                        {Math.floor(((Object.values(buildings) as number[]).reduce((a, b) => a + b, 0) + totalShips) / 5) + 1}
+                                    </div>
+                                    <div className="text-[#929bc9] text-xs uppercase">Poziom</div>
                                 </div>
-                                <div className="text-[#929bc9] text-xs uppercase">Poziom</div>
-                            </div>
-                            <div className="bg-[#111422] rounded-lg p-3 text-center">
-                                <div className="text-primary font-bold text-2xl">{totalShips}</div>
-                                <div className="text-[#929bc9] text-xs uppercase">Flota</div>
-                            </div>
-                            <div className="bg-[#111422] rounded-lg p-3 text-center">
-                                <div className="text-green-400 font-bold text-lg">~2-5k</div>
-                                <div className="text-[#929bc9] text-xs uppercase">Zysk/Exp.</div>
-                            </div>
-                            <div className="bg-[#111422] rounded-lg p-3 text-center">
-                                <div className="text-purple-400 font-bold text-lg">{activeMissions.length}</div>
-                                <div className="text-[#929bc9] text-xs uppercase">Aktywne Misje</div>
+                                <div className="bg-[#111422] rounded-lg p-3 text-center">
+                                    <div className="text-primary font-bold text-2xl">{totalShips}</div>
+                                    <div className="text-[#929bc9] text-xs uppercase">Flota</div>
+                                </div>
+                                <div className="bg-[#111422] rounded-lg p-3 text-center">
+                                    <div className="text-green-400 font-bold text-lg">~2-5k</div>
+                                    <div className="text-[#929bc9] text-xs uppercase">Zysk/Exp.</div>
+                                </div>
+                                <div className="bg-[#111422] rounded-lg p-3 text-center">
+                                    <div className="text-purple-400 font-bold text-lg">{activeMissions.length}</div>
+                                    <div className="text-[#929bc9] text-xs uppercase">Aktywne Misje</div>
+                                </div>
                             </div>
                         </div>
                     </div>
