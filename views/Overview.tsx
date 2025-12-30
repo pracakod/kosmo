@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS, DEFENSES } from '../constants
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel } = useGame();
+    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel, cancelMission } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeShipBuild = shipyardQueue[0];
     const [queueTimes, setQueueTimes] = useState<Record<string, string>>({});
