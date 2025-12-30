@@ -399,7 +399,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
         };
 
-        const interval = setInterval(save, 5000); // Save every 5 seconds
+        const interval = setInterval(save, 60000); // Save every 60 seconds (optimized for DB limits)
 
         // Save on unmount / refresh
         const handleBeforeUnload = () => {
@@ -646,9 +646,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             const now = Date.now();
             const missions = gameState.activeMissions;
 
-            // Poll for incoming attacks every 5 seconds
+            // Poll for incoming attacks every 30 seconds (backup for Realtime)
             pollCounter++;
-            if (pollCounter >= 5) {
+            if (pollCounter >= 30) {
                 pollCounter = 0;
                 fetchMissions(); // Refresh both active and incoming missions
             }
