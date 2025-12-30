@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import ResourceHeader from './ResourceHeader';
 import { useGame } from '../GameContext';
-import { formatTime } from '../constants';
+import { useGame } from '../GameContext';
+import { formatTime, SHIPS, ShipId } from '../constants';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -78,9 +79,20 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                                         </span>
                                     </h3>
                                     {!isAlertCollapsed && (
-                                        <p className="text-red-200 text-xs hidden sm:block">
-                                            {incomingMissions[0].attackerName ? `Atakuje Cię: ${incomingMissions[0].attackerName}` : 'Nadciąga wroga flota! Przygotuj obronę!'}
-                                        </p>
+                                        <div className="mt-2 text-red-100/80 space-y-2">
+                                            {incomingMissions.map((mission) => (
+                                                <div key={mission.id} className="text-xs border-t border-red-500/30 pt-2">
+                                                    <p className="font-bold text-red-200 mb-1">
+                                                        {mission.attackerName ? `Atakuje: ${mission.attackerName}` : 'Nadciąga wroga flota!'}
+                                                    </p>
+                                                    <p className="opacity-80">
+                                                        Flota: {Object.entries(mission.ships || {}).map(([id, n]) =>
+                                                            `${SHIPS[id as ShipId]?.name || id}: ${n}`
+                                                        ).join(', ')}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </div>

@@ -1,4 +1,4 @@
-
+```
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { calculateExpeditionOutcome } from './lib/gameLogic';
@@ -110,7 +110,7 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
             id: Date.now().toString(),
             timestamp: Date.now(),
             title: attackerWin ? "Zwycięstwo!" : "Porażka!",
-            message: `Walka zakończona. Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}. Straty: ${totalAttackerLost} jednostek. Zrabowano: M:${loot.metal} C:${loot.crystal}`,
+            message: `Walka zakończona.Wynik: ${ attackerWin ? 'Wygrana' : 'Przegrana' }.Straty: ${ totalAttackerLost } jednostek.Zrabowano: M:${ loot.metal } C:${ loot.crystal } `,
             outcome: (attackerWin ? 'success' : 'failure') as 'success' | 'failure'
         },
         attackerWon: attackerWin
@@ -296,7 +296,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const { data, error } = await supabase
             .from('missions')
             .select('*')
-            .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
+            .or(`owner_id.eq.${ session.user.id }, target_user_id.eq.${ session.user.id } `);
 
         if (data && !error) {
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
@@ -368,7 +368,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             let loadedResources = { ...data.resources };
 
             if (timeDiff > 1) {
-                console.log(`🕒 Calculating offline production for ${timeDiff.toFixed(0)} seconds...`);
+                console.log(`🕒 Calculating offline production for ${ timeDiff.toFixed(0) } seconds...`);
 
                 const b = { ...initialState.buildings, ...data.buildings };
                 const s = { ...initialState.productionSettings, ...data.production_settings };
@@ -554,7 +554,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     // Fetch target data
                     const { data: targetProfile, error: targetError } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
 
-                    if (targetError) throw new Error(`Target profile fetch error: ${targetError.message}`);
+                    if (targetError) throw new Error(`Target profile fetch error: ${ targetError.message } `);
 
 
                     if (targetProfile) {
@@ -568,10 +568,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         );
 
                         result = {
-                            id: `${mission.id}-result`, // Deterministic ID to avoid duplicates
+                            id: `${ mission.id } -result`, // Deterministic ID to avoid duplicates
                             timestamp: Date.now(),
                             title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
-                            message: `Walka zakończona. Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}. Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)}`,
+                            message: `Walka zakończona.Wynik: ${ battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana' }.Straty: ${ Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0) } jednostek.Zrabowano: M:${ Math.floor(battle.loot.metal) } C:${ Math.floor(battle.loot.crystal) } `,
                             outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
                             rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
                             report: {
@@ -595,10 +595,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         // Note: For duplicate log prevention on defender side, we use a deterministic ID logic or check existing
                         const newTargetLogs = [
                             {
-                                id: `${mission.id}-def-log`, // Deterministic ID
+                                id: `${ mission.id } -def - log`, // Deterministic ID
                                 timestamp: Date.now(),
                                 title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${battle.attackerLosses} | Twoje Straty: ${battle.defenderLosses}.`,
+                                message: `Gracz ${ gameStateRef.current.nickname || 'Nieznany' } [${ mission.originCoords.galaxy }: ${ mission.originCoords.system }: ${ mission.originCoords.position }] zaatakował Cię.\nFlota: ${ Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') }.\nWynik: ${ battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)' }.\nZrabowano: M:${ Math.floor(battle.loot.metal).toLocaleString() } C:${ Math.floor(battle.loot.crystal).toLocaleString() } D:${ Math.floor(battle.loot.deuterium).toLocaleString() }.\nStraty Agresora: ${ battle.attackerLosses } | Twoje Straty: ${ battle.defenderLosses }.`,
                                 outcome: 'danger' as 'danger',
                                 report: {
                                     rounds: battle.rounds,
@@ -630,7 +630,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     // PvE (Pirates)
                     const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
                     result = {
-                        id: `${mission.id}-pve-result`,
+                        id: `${ mission.id } -pve - result`,
                         timestamp: Date.now(),
                         title: 'Bitwa z Piratami',
                         message: battle.log.message,
@@ -660,35 +660,35 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         const spyDiff = attackerSpyLevel - defenderSpyLevel;
 
                         // Base Info: Resources (always visible if spy successful, maybe chance based later)
-                        let spyMessage = `Cel: ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].\n`;
-                        spyMessage += `Zasoby: M:${Math.floor(targetProfile.resources?.metal || 0).toLocaleString()} C:${Math.floor(targetProfile.resources?.crystal || 0).toLocaleString()} D:${Math.floor(targetProfile.resources?.deuterium || 0).toLocaleString()}\n`;
+                        let spyMessage = `Cel: ${ targetProfile.nickname || 'Nieznany' } [${ mission.targetCoords.galaxy }: ${ mission.targetCoords.system }: ${ mission.targetCoords.position }].\n`;
+                        spyMessage += `Zasoby: M:${ Math.floor(targetProfile.resources?.metal || 0).toLocaleString() } C:${ Math.floor(targetProfile.resources?.crystal || 0).toLocaleString() } D:${ Math.floor(targetProfile.resources?.deuterium || 0).toLocaleString() } \n`;
 
                         // Details based on Tech Difference
                         // Level Difference >= 2: Show Fleet
                         if (spyDiff >= 2 || attackerSpyLevel >= 4) { // Allow brute force with high level
                             const sh = targetProfile.ships || {};
-                            const shipList = Object.entries(sh).map(([id, count]) => `${SHIPS[id as ShipId]?.name || id}: ${count}`).join(', ');
-                            spyMessage += `Flota: ${shipList || 'Brak'}\n`;
+                            const shipList = Object.entries(sh).map(([id, count]) => `${ SHIPS[id as ShipId]?.name || id }: ${ count } `).join(', ');
+                            spyMessage += `Flota: ${ shipList || 'Brak' } \n`;
                         } else {
-                            spyMessage += `Flota: (Wymagany wyższy poziom szpiegostwa)\n`;
+                            spyMessage += `Flota: (Wymagany wyższy poziom szpiegostwa) \n`;
                         }
 
                         // Level Difference >= 3: Show Defense
                         if (spyDiff >= 3 || attackerSpyLevel >= 6) {
                             const def = targetProfile.defenses || {};
-                            const defList = Object.entries(def).map(([id, count]) => `${DEFENSES[id as DefenseId]?.name || id}: ${count}`).join(', ');
-                            spyMessage += `Obrona: ${defList || 'Brak'}\n`;
+                            const defList = Object.entries(def).map(([id, count]) => `${ DEFENSES[id as DefenseId]?.name || id }: ${ count } `).join(', ');
+                            spyMessage += `Obrona: ${ defList || 'Brak' } \n`;
                         } else {
-                            spyMessage += `Obrona: (Wymagany wyższy poziom szpiegostwa)\n`;
+                            spyMessage += `Obrona: (Wymagany wyższy poziom szpiegostwa) \n`;
                         }
 
                         // Level Difference >= 4: Show Buildings
                         if (spyDiff >= 4 || attackerSpyLevel >= 8) {
                             const bld = targetProfile.buildings || {};
-                            const bldList = Object.entries(bld).map(([id, lvl]) => `${BUILDINGS[id as BuildingId]?.name || id} (${lvl})`).join(', ');
-                            spyMessage += `Budynki: ${bldList || 'Brak'}\n`;
+                            const bldList = Object.entries(bld).map(([id, lvl]) => `${ BUILDINGS[id as BuildingId]?.name || id } (${ lvl })`).join(', ');
+                            spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa) \n`;
                         } else {
-                            spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa)\n`;
+                            spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa) \n`;
                         }
 
                         result = {
@@ -704,7 +704,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: Date.now().toString(),
                                 timestamp: Date.now(),
                                 title: "Wykryto Skanowanie!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}] przeskanował Twoją planetę.`,
+                                message: `Gracz ${ gameStateRef.current.nickname || 'Nieznany' } [${ mission.originCoords.galaxy }: ${ mission.originCoords.system }: ${ mission.originCoords.position }] przeskanował Twoją planetę.`,
                                 outcome: 'danger' as 'danger'
                             },
                             ...(targetProfile.mission_logs || [])
@@ -726,7 +726,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         };
 
                         const newTargetLogs = [
-                            { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz ${session.user.email?.split('@')[0]} dostarczył: M:${mission.resources?.metal} C:${mission.resources?.crystal} D:${mission.resources?.deuterium}`, outcome: 'success' as 'success' },
+                            { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz ${ session.user.email?.split('@')[0] } dostarczył: M:${ mission.resources?.metal } C:${ mission.resources?.crystal } D:${ mission.resources?.deuterium } `, outcome: 'success' as 'success' },
                             ...(targetProfile.mission_logs || [])
                         ].slice(0, 50);
 
@@ -737,7 +737,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             timestamp: Date.now(),
                             outcome: 'success' as 'success',
                             title: 'Transport',
-                            message: `Surowce dostarczone do gracza ${targetProfile.nickname || targetProfile.email || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].`
+                            message: `Surowce dostarczone do gracza ${ targetProfile.nickname || targetProfile.email || 'Nieznany' } [${ mission.targetCoords.galaxy }: ${ mission.targetCoords.system }: ${ mission.targetCoords.position }].`
                         };
                     }
                 } else {
@@ -762,7 +762,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         } catch (err: any) {
             console.error('Critical Error in processMissionArrival:', err);
-            alert(`BŁĄD PRZYLOTU: ${err.message || err}`);
+            alert(`BŁĄD PRZYLOTU: ${ err.message || err } `);
         }
     };
 
@@ -786,7 +786,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             const { data: myProfile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
 
-            if (error) throw new Error(`Profile fetch error: ${error.message}`);
+            if (error) throw new Error(`Profile fetch error: ${ error.message } `);
             if (!myProfile) return;
 
             const newShips = { ...myProfile.ships };
@@ -817,7 +817,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
 
             const title = mission.result?.title || `Powrót Floty`;
-            const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
+            const message = mission.result?.message || `Flota wróciła z misji ${ mission.type }.`;
             const outcome = (mission.result?.outcome as 'success' | 'failure' | 'neutral' | 'danger') || 'success';
 
             const newLogs = [
@@ -833,7 +833,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 points: calculatePoints(newRes, gameState.buildings, newShips)
             }).eq('id', session.user.id);
 
-            if (updateError) throw new Error(`Profile Update Failed: ${updateError.message}`);
+            if (updateError) throw new Error(`Profile Update Failed: ${ updateError.message } `);
 
             // Update Local State immediately to prevent race condition with Autosaver
             setGameState(prev => ({
@@ -851,7 +851,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         } catch (err: any) {
             console.error('Critical Error in processMissionReturn:', err);
             // Temporary debug alert
-            alert(`BŁĄD MISJI: ${err.message || err}`);
+            alert(`BŁĄD MISJI: ${ err.message || err } `);
         }
     };
 
@@ -1114,7 +1114,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 const targetLevel = Math.floor(Math.pow(targetProfile.points || 0, 1 / 3));
 
                 if (targetLevel < 7) {
-                    alert(`Ten gracz znajduje się pod ochroną początkujących (Poziom ${targetLevel} < 7). Atak niemożliwy.`);
+                    alert(`Ten gracz znajduje się pod ochroną początkujących(Poziom ${ targetLevel } < 7).Atak niemożliwy.`);
                     return;
                 }
             }
@@ -1360,12 +1360,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             const { data: targetProfile } = await supabase.from('profiles').select('mission_logs').eq('id', mission.targetUserId).single();
             if (targetProfile) {
                 const newLog = {
-                    id: Date.now().toString(),
-                    timestamp: Date.now(),
-                    title: 'Atak Anulowany',
-                    message: `Gracz ${gameState.nickname || 'Nieznany'} [${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}] zawrócił flotę tuż przed atakiem.`,
-                    outcome: 'info' as 'info' // Or 'success' as it's good news? Let's use info or success. 'success' is usually green.
-                };
+                id: Date.now().toString(),
+                timestamp: Date.now(),
+                title: 'Atak Anulowany',
+                message: `Gracz ${ gameStateRef.current.nickname || 'Nieznany' } [${ mission.originCoords.galaxy }: ${ mission.originCoords.system }: ${ mission.originCoords.position }] zawrócił flotę tuż przed atakiem.\nSkład floty: ${ Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') }.`,
+                outcome: 'info' as 'info' 
+            };
                 const updatedLogs = [newLog, ...(targetProfile.mission_logs || [])].slice(0, 50);
                 await supabase.from('profiles').update({ mission_logs: updatedLogs }).eq('id', mission.targetUserId);
             }
@@ -1548,7 +1548,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
 
         const newItem: ConstructionItem = {
-            id: `def-${now}-${Math.random()}`,
+            id: `def - ${ now } -${ Math.random() } `,
             type: 'defense',
             itemId: defenseId,
             quantity: amount,
