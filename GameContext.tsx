@@ -1397,9 +1397,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         }
                     }
                 }
-
-                // Missions are now handled asynchronously in a separate useEffect
-                // const processedMissionState = handleMissions({ ...prev, activeMissions: prev.activeMissions, missionLogs: prev.missionLogs, ships: newShips, resources: newResources } as GameState, now);
+                // Persist completed items to Supabase
+                if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length)) {
+                    supabase.from('profiles').update({
+                        buildings: newBuildings,
+                        research: newResearch,
+                        ships: newShips,
+                        defenses: newDefenses,
+                        shipyard_queue: newShipQueue,
+                        construction_queue: newQueue,
+                        points: calculatePoints(newResources, newBuildings, newShips)
+                    }).eq('id', session.user.id).then(({ error }) => {
+                        if (error) console.error("Auto-save error:", error);
+                    });
+                }
 
                 return {
                     ...prev,
