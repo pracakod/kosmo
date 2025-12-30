@@ -715,7 +715,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const sendExpedition = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        const duration = 5 * 60 * 1000; // 5 minutes fixed
+        const duration = 10 * 1000; // 10 seconds for testing
 
         const now = Date.now();
         const missionId = crypto.randomUUID();
@@ -757,7 +757,23 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        const duration = 5 * 60 * 1000;
+        // Distance-based duration calculation
+        const origin = gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 };
+        let duration: number;
+
+        if (origin.galaxy !== coords.galaxy) {
+            // Different galaxy = 1 hour
+            duration = 60 * 60 * 1000;
+        } else if (origin.system !== coords.system) {
+            // Different system = system difference * 30 seconds (min 1 min, max 10 min)
+            const systemDiff = Math.abs(origin.system - coords.system);
+            duration = Math.min(10 * 60 * 1000, Math.max(60 * 1000, systemDiff * 30 * 1000));
+        } else {
+            // Same system = position difference * 5 seconds (min 10 sec)
+            const posDiff = Math.abs(origin.position - coords.position);
+            duration = Math.max(10 * 1000, posDiff * 5 * 1000);
+        }
+
         const now = Date.now();
         const missionId = crypto.randomUUID();
         const targetUserId = await findTargetUser(coords);

@@ -31,7 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
         { id: 'fleet', label: 'Centrum Floty', icon: 'flight_takeoff' },
         { id: 'galaxy', label: 'Galaktyka', icon: 'public' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
-        { id: 'alliance', label: 'Sojusz', icon: 'groups' },
+        { id: 'clans', label: 'Klany', icon: 'groups' },
         { id: 'shop', label: 'Sklep Premium', icon: 'shopping_cart' },
         { id: 'ranking', label: 'Ranking', icon: 'leaderboard' },
         { id: 'settings', label: 'Opcje', icon: 'settings' },

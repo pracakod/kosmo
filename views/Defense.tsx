@@ -2,16 +2,16 @@
 import React from 'react';
 import { useGame } from '../GameContext';
 
-// Defense structures definitions
+// Defense structures definitions - balanced costs
 const DEFENSES = [
-    { id: 'rocketLauncher', name: 'Wyrzutnia Rakiet', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko małym celom.', attack: 80, defense: 20, cost: { metal: 2000, crystal: 0, deuterium: 0 }, icon: 'rocket' },
-    { id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców.', attack: 100, defense: 25, cost: { metal: 1500, crystal: 500, deuterium: 0 }, icon: 'electric_bolt' },
-    { id: 'heavyLaser', name: 'Ciężkie Działko Laserowe', desc: 'Potężny laser zdolny przebić pancerz średnich okrętów.', attack: 250, defense: 100, cost: { metal: 6000, crystal: 2000, deuterium: 0 }, icon: 'bolt' },
-    { id: 'gaussCannon', name: 'Działo Gaussa', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 1100, defense: 200, cost: { metal: 20000, crystal: 15000, deuterium: 2000 }, icon: 'gps_fixed' },
-    { id: 'ionCannon', name: 'Działo Jonowe', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 150, defense: 500, cost: { metal: 5000, crystal: 3000, deuterium: 1000 }, icon: 'flashlight' },
-    { id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć niszczyciele jednym strzałem.', attack: 3000, defense: 300, cost: { metal: 50000, crystal: 50000, deuterium: 30000 }, icon: 'local_fire_department' },
-    { id: 'smallShield', name: 'Mała Osłona Tarczowa', desc: 'Kopuła energetyczna chroniąca część planety przed atakami.', attack: 1, defense: 2000, cost: { metal: 10000, crystal: 10000, deuterium: 0 }, icon: 'shield' },
-    { id: 'largeShield', name: 'Duża Osłona Tarczowa', desc: 'Masywna tarcza energetyczna obejmująca całą planetę.', attack: 1, defense: 10000, cost: { metal: 50000, crystal: 50000, deuterium: 0 }, icon: 'security' },
+    { id: 'rocketLauncher', name: 'Wyrzutnia Rakiet', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko małym celom.', attack: 40, defense: 10, cost: { metal: 500, crystal: 0, deuterium: 0 }, icon: 'rocket_launch' },
+    { id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców.', attack: 50, defense: 12, cost: { metal: 400, crystal: 100, deuterium: 0 }, icon: 'electric_bolt' },
+    { id: 'heavyLaser', name: 'Ciężkie Działko Laserowe', desc: 'Potężny laser zdolny przebić pancerz średnich okrętów.', attack: 125, defense: 50, cost: { metal: 1500, crystal: 500, deuterium: 0 }, icon: 'bolt' },
+    { id: 'gaussCannon', name: 'Działo Gaussa', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 550, defense: 100, cost: { metal: 5000, crystal: 3500, deuterium: 500 }, icon: 'target' },
+    { id: 'ionCannon', name: 'Działo Jonowe', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 75, defense: 250, cost: { metal: 1200, crystal: 700, deuterium: 250 }, icon: 'storm' },
+    { id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć niszczyciele jednym strzałem.', attack: 1500, defense: 150, cost: { metal: 12000, crystal: 12000, deuterium: 7500 }, icon: 'whatshot' },
+    { id: 'smallShield', name: 'Mała Osłona Tarczowa', desc: 'Kopuła energetyczna chroniąca część planety przed atakami.', attack: 1, defense: 500, cost: { metal: 2500, crystal: 2500, deuterium: 0 }, icon: 'shield' },
+    { id: 'largeShield', name: 'Duża Osłona Tarczowa', desc: 'Masywna tarcza energetyczna obejmująca całą planetę.', attack: 1, defense: 2500, cost: { metal: 12000, crystal: 12000, deuterium: 0 }, icon: 'security' },
 ];
 
 const Defense: React.FC = () => {

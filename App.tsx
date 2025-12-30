@@ -14,8 +14,9 @@ import Shop from './views/Shop';
 import Ranking from './views/Ranking';
 import Settings from './views/Settings';
 import Defense from './views/Defense';
+import Clans from './views/Clans';
 
-export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings' | 'defense';
+export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings' | 'defense' | 'clans';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<any>(null);
@@ -114,6 +115,7 @@ const App: React.FC = () => {
             case 'ranking': return <Ranking />;
             case 'settings': return <Settings />;
             case 'defense': return <Defense />;
+            case 'clans': return <Clans />;
             default: return <Overview onNavigate={setCurrentView} />;
         }
     };
