@@ -18,22 +18,30 @@ const Ranking: React.FC = () => {
 
     useEffect(() => {
         const fetchRanking = async () => {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, points, production_settings, planet_name, nickname')
-                .order('points', { ascending: false })
-                .limit(50);
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('id, points, production_settings, planet_name, nickname')
+                    .order('points', { ascending: false })
+                    .limit(50);
 
-            if (data && !error) {
-                // Map data to extract avatar and user info
-                const mapped = data.map((p: any) => ({
-                    id: p.id,
-                    points: p.points || 0,
-                    avatar_url: p.production_settings?.avatarUrl || IMAGES.avatar,
-                    planet_name: p.planet_name || 'Nieznana Planeta',
-                    nickname: p.nickname || p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`
-                }));
-                setPlayers(mapped);
+                console.log('Ranking data:', data, 'error:', error);
+
+                if (data && !error) {
+                    // Map data to extract avatar and user info
+                    const mapped = data.map((p: any) => ({
+                        id: p.id,
+                        points: p.points || 0,
+                        avatar_url: p.production_settings?.avatarUrl || IMAGES.avatar,
+                        planet_name: p.planet_name || 'Nieznana Planeta',
+                        nickname: p.nickname || p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`
+                    }));
+                    setPlayers(mapped);
+                } else if (error) {
+                    console.error('Error fetching ranking:', error);
+                }
+            } catch (err) {
+                console.error('Ranking fetch error:', err);
             }
             setLoading(false);
         };
@@ -43,6 +51,21 @@ const Ranking: React.FC = () => {
 
     if (loading) {
         return <div className="p-8 text-center text-[#929bc9]">Ładowanie danych wywiadu...</div>;
+    }
+
+    if (players.length === 0) {
+        return (
+            <div className="animate-in fade-in duration-500">
+                <h2 className="text-2xl font-bold mb-6 text-white tracking-widest uppercase border-b border-white/10 pb-4">
+                    <span className="text-primary">System</span> Rankingowy
+                </h2>
+                <div className="bg-[#1c2136] rounded-xl border border-white/10 p-8 text-center">
+                    <span className="material-symbols-outlined text-[#929bc9] text-5xl mb-4">leaderboard</span>
+                    <h3 className="text-xl font-bold text-white mb-2">Brak graczy w rankingu</h3>
+                    <p className="text-[#929bc9]">Ranking jest pusty. Rozwijaj swoją kolonię, aby pojawić się na liście!</p>
+                </div>
+            </div>
+        );
     }
 
     return (
