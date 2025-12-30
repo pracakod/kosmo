@@ -601,10 +601,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     // Mission Processing Watcher
     useEffect(() => {
         if (!loaded || !session?.user) return;
+        let pollCounter = 0;
 
         const checkMissions = async () => {
             const now = Date.now();
             const missions = gameState.activeMissions;
+
+            // Poll for incoming attacks every 5 seconds
+            pollCounter++;
+            if (pollCounter >= 5) {
+                pollCounter = 0;
+                fetchMissions(); // Refresh both active and incoming missions
+            }
 
             // Check Arrivals (Only OWNER processes arrival logic to avoid double processing)
             const arriving = missions.filter(m => m.status === 'flying' && now >= m.arrivalTime && m.ownerId === session.user.id && !m.eventProcessed);
@@ -623,6 +631,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 await processMissionReturn(m);
             }
         };
+
+        // Also fetch immediately on load
+        fetchMissions();
 
         const interval = setInterval(checkMissions, 1000);
         return () => clearInterval(interval);
