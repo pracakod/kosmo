@@ -15,7 +15,7 @@ const DEFENSES = [
 ];
 
 const Defense: React.FC = () => {
-    const { resources, buildings } = useGame();
+    const { resources, buildings, buildDefense } = useGame();
     const shipyardLevel = buildings?.shipyard || 0;
 
     return (
@@ -71,6 +71,7 @@ const Defense: React.FC = () => {
                                         </div>
 
                                         <button
+                                            onClick={() => buildDefense(def.id as any, 1)}
                                             disabled={!canAfford}
                                             className={`w-full py-2 rounded-lg font-bold text-sm uppercase tracking-wider transition-all ${canAfford ? 'bg-primary hover:bg-blue-600 text-white' : 'bg-[#111422] text-[#555a7a] cursor-not-allowed'}`}
                                         >

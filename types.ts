@@ -52,6 +52,17 @@ export enum ShipId {
   PIONEER = 'pioneer'
 }
 
+export enum DefenseId {
+  ROCKET_LAUNCHER = 'rocketLauncher',
+  LIGHT_LASER = 'lightLaser',
+  HEAVY_LASER = 'heavyLaser',
+  GAUSS_CANNON = 'gaussCannon',
+  ION_CANNON = 'ionCannon',
+  PLASMA_TURRET = 'plasmaTurret',
+  SMALL_SHIELD = 'smallShield',
+  LARGE_SHIELD = 'largeShield'
+}
+
 export interface Cost {
   metal: number;
   crystal: number;
@@ -101,8 +112,8 @@ export interface ShipDef {
 
 export interface ConstructionItem {
   id: string;
-  type: 'building' | 'research' | 'ship';
-  itemId: BuildingId | ResearchId | ShipId;
+  type: 'building' | 'research' | 'ship' | 'defense';
+  itemId: BuildingId | ResearchId | ShipId | DefenseId;
   targetLevel?: number; // For buildings/research
   quantity?: number; // For ships
   startTime: number;
@@ -181,6 +192,7 @@ export interface GameState {
   buildings: Record<BuildingId, number>;
   research: Record<ResearchId, number>;
   ships: Record<ShipId, number>;
+  defenses: Record<DefenseId, number>;
   constructionQueue: ConstructionItem[];
   shipyardQueue: ConstructionItem[];
   activeMissions: FleetMission[];

@@ -2,8 +2,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { calculateExpeditionOutcome } from './lib/gameLogic';
-import { GameState, BuildingId, ResearchId, ShipId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
-import { BUILDINGS, RESEARCH, SHIPS } from './constants';
+import { GameState, BuildingId, ResearchId, ShipId, DefenseId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
+import { BUILDINGS, RESEARCH, SHIPS, DEFENSES } from './constants';
 
 const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
     let attackPower = 0;
@@ -92,6 +92,7 @@ interface GameContextType extends GameState {
     upgradeBuilding: (buildingId: BuildingId) => void;
     upgradeResearch: (researchId: ResearchId) => void;
     buildShip: (shipId: ShipId, amount: number) => void;
+    buildDefense: (defenseId: DefenseId, amount: number) => void;
     sendExpedition: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
     sendAttack: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
     sendTransport: (ships: Record<ShipId, number>, resources: { metal: number, crystal: number, deuterium: number }, coords: { galaxy: number, system: number, position: number }) => void;
@@ -185,6 +186,16 @@ const initialState: GameState = {
         [ShipId.COLONY_SHIP]: 0,
         [ShipId.ESPIONAGE_PROBE]: 0,
         [ShipId.PIONEER]: 1,
+    },
+    defenses: {
+        [DefenseId.ROCKET_LAUNCHER]: 0,
+        [DefenseId.LIGHT_LASER]: 0,
+        [DefenseId.HEAVY_LASER]: 0,
+        [DefenseId.GAUSS_CANNON]: 0,
+        [DefenseId.ION_CANNON]: 0,
+        [DefenseId.PLASMA_TURRET]: 0,
+        [DefenseId.SMALL_SHIELD]: 0,
+        [DefenseId.LARGE_SHIELD]: 0,
     },
     constructionQueue: [],
     shipyardQueue: [],
@@ -1192,6 +1203,41 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }));
     };
 
+    const buildDefense = (defenseId: DefenseId, amount: number) => {
+        const defense = DEFENSES[defenseId as keyof typeof DEFENSES];
+        if (!defense) return;
+        const totalCost = { metal: defense.cost.metal * amount, crystal: defense.cost.crystal * amount, deuterium: defense.cost.deuterium * amount };
+        if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
+
+        const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
+        if (shipyardLevel === 0) return;
+
+        const buildTimeMs = (defense.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+        const now = Date.now();
+        let startTime = now;
+        if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
+
+        const newItem: ConstructionItem = {
+            id: `def-${now}-${Math.random()}`,
+            type: 'defense',
+            itemId: defenseId,
+            quantity: amount,
+            startTime: startTime,
+            endTime: startTime + (buildTimeMs * amount)
+        };
+
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal - totalCost.metal,
+                crystal: prev.resources.crystal - totalCost.crystal,
+                deuterium: prev.resources.deuterium - totalCost.deuterium
+            },
+            shipyardQueue: [...prev.shipyardQueue, newItem]
+        }));
+    };
+
     const renamePlanet = async (newName: string) => {
         setGameState(prev => ({ ...prev, planetName: newName }));
         await supabase.from('profiles').update({ planet_name: newName }).eq('id', session.user.id);
@@ -1288,10 +1334,17 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 }
 
                 let newShips = { ...prev.ships };
+                let newDefenses = { ...prev.defenses };
                 let newShipQueue = [...prev.shipyardQueue];
                 while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
                     const completed = newShipQueue.shift();
-                    if (completed) newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
+                    if (completed) {
+                        if (completed.type === 'defense') {
+                            newDefenses[completed.itemId as DefenseId] = (newDefenses[completed.itemId as DefenseId] || 0) + (completed.quantity || 0);
+                        } else {
+                            newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
+                        }
+                    }
                 }
 
                 // Missions are now handled asynchronously in a separate useEffect
@@ -1306,6 +1359,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     buildings: newBuildings,
                     research: newResearch,
                     ships: newShips,
+                    defenses: newDefenses,
                     constructionQueue: newQueue,
                     shipyardQueue: newShipQueue,
                     activeMissions: prev.activeMissions, // Managed by sync
@@ -1325,6 +1379,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         upgradeBuilding,
         upgradeResearch,
         buildShip,
+        buildDefense,
         sendExpedition,
         sendAttack,
         sendSpyProbe,

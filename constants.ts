@@ -390,3 +390,14 @@ export const PLANET_IMAGES: Record<string, string> = {
   ice: "/kosmo/planets/planet_ice.png",
   default: IMAGES.planet
 };
+
+export const DEFENSES = {
+  rocketLauncher: { id: 'rocketLauncher', name: 'Wyrzutnia Rakiet', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko małym celom.', attack: 40, defense: 10, cost: { metal: 500, crystal: 0, deuterium: 0 }, buildTime: 20 },
+  lightLaser: { id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców.', attack: 50, defense: 12, cost: { metal: 400, crystal: 100, deuterium: 0 }, buildTime: 30 },
+  heavyLaser: { id: 'heavyLaser', name: 'Ciężkie Działko Laserowe', desc: 'Potężny laser zdolny przebić pancerz średnich okrętów.', attack: 125, defense: 50, cost: { metal: 1500, crystal: 500, deuterium: 0 }, buildTime: 60 },
+  gaussCannon: { id: 'gaussCannon', name: 'Działo Gaussa', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 550, defense: 100, cost: { metal: 5000, crystal: 3500, deuterium: 500 }, buildTime: 150 },
+  ionCannon: { id: 'ionCannon', name: 'Działo Jonowe', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 75, defense: 250, cost: { metal: 1200, crystal: 700, deuterium: 250 }, buildTime: 120 },
+  plasmaTurret: { id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć niszczyciele jednym strzałem.', attack: 1500, defense: 150, cost: { metal: 12000, crystal: 12000, deuterium: 7500 }, buildTime: 300 },
+  smallShield: { id: 'smallShield', name: 'Mała Osłona Tarczowa', desc: 'Kopuła energetyczna chroniąca część planety przed atakami.', attack: 1, defense: 500, cost: { metal: 2500, crystal: 2500, deuterium: 0 }, buildTime: 60 },
+  largeShield: { id: 'largeShield', name: 'Duża Osłona Tarczowa', desc: 'Masywna tarcza energetyczna obejmująca całą planetę.', attack: 1, defense: 2500, cost: { metal: 12000, crystal: 12000, deuterium: 0 }, buildTime: 300 }
+};
