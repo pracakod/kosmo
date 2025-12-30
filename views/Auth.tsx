@@ -16,7 +16,7 @@ const Auth: React.FC = () => {
         setError(null);
 
         // Pseudo-email strategy
-        const fakeEmail = `${nickname.trim()}@kosmo.game`;
+        const fakeEmail = `${nickname.trim()}@kosmo.com`;
 
         try {
             if (isLogin) {
