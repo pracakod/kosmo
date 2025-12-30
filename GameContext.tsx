@@ -252,7 +252,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
 
         if (data && !error) {
-            // ... (rest of mapping logic same as before, simplified for brevity in this tool call context, but I must preserve it)
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
                 id: m.id,
                 ownerId: m.owner_id,
