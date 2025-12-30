@@ -370,6 +370,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 buildings: { ...prev.buildings, ...data.buildings },
                 research: { ...prev.research, ...data.research },
                 ships: { ...prev.ships, ...data.ships },
+                defenses: { ...prev.defenses, ...data.defenses },
                 constructionQueue: data.construction_queue || [],
                 shipyardQueue: data.shipyard_queue || [],
                 productionSettings: { ...prev.productionSettings, ...data.production_settings },
@@ -439,6 +440,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 buildings: current.buildings,
                 research: current.research,
                 ships: current.ships,
+                defenses: current.defenses,
                 construction_queue: current.constructionQueue,
                 shipyard_queue: current.shipyardQueue,
                 production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl, planetType: current.planetType, nickname: current.nickname }, // Save nickname in production_settings for legacy/consistency
@@ -517,7 +519,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             id: `${mission.id}-result`, // Deterministic ID to avoid duplicates
                             timestamp: Date.now(),
                             title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
-                            message: `Walka zakończona. Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}. Straty: ${Object.values(battle.attackerLosses).reduce((a, b) => a + b, 0)} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)}`,
+                            message: `Walka zakończona. Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}. Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)}`,
                             outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
                             rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
                             report: {
