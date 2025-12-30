@@ -108,6 +108,7 @@ interface GameContextType extends GameState {
     deleteAccount: () => Promise<void>;
 
     updateAvatar: (url: string) => void;
+    updatePlanetType: (type: string) => void;
     getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
     renameUser: (name: string) => void;
 }
@@ -1224,6 +1225,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         await supabase.from('profiles').update({ production_settings: { ...currentSettings, avatarUrl: url } }).eq('id', session.user.id);
     };
 
+    const updatePlanetType = async (type: string) => {
+        setGameState(prev => ({ ...prev, planetType: type }));
+        const currentSettings = gameState.productionSettings || {};
+        await supabase.from('profiles').update({ production_settings: { ...currentSettings, planetType: type } }).eq('id', session.user.id);
+    };
+
     const getPlayersInSystem = async (galaxy: number, system: number) => {
         const { data, error } = await supabase
             .from('profiles')
@@ -1330,6 +1337,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         logout,
         deleteAccount,
         updateAvatar,
+        updatePlanetType,
         getPlayersInSystem,
         renameUser
     };

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useGame } from '../GameContext';
-import { IMAGES } from '../constants';
+import { IMAGES, PLANET_IMAGES } from '../constants';
 
 const Settings: React.FC = () => {
     const {
         planetName, renamePlanet,
         avatarUrl, updateAvatar,
+        planetType, updatePlanetType,
         nickname, renameUser,
         resetGame, logout, deleteAccount
     } = useGame();
@@ -79,79 +80,106 @@ const Settings: React.FC = () => {
                     </div>
                 </div>
             </div>
+        </div>
 
-            {/* Avatar Selection */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-purple-400">face</span>
-                    Personalizacja Dowódcy
-                </h3>
+            {/* Planet Type Selection */ }
+    <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <span className="material-symbols-outlined text-blue-400">public</span>
+            Wygląd Planety
+        </h3>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                        { name: "Pomocnik", url: "/kosmo/avatars/avatar_default.png" },
-                        { name: "Major (M)", url: "/kosmo/avatars/avatar_major.png" },
-                        { name: "Major (K)", url: "/kosmo/avatars/avatar_female.png" },
-                        { name: "Cyborg", url: "/kosmo/avatars/avatar_cyber.png" }
-                    ].map((av) => (
-                        <div key={av.name} className="flex flex-col gap-2">
-                            <button
-                                onClick={() => updateAvatar(av.url)}
-                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'}`}
-                            >
-                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${av.url}")` }}></div>
-                            </button>
-                            <span className="text-xs text-center text-[#929bc9] font-medium">{av.name}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* About */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-green-400">info</span>
-                    O Grze
-                </h3>
-                <p className="text-[#929bc9] text-sm mb-4 leading-relaxed">
-                    Zostań architektem międzygwiezdnego imperium w <strong>Cosmos Conquest</strong>. Obejmij dowodzenie nad nową kolonią, zarządzaj wydobyciem rzadkich surowców i rozwijaj futurystyczne technologie, aby zbudować flotę zdolną do dominacji w galaktyce.
-                    Gra łączy głęboką strategię ekonomiczną z dynamiczną symulacją walki w czasie rzeczywistym, oferując immersyjne doświadczenie w nowoczesnym wydaniu.
-                </p>
-                <div className="text-xs text-[#555a7a] font-mono">
-                    Wersja: v1.2.5 (Ranking & Security)
-                </div>
-            </div>
-
-            {/* Danger Zone */}
-            <div className="bg-[#1c2136] rounded-xl border border-red-500/20 p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined">warning</span>
-                    Strefa Niebezpieczna
-                </h3>
-                <p className="text-[#929bc9] text-sm mb-6">
-                    Te operacje są nieodwracalne. Zresetowanie gry spowoduje utratę wszystkich postępów, budynków, floty i surowców.
-                </p>
-
-                <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+                { name: "Ziemiopodobna", type: "terran" },
+                { name: "Pustynna", type: "desert" },
+                { name: "Lodowa", type: "ice" },
+            ].map((p) => (
+                <div key={p.type} className="flex flex-col gap-2">
                     <button
-                        onClick={() => { if (confirm('To usunie tylko dane z tego urządzenia (wyloguje). Aby usunąć konto z serwera, użyj drugiego przycisku.')) resetGame() }}
-                        className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all"
+                        onClick={() => updatePlanetType(p.type)}
+                        className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${planetType === p.type ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'}`}
                     >
-                        Wyloguj i Wyczyść Konsolę
+                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${PLANET_IMAGES[p.type] || IMAGES.planet}")` }}></div>
                     </button>
-
-                    <button
-                        onClick={deleteAccount}
-                        className="bg-red-900/50 hover:bg-red-700 text-white border border-red-500/50 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
-                    >
-                        <span className="material-symbols-outlined">delete_forever</span>
-                        Usuń Konto Trwale
-                    </button>
-                    <p className="text-xs text-red-400 text-center mt-2">
-                        Uwaga: Usunięcie konta trwale wykasuje Twój profil i misje z bazy danych. Tej akcji nie da się cofnąć!
-                    </p>
+                    <span className="text-xs text-center text-[#929bc9] font-medium">{p.name}</span>
                 </div>
-            </div>
+            ))}
+        </div>
+    </div>
+
+    {/* Avatar Selection */ }
+    <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+            <span className="material-symbols-outlined text-purple-400">face</span>
+            Personalizacja Dowódcy
+        </h3>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+                { name: "Pomocnik", url: "/kosmo/avatars/avatar_default.png" },
+                { name: "Major (M)", url: "/kosmo/avatars/avatar_major.png" },
+                { name: "Major (K)", url: "/kosmo/avatars/avatar_female.png" },
+                { name: "Cyborg", url: "/kosmo/avatars/avatar_cyber.png" }
+            ].map((av) => (
+                <div key={av.name} className="flex flex-col gap-2">
+                    <button
+                        onClick={() => updateAvatar(av.url)}
+                        className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'}`}
+                    >
+                        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${av.url}")` }}></div>
+                    </button>
+                    <span className="text-xs text-center text-[#929bc9] font-medium">{av.name}</span>
+                </div>
+            ))}
+        </div>
+    </div>
+
+    {/* About */ }
+    <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-green-400">info</span>
+            O Grze
+        </h3>
+        <p className="text-[#929bc9] text-sm mb-4 leading-relaxed">
+            Zostań architektem międzygwiezdnego imperium w <strong>Cosmos Conquest</strong>. Obejmij dowodzenie nad nową kolonią, zarządzaj wydobyciem rzadkich surowców i rozwijaj futurystyczne technologie, aby zbudować flotę zdolną do dominacji w galaktyce.
+            Gra łączy głęboką strategię ekonomiczną z dynamiczną symulacją walki w czasie rzeczywistym, oferując immersyjne doświadczenie w nowoczesnym wydaniu.
+        </p>
+        <div className="text-xs text-[#555a7a] font-mono">
+            Wersja: v1.2.5 (Ranking & Security)
+        </div>
+    </div>
+
+    {/* Danger Zone */ }
+    <div className="bg-[#1c2136] rounded-xl border border-red-500/20 p-6 shadow-lg">
+        <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined">warning</span>
+            Strefa Niebezpieczna
+        </h3>
+        <p className="text-[#929bc9] text-sm mb-6">
+            Te operacje są nieodwracalne. Zresetowanie gry spowoduje utratę wszystkich postępów, budynków, floty i surowców.
+        </p>
+
+        <div className="flex flex-col gap-4">
+            <button
+                onClick={() => { if (confirm('To usunie tylko dane z tego urządzenia (wyloguje). Aby usunąć konto z serwera, użyj drugiego przycisku.')) resetGame() }}
+                className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all"
+            >
+                Wyloguj i Wyczyść Konsolę
+            </button>
+
+            <button
+                onClick={deleteAccount}
+                className="bg-red-900/50 hover:bg-red-700 text-white border border-red-500/50 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+            >
+                <span className="material-symbols-outlined">delete_forever</span>
+                Usuń Konto Trwale
+            </button>
+            <p className="text-xs text-red-400 text-center mt-2">
+                Uwaga: Usunięcie konta trwale wykasuje Twój profil i misje z bazy danych. Tej akcji nie da się cofnąć!
+            </p>
+        </div>
+    </div>
         </div >
     );
 };
