@@ -568,21 +568,26 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             const newShips = { ...myProfile.ships };
             if (mission.ships) {
                 Object.entries(mission.ships).forEach(([id, count]) => {
-                    newShips[id] = (newShips[id] || 0) + (count as number);
+                    // Ensure we are adding numbers, even if DB returns strings
+                    const currentVal = Number(newShips[id]) || 0;
+                    const valToAdd = Number(count) || 0;
+                    newShips[id] = currentVal + valToAdd;
                 });
             }
 
             const newRes = { ...myProfile.resources };
             if (mission.resources) {
-                newRes.metal += (mission.resources.metal || 0);
-                newRes.crystal += (mission.resources.crystal || 0);
-                newRes.deuterium += (mission.resources.deuterium || 0);
-                newRes.darkMatter += (mission.resources.darkMatter || 0);
+                newRes.metal = (Number(newRes.metal) || 0) + (Number(mission.resources.metal) || 0);
+                newRes.crystal = (Number(newRes.crystal) || 0) + (Number(mission.resources.crystal) || 0);
+                newRes.deuterium = (Number(newRes.deuterium) || 0) + (Number(mission.resources.deuterium) || 0);
+                newRes.darkMatter = (Number(newRes.darkMatter) || 0) + (Number(mission.resources.darkMatter) || 0);
 
                 // Add found ships (Expedition Rewards)
                 if (mission.resources.ships) {
                     Object.entries(mission.resources.ships).forEach(([id, count]) => {
-                        newShips[id] = (newShips[id] || 0) + (count as number);
+                        const currentVal = Number(newShips[id]) || 0;
+                        const valToAdd = Number(count) || 0;
+                        newShips[id] = currentVal + valToAdd;
                     });
                 }
             }
@@ -596,11 +601,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 ...(myProfile.mission_logs || [])
             ].slice(0, 50);
 
-            await supabase.from('profiles').update({
+            // Robust update
+            const { error: updateError } = await supabase.from('profiles').update({
                 ships: newShips,
                 resources: newRes,
                 mission_logs: newLogs
             }).eq('id', session.user.id);
+
+            if (updateError) throw new Error(`Profile Update Failed: ${updateError.message}`);
 
             // Update Local State immediately to prevent race condition with Autosaver
             setGameState(prev => ({
