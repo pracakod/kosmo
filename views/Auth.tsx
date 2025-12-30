@@ -26,7 +26,7 @@ const Auth: React.FC = () => {
                 });
                 if (error) throw error;
             } else {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email: fakeEmail,
                     password,
                     options: {
@@ -35,10 +35,23 @@ const Auth: React.FC = () => {
                         },
                     },
                 });
+
                 if (error) throw error;
-                // Auto-login happens if confirm email is disabled
-                // But we can check session? Usually signInWithPassword isn't needed if signUp AutoSignIn is on.
-                // Assuming "Confirm Email" is disabled in Supabase, user is logged in automatically.
+
+                // If no session (confirm email required), alerting user
+                if (data.user && !data.session) {
+                    // Try to sign in immediately just in case
+                    const { error: signInError } = await supabase.auth.signInWithPassword({
+                        email: fakeEmail,
+                        password,
+                    });
+
+                    if (signInError) {
+                        // Likely "Email not confirmed"
+                        alert('Konto utworzone! Jeśli nie zostałeś zalogowany automatycznie, sprawdź czy wyłączyłeś "Confirm Email" w Supabase lub spróbuj się zalogować.');
+                        setIsLogin(true);
+                    }
+                }
             }
         } catch (err: any) {
             setError(err.message);
