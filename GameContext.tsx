@@ -1093,7 +1093,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const currentLevel = gameState.buildings[buildingId];
         const cost = getCost('building', buildingId, currentLevel);
         if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-        if (gameState.constructionQueue.length > 0) return;
+        // Check if building is already in progress
+        if (gameState.constructionQueue.some(q => q.type === 'building')) return;
 
         const totalResources = cost.metal + cost.crystal;
         let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
@@ -1125,7 +1126,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const currentLevel = gameState.research[researchId];
         const cost = getCost('research', researchId, currentLevel);
         if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-        if (gameState.constructionQueue.length > 0) return;
+        // Check if research is already in progress
+        if (gameState.constructionQueue.some(q => q.type === 'research')) return;
 
         const labLevel = gameState.buildings[BuildingId.RESEARCH_LAB];
         if (labLevel === 0) return;
@@ -1263,11 +1265,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 let newResearch = { ...prev.research };
                 let newQueue = [...prev.constructionQueue];
 
-                if (newQueue.length > 0 && now >= newQueue[0].endTime) {
-                    const item = newQueue[0];
-                    if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
-                    else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
-                    newQueue.shift();
+                // Process ALL finished items (Parallel Queues)
+                const finished = newQueue.filter(q => now >= q.endTime);
+                const active = newQueue.filter(q => now < q.endTime);
+
+                if (finished.length > 0) {
+                    finished.forEach(item => {
+                        if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
+                        else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
+                    });
+                    newQueue = active;
                 }
 
                 let newShips = { ...prev.ships };
