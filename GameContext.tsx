@@ -44,7 +44,7 @@ const initialState: GameState = {
         metal: 500,
         crystal: 300,
         deuterium: 100,
-        darkMatter: 50,
+        darkMatter: 0,
         energy: 0,
         maxEnergy: 0,
         storage: {

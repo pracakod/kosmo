@@ -30,55 +30,26 @@ const Settings: React.FC = () => {
                 </h2>
             </div>
 
-            {/* Player Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
-                {/* Nickname */}
-                <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5">
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">badge</span>
-                        Nazwa Dowódcy
-                    </h3>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
-                            placeholder="Wpisz nową nazwę"
-                            value={newNickname}
-                            onChange={(e) => setNewNickname(e.target.value)}
-                        />
-                        <button
-                            onClick={() => renameUser(newNickname)}
-                            className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition-colors"
-                        >
-                            Zmień
-                        </button>
-                    </div>
-                </div>
-
-                {/* Avatar */}
-                <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5">
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">face</span>
-                        Awatar
-                    </h3>
-                    <div className="flex flex-col gap-2 mb-4">
-                        <label className="text-sm text-[#929bc9] font-bold uppercase">URL Awatara</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={avatarInput}
-                                onChange={(e) => setAvatarInput(e.target.value)}
-                                className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
-                                placeholder="Wklej URL obrazka"
-                            />
-                            <button
-                                onClick={() => updateAvatar(avatarInput)}
-                                className="bg-primary hover:bg-blue-600 text-white px-6 rounded-lg font-bold transition-colors"
-                            >
-                                Zapisz
-                            </button>
-                        </div>
-                    </div>
+            {/* Nickname */}
+            <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">badge</span>
+                    Nazwa Dowódcy
+                </h3>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
+                        placeholder="Wpisz nową nazwę"
+                        value={newNickname}
+                        onChange={(e) => setNewNickname(e.target.value)}
+                    />
+                    <button
+                        onClick={() => renameUser(newNickname)}
+                        className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition-colors"
+                    >
+                        Zmień
+                    </button>
                 </div>
             </div>
 

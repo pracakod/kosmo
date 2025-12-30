@@ -13,11 +13,8 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    let resetGame = () => { };
-    try {
-        const game = useGame();
-        resetGame = game.resetGame;
-    } catch (e) { }
+    const game = useGame();
+    const logout = game?.logout || (() => window.location.reload());
 
     const bottomNavItems = [
         { id: 'overview', icon: 'dashboard', label: 'Podgląd' },
@@ -35,9 +32,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
         { id: 'galaxy', label: 'Galaktyka', icon: 'public' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
         { id: 'alliance', label: 'Sojusz', icon: 'groups' },
-        { id: 'alliance', label: 'Sojusz', icon: 'groups' },
         { id: 'shop', label: 'Sklep Premium', icon: 'shopping_cart' },
-        { id: 'ranking', label: 'Ranking', icon: 'leaderboard' }, // Added
+        { id: 'ranking', label: 'Ranking', icon: 'leaderboard' },
         { id: 'settings', label: 'Opcje', icon: 'settings' },
     ];
 
@@ -102,14 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
 
                         {/* Logout Button Mobile */}
                         <button
-                            onClick={() => {
-                                try {
-                                    const { logout } = useGame();
-                                    logout();
-                                } catch (e) {
-                                    window.location.reload();
-                                }
-                            }}
+                            onClick={() => logout()}
                             className="flex flex-col items-center justify-center p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 col-span-2 mt-4"
                         >
                             <span className="material-symbols-outlined text-3xl mb-2">logout</span>

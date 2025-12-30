@@ -20,7 +20,7 @@ const Ranking: React.FC = () => {
         const fetchRanking = async () => {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, points, production_settings, planet_name')
+                .select('id, points, production_settings, planet_name, nickname')
                 .order('points', { ascending: false })
                 .limit(50);
 
@@ -31,7 +31,7 @@ const Ranking: React.FC = () => {
                     points: p.points || 0,
                     avatar_url: p.production_settings?.avatarUrl || IMAGES.avatar,
                     planet_name: p.planet_name || 'Nieznana Planeta',
-                    user_id: p.id // use ID as placeholder for name if not stored separately
+                    nickname: p.nickname || p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`
                 }));
                 setPlayers(mapped);
             }
@@ -84,7 +84,7 @@ const Ranking: React.FC = () => {
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-white group-hover:text-primary transition-colors">
-                                                        {player.production_settings?.nickname || `Dowódca ${player.id.substring(0, 8)}`}
+                                                        {player.nickname}
                                                     </span>
                                                     <span className="text-xs text-[#929bc9] md:hidden">{player.planet_name}</span>
                                                 </div>

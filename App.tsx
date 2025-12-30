@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { GameProvider } from './GameContext';
@@ -14,8 +13,9 @@ import Fleet from './views/Fleet';
 import Shop from './views/Shop';
 import Ranking from './views/Ranking';
 import Settings from './views/Settings';
+import Defense from './views/Defense';
 
-export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings';
+export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings' | 'defense';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<any>(null);
@@ -113,6 +113,7 @@ const App: React.FC = () => {
             case 'shop': return <Shop />;
             case 'ranking': return <Ranking />;
             case 'settings': return <Settings />;
+            case 'defense': return <Defense />;
             default: return <Overview onNavigate={setCurrentView} />;
         }
     };
