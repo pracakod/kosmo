@@ -83,6 +83,7 @@ const Ranking: React.FC = () => {
                             <tr className="bg-[#111422]/80 text-[#929bc9] text-xs uppercase tracking-wider border-b border-white/5">
                                 <th className="p-4 font-bold text-center w-16">#</th>
                                 <th className="p-4 font-bold">Dowódca</th>
+                                <th className="p-4 font-bold text-center">Poziom</th>
                                 <th className="p-4 font-bold hidden md:table-cell">Planeta</th>
                                 <th className="p-4 font-bold text-right">Punkty</th>
                             </tr>
@@ -91,6 +92,7 @@ const Ranking: React.FC = () => {
                             {players.map((player, index) => {
                                 const isTop3 = index < 3;
                                 const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-[#929bc9]';
+                                const level = Math.floor(player.points / 100) + 1;
 
                                 return (
                                     <tr key={player.id} className="hover:bg-white/5 transition-colors group">
@@ -114,6 +116,9 @@ const Ranking: React.FC = () => {
                                                     <span className="text-xs text-[#929bc9] md:hidden">{player.planet_name}</span>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="p-4 text-center font-mono text-green-400 font-bold">
+                                            {level}
                                         </td>
                                         <td className="p-4 text-[#929bc9] font-mono text-sm hidden md:table-cell">
                                             {player.planet_name}
