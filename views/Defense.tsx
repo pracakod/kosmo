@@ -25,6 +25,58 @@ const Defense: React.FC = () => {
                 <span className="text-primary">System</span> Obrony Planetarnej
             </h2>
 
+            {/* Defense Summary Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {(() => {
+                    let totalCount = 0;
+                    let totalAttack = 0;
+                    let totalShield = 0;
+
+                    DEFENSE_LIST.forEach(def => {
+                        const count = defenses[def.id as DefenseId] || 0;
+                        if (count > 0) {
+                            totalCount += count;
+                            totalAttack += count * def.attack;
+                            totalShield += count * def.defense;
+                        }
+                    });
+
+                    return (
+                        <>
+                            <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 flex items-center gap-4 shadow-lg">
+                                <div className="size-12 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl">shield</span>
+                                </div>
+                                <div>
+                                    <div className="text-[#929bc9] text-xs uppercase font-bold">Jednostki Obronne</div>
+                                    <div className="text-white text-2xl font-mono font-bold">{totalCount}</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 flex items-center gap-4 shadow-lg">
+                                <div className="size-12 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl">swords</span>
+                                </div>
+                                <div>
+                                    <div className="text-[#929bc9] text-xs uppercase font-bold">Siła Ognia</div>
+                                    <div className="text-white text-2xl font-mono font-bold">{totalAttack.toLocaleString()}</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-[#1c2136] p-4 rounded-xl border border-white/10 flex items-center gap-4 shadow-lg">
+                                <div className="size-12 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-2xl">security</span>
+                                </div>
+                                <div>
+                                    <div className="text-[#929bc9] text-xs uppercase font-bold">Wytrzymałość Tarcz</div>
+                                    <div className="text-white text-2xl font-mono font-bold">{totalShield.toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </>
+                    );
+                })()}
+            </div>
+
             {shipyardLevel < 1 ? (
                 <div className="bg-[#1c2136] rounded-xl border border-yellow-500/30 p-8 text-center">
                     <span className="material-symbols-outlined text-yellow-500 text-5xl mb-4">construction</span>
