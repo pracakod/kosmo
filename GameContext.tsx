@@ -131,6 +131,7 @@ interface GameContextType extends GameState {
     sendAttack: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
     sendTransport: (ships: Record<ShipId, number>, resources: { metal: number, crystal: number, deuterium: number }, coords: { galaxy: number, system: number, position: number }) => void;
     cancelMission: (missionId: string) => Promise<void>;
+    cancelConstruction: (constructionId: string) => Promise<void>;
     sendSpyProbe: (amount: number, coords: { galaxy: number, system: number, position: number }) => Promise<boolean>;
     buyPremium: (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }) => TransactionStatus;
     getCost: (type: 'building' | 'research', id: string, currentLevel: number) => { metal: number, crystal: number, deuterium: number };
@@ -1447,6 +1448,56 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }
     };
 
+    const cancelConstruction = async (constructionId: string) => {
+        setGameState(current => {
+            const itemIndex = current.constructionQueue.findIndex(i => i.id === constructionId);
+            if (itemIndex === -1) return current;
+
+            const item = current.constructionQueue[itemIndex];
+            const cost = getCost(item.type, item.itemId, item.targetLevel - 1); // Cost of level we are building
+
+            // Refund (100% since it's canceled)
+            const newResources = {
+                ...current.resources,
+                metal: current.resources.metal + cost.metal,
+                crystal: current.resources.crystal + cost.crystal,
+                deuterium: current.resources.deuterium + cost.deuterium
+            };
+
+            const newQueue = [...current.constructionQueue];
+            newQueue.splice(itemIndex, 1);
+
+            // Recalculate times for subsequent items
+            // If we removed the first item (active), the next one starts NOW.
+            // If we removed a middle item, the next one starts when the previous one ends.
+
+            for (let i = itemIndex; i < newQueue.length; i++) {
+                const prevItem = i > 0 ? newQueue[i - 1] : null;
+                const startTime = prevItem ? prevItem.endTime : Date.now();
+                const duration = newQueue[i].endTime - newQueue[i].startTime; // Persist original duration
+                newQueue[i] = {
+                    ...newQueue[i],
+                    startTime: startTime,
+                    endTime: startTime + duration
+                };
+            }
+
+            // Sync with Supabase
+            supabase.from('profiles').update({
+                resources: newResources,
+                construction_queue: newQueue
+            }).eq('id', session.user.id).then(({ error }) => {
+                if (error) console.error("Cancel construction failed:", error);
+            });
+
+            return {
+                ...current,
+                resources: newResources,
+                constructionQueue: newQueue
+            };
+        });
+    };
+
     const upgradeResearch = async (researchId: ResearchId) => {
         const currentLevel = gameState.research[researchId];
         const cost = getCost('research', researchId, currentLevel);
@@ -1750,6 +1801,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         sendSpyProbe,
         sendTransport,
         cancelMission,
+        cancelConstruction,
         buyPremium,
         getCost,
         checkRequirements,

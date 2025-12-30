@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS, DEFENSES } from '../constants
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel, cancelMission } = useGame();
+    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel, cancelMission, cancelConstruction } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeShipBuild = shipyardQueue[0];
     const [queueTimes, setQueueTimes] = useState<Record<string, string>>({});
@@ -132,7 +132,7 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                 <span className="text-white font-medium">12°C do 50°C</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-[#929bc9] text-sm">Zabudowa</span>
+                                <span className="text-[#929bc9] text-sm">Zajęte Pola</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-white font-medium">{(Object.values(buildings) as number[]).reduce((a, b) => a + b, 0)} / 163</span>
                                 </div>
@@ -208,6 +208,13 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                                 </span>
                                             </div>
                                         </div>
+                                        <button
+                                            onClick={() => cancelConstruction(item.id)}
+                                            className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-xs font-bold uppercase transition-colors flex items-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">cancel</span>
+                                            Anuluj
+                                        </button>
                                     </div>
                                 );
                             })}
