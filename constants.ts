@@ -81,7 +81,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Kopalnia Kryształu",
     description: "Wydobywa kryształ niezbędny do elektroniki.",
     baseCost: { metal: 48, crystal: 24, deuterium: 0 },
-    baseProduction: { metal: 0, crystal: 20, deuterium: 0, energy: -20 }, // Increased energy cost
+    baseProduction: { metal: 0, crystal: 20, deuterium: 0, energy: -15 }, // Reduced energy cost
     image: IMAGES.crystalMine,
     buildTimeBase: 15
   },
@@ -90,7 +90,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Syntezator Deuteru",
     description: "Przetwarza ciężki wodór na paliwo.",
     baseCost: { metal: 225, crystal: 75, deuterium: 0 },
-    baseProduction: { metal: 0, crystal: 0, deuterium: 10, energy: -40 }, // Increased energy cost
+    baseProduction: { metal: 0, crystal: 0, deuterium: 10, energy: -30 }, // Reduced energy cost
     image: IMAGES.deuteriumSynth,
     buildTimeBase: 20
   },
@@ -99,7 +99,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Elektrownia Słoneczna",
     description: "Wytwarza energię z promieniowania gwiazdy.",
     baseCost: { metal: 75, crystal: 30, deuterium: 0 },
-    baseProduction: { metal: 0, crystal: 0, deuterium: 0, energy: 20 },
+    baseProduction: { metal: 0, crystal: 0, deuterium: 0, energy: 30 },
     image: IMAGES.solarPlant,
     buildTimeBase: 12
   },
@@ -108,7 +108,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Elektrownia Fuzyjna",
     description: "Wydajna elektrownia zużywająca deuter.",
     baseCost: { metal: 900, crystal: 360, deuterium: 180 },
-    baseProduction: { metal: 0, crystal: 0, deuterium: -5, energy: 50 },
+    baseProduction: { metal: 0, crystal: 0, deuterium: -5, energy: 60 },
     image: IMAGES.fusionReactor,
     buildTimeBase: 40,
     requirements: [{ type: 'research', id: ResearchId.ENERGY_TECH, level: 3 }]

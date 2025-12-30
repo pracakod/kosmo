@@ -74,6 +74,7 @@ const Ranking: React.FC = () => {
         <div className="animate-in fade-in duration-500">
             <h2 className="text-2xl font-bold mb-6 text-white tracking-widest uppercase border-b border-white/10 pb-4">
                 <span className="text-primary">System</span> Rankingowy
+                <span className="text-xs text-[#929bc9] normal-case ml-4 font-normal tracking-normal">(Dane odświeżane co ok. 60s)</span>
             </h2>
 
             <div className="bg-[#1c2136]/50 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden shadow-xl">
