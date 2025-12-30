@@ -540,8 +540,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // Refresh local state
             fetchMissions();
 
-        } catch (err) {
+        } catch (err: any) {
             console.error('Critical Error in processMissionArrival:', err);
+            alert(`BŁĄD PRZYLOTU: ${err.message || err}`);
         }
     };
 
@@ -623,8 +624,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             await refreshProfile(); // Refresh resources & ships
             fetchMissions();
 
-        } catch (err) {
+        } catch (err: any) {
             console.error('Critical Error in processMissionReturn:', err);
+            // Temporary debug alert
+            alert(`BŁĄD MISJI: ${err.message || err}`);
         }
     };
 
