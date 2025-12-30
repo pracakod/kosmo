@@ -683,12 +683,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         };
 
                         const newTargetLogs = [
-                            { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz dostarczył: M:${mission.resources?.metal} C:${mission.resources?.crystal} D:${mission.resources?.deuterium}`, outcome: 'success' as 'success' },
+                            { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz ${session.user.email?.split('@')[0]} dostarczył: M:${mission.resources?.metal} C:${mission.resources?.crystal} D:${mission.resources?.deuterium}`, outcome: 'success' as 'success' },
                             ...(targetProfile.mission_logs || [])
                         ].slice(0, 50);
 
                         await supabase.from('profiles').update({ resources: newRes, mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
-                        result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'success' as 'success', title: 'Transport', message: 'Surowce dostarczone.' };
+
+                        result = {
+                            id: Date.now().toString(),
+                            timestamp: Date.now(),
+                            outcome: 'success' as 'success',
+                            title: 'Transport',
+                            message: `Surowce dostarczone do gracza ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].`
+                        };
                     }
                 } else {
                     result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'neutral' as 'neutral', title: 'Transport', message: 'Nie znaleziono kolonii docelowej. Flota zawraca.' };
