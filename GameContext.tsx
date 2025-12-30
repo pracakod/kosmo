@@ -598,7 +598,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: `${mission.id}-def-log`, // Deterministic ID
                                 timestamp: Date.now(),
                                 title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${gameState.nickname || 'Nieznany'} [${mission.startCoords.galaxy}:${mission.startCoords.system}:${mission.startCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(battle.attackerShips).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.outcome === 'success' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${battle.attackerLosses} | Twoje Straty: ${battle.defenderLosses}.`,
+                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${battle.attackerLosses} | Twoje Straty: ${battle.defenderLosses}.`,
                                 outcome: 'danger' as 'danger',
                                 report: {
                                     rounds: battle.rounds,
@@ -655,7 +655,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
                     if (targetProfile) {
                         // Espionage Logic
-                        const attackerSpyLevel = research[ResearchId.ESPIONAGE_TECH] || 0;
+                        const attackerSpyLevel = gameStateRef.current.research[ResearchId.ESPIONAGE_TECH] || 0;
                         const defenderSpyLevel = targetProfile.research?.[ResearchId.ESPIONAGE_TECH] || 0;
                         const spyDiff = attackerSpyLevel - defenderSpyLevel;
 
@@ -704,7 +704,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: Date.now().toString(),
                                 timestamp: Date.now(),
                                 title: "Wykryto Skanowanie!",
-                                message: `Gracz ${gameState.nickname || 'Nieznany'} [${mission.startCoords.galaxy}:${mission.startCoords.system}:${mission.startCoords.position}] przeskanował Twoją planetę.`,
+                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}] przeskanował Twoją planetę.`,
                                 outcome: 'danger' as 'danger'
                             },
                             ...(targetProfile.mission_logs || [])
@@ -1392,6 +1392,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
         buildTimeMs = buildTimeMs / GAME_SPEED;
         const buildTime = Math.max(1000, buildTimeMs);
+        const now = Date.now();
 
         // Determine start time (After the last item in queue finishes, or Now)
         const lastItem = currentQueue.sort((a, b) => b.endTime - a.endTime)[0];
