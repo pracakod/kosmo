@@ -694,7 +694,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             timestamp: Date.now(),
                             outcome: 'success' as 'success',
                             title: 'Transport',
-                            message: `Surowce dostarczone do gracza ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].`
+                            message: `Surowce dostarczone do gracza ${targetProfile.nickname || targetProfile.email || 'Nieznany'} [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].`
                         };
                     }
                 } else {

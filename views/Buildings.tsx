@@ -31,18 +31,18 @@ const Buildings: React.FC = () => {
     const getProductionInfo = (buildingId: BuildingId, currentLevel: number) => {
         // Simplified prediction logic purely for display purposes
         if (buildingId === BuildingId.METAL_MINE) {
-            const current = Math.floor(30 * currentLevel * Math.pow(1.1, currentLevel)) * 20; // 20 is GAME_SPEED factor approximation for ticks
-            const next = Math.floor(30 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 20;
+            const current = Math.floor(30 * currentLevel * Math.pow(1.1, currentLevel)) * 100; // 100 is GAME_SPEED
+            const next = Math.floor(30 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 100;
             return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, type: 'gain' };
         }
         if (buildingId === BuildingId.CRYSTAL_MINE) {
-            const current = Math.floor(20 * currentLevel * Math.pow(1.1, currentLevel)) * 20;
-            const next = Math.floor(20 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 20;
+            const current = Math.floor(20 * currentLevel * Math.pow(1.1, currentLevel)) * 100;
+            const next = Math.floor(20 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 100;
             return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, type: 'gain' };
         }
         if (buildingId === BuildingId.DEUTERIUM_SYNTH) {
-            const current = Math.floor(10 * currentLevel * Math.pow(1.1, currentLevel)) * 20;
-            const next = Math.floor(10 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 20;
+            const current = Math.floor(10 * currentLevel * Math.pow(1.1, currentLevel)) * 100;
+            const next = Math.floor(10 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 100;
             return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, type: 'gain' };
         }
         if (buildingId === BuildingId.SOLAR_PLANT) {

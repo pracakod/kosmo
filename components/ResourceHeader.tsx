@@ -30,7 +30,7 @@ const ResourceItem: React.FC<{
                     <div className="flex items-center gap-0.5 mt-0.5 md:mt-0">
                         <span className="material-symbols-outlined text-[10px] text-[#0bda65]">trending_up</span>
                         <span className="text-[#0bda65] text-[10px] font-medium font-mono leading-none whitespace-nowrap">
-                            {(production * 60).toFixed(0)}/min
+                            {(production * 3600).toLocaleString()}/h
                         </span>
                     </div>
                 )}

@@ -11,9 +11,10 @@ const Logbook: React.FC = () => {
     // Helpers
     const getLogType = (log: MissionLog): 'attack' | 'spy' | 'expedition' | 'transport' | 'other' => {
         const t = log.title?.toLowerCase() || '';
-        if (t.includes('szpieg') || t.includes('skan')) return 'spy';
         if (t.includes('bojowy') || t.includes('atak')) return 'attack';
-        if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez') || t.includes('statki') || t.includes('artefakt') || t.includes('materia')) return 'expedition';
+        // Fix: "pozyskano" contains "skan", so check for expedition keywords first or exclude "pozyskano" from spy
+        if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez') || t.includes('statki') || t.includes('artefakt') || t.includes('materia') || t.includes('pozyskano')) return 'expedition';
+        if (t.includes('szpieg') || t.includes('skan')) return 'spy';
         if (t.includes('transport') || t.includes('dostarcz') || t.includes('surow')) return 'transport';
         return 'other';
     };
