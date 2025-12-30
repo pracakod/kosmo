@@ -68,25 +68,47 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
 
     if (eventRoll < 0.50) {
         // RESOURCES
-        const metal = Math.floor(Math.random() * Math.min(50000, fleetCapacity * 0.6)) + 2000;
-        const crystal = Math.floor(Math.random() * Math.min(30000, fleetCapacity * 0.4)) + 1000;
-        const deuterium = Math.floor(Math.random() * Math.min(10000, fleetCapacity * 0.2)) + 500;
+        // Calculate potential find amount (independent of capacity first)
+        let metal = Math.floor(Math.random() * 50000) + 2000;
+        let crystal = Math.floor(Math.random() * 30000) + 1000;
+        let deuterium = Math.floor(Math.random() * 10000) + 500;
 
-        // Sometimes only one resource
+        // Determine type variation
         const typeRoll = Math.random();
         let rewards: MissionRewards = {};
         let msg = "";
 
         if (typeRoll < 0.5) {
-            rewards = { metal, crystal };
-            msg = `Odkryto pole asteroid bogate w minerały. Pozyskano Metal: ${metal}, Kryształ: ${crystal}.`;
+            // Metal + Crystal
+            deuterium = 0;
+            msg = `Odkryto pole asteroid bogate w minerały.`;
         } else if (typeRoll < 0.8) {
-            rewards = { deuterium, crystal };
-            msg = `Znaleziono obłok gazowy zawierający deuter. Skondensowano Deuter: ${deuterium} i zebrano Kryształ: ${crystal}.`;
+            // Deuterium + Crystal
+            metal = 0;
+            msg = `Znaleziono obłok gazowy zawierający deuter.`;
         } else {
-            rewards = { metal, crystal, deuterium };
-            msg = `Trafiono na opuszczony magazyn piratów! Zrabowano Metal: ${metal}, Kryształ: ${crystal}, Deuter: ${deuterium}.`;
+            // All three
+            msg = `Trafiono na opuszczony magazyn piratów!`;
         }
+
+        // CLAMP TO FLEET CAPACITY
+        const total = metal + crystal + deuterium;
+        if (total > fleetCapacity) {
+            const ratio = fleetCapacity / total;
+            metal = Math.floor(metal * ratio);
+            crystal = Math.floor(crystal * ratio);
+            deuterium = Math.floor(deuterium * ratio);
+            msg += ` (Ładownie pełne: ${fleetCapacity})`;
+        }
+
+        if (metal > 0) rewards.metal = metal;
+        if (crystal > 0) rewards.crystal = crystal;
+        if (deuterium > 0) rewards.deuterium = deuterium;
+
+        msg += ` Pozyskano:`;
+        if (metal > 0) msg += ` Metal: ${metal}`;
+        if (crystal > 0) msg += ` Kryształ: ${crystal}`;
+        if (deuterium > 0) msg += ` Deuter: ${deuterium}.`;
 
         return {
             log: { ...logBase, title: "Pozyskano Zasoby", message: msg, outcome: 'success', rewards },

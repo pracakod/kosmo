@@ -195,8 +195,8 @@ const DetailModal: React.FC<{ log: MissionLog, onClose: () => void }> = ({ log, 
             <div className="bg-[#1c2136] w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 shadow-2xl" onClick={e => e.stopPropagation()}>
                 <div className="sticky top-0 bg-[#1c2136] border-b border-white/10 p-4 flex justify-between items-center z-10">
                     <h3 className="text-white font-bold flex items-center gap-2">
-                        <span className="material-symbols-outlined text-red-500">
-                            {log.title?.includes("Szpieg") ? 'visibility' : 'swords'}
+                        <span className={`material-symbols-outlined ${log.title?.includes("Szpieg") ? 'text-blue-400' : log.title?.includes("Transport") || log.title?.includes("Dostawa") ? 'text-green-400' : log.title?.includes("Bojowy") ? 'text-red-500' : 'text-purple-400'}`}>
+                            {log.title?.includes("Szpieg") ? 'visibility' : log.title?.includes("Transport") || log.title?.includes("Dostawa") ? 'local_shipping' : log.title?.includes("Bojowy") ? 'swords' : 'public'}
                         </span>
                         {log.title}
                     </h3>
