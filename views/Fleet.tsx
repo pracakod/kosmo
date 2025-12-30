@@ -156,8 +156,8 @@ const Fleet: React.FC = () => {
                                     <div key={id} className={`p-4 rounded-xl border transition-all ${isSelected ? 'bg-primary/5 border-primary/30 shadow-lg shadow-primary/5' : 'bg-[#1c2136] border-white/5 hover:border-white/10'}`}>
                                         <div className="flex justify-between items-start mb-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="size-12 rounded-lg bg-[#111422] flex items-center justify-center border border-white/10">
-                                                    <span className="material-symbols-outlined text-primary text-2xl">{shipDef.image || 'rocket'}</span>
+                                                <div className="size-12 rounded-lg bg-[#111422] flex items-center justify-center border border-white/10 bg-cover bg-center" style={{ backgroundImage: `url(${shipDef.image})` }}>
+                                                    {!shipDef.image && <span className="material-symbols-outlined text-primary text-2xl">rocket</span>}
                                                 </div>
                                                 <div>
                                                     <h4 className="text-white font-bold">{shipDef.name}</h4>
