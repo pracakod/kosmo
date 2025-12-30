@@ -361,12 +361,55 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             .single();
 
         if (data && !error) {
+            // Offline Production Calculation
+            const lastUpdated = data.last_updated || Date.now();
+            const now = Date.now();
+            const timeDiff = Math.max(0, (now - lastUpdated) / 1000); // Seconds since last save
+            let loadedResources = { ...data.resources };
+
+            if (timeDiff > 1) {
+                console.log(`🕒 Calculating offline production for ${timeDiff.toFixed(0)} seconds...`);
+
+                const b = { ...initialState.buildings, ...data.buildings };
+                const s = { ...initialState.productionSettings, ...data.production_settings };
+
+                // Production Formulas (Standard OGame-like)
+                const metalLevel = b[BuildingId.METAL_MINE] || 0;
+                const crystalLevel = b[BuildingId.CRYSTAL_MINE] || 0;
+                const deuteriumLevel = b[BuildingId.DEUTERIUM_SYNTH] || 0;
+                const solarLevel = b[BuildingId.SOLAR_PLANT] || 0;
+                const fusionLevel = b[BuildingId.FUSION_REACTOR] || 0;
+
+                // Energy Calculation
+                const solarEnergy = 20 * solarLevel * Math.pow(1.1, solarLevel);
+                const fusionEnergy = 30 * fusionLevel * Math.pow(1.05 + (0.01 * (b[ResearchId.ENERGY_TECH] || 0)), fusionLevel);
+                const maxEnergy = Math.floor(solarEnergy + fusionEnergy);
+
+                // Consumption
+                const metalCons = 10 * metalLevel * Math.pow(1.1, metalLevel);
+                const crystalCons = 10 * crystalLevel * Math.pow(1.1, crystalLevel);
+                const deuteriumCons = 20 * deuteriumLevel * Math.pow(1.1, deuteriumLevel);
+                const totalCons = Math.ceil(metalCons + crystalCons + deuteriumCons);
+
+                const efficiency = maxEnergy >= totalCons ? 1 : (maxEnergy / (totalCons || 1));
+
+                // Production (Base + Mine) * Efficiency * Settings
+                const metalProd = (30 * metalLevel * Math.pow(1.1, metalLevel)) * efficiency * (s[BuildingId.METAL_MINE] ?? 100) / 100;
+                const crystalProd = (20 * crystalLevel * Math.pow(1.1, crystalLevel)) * efficiency * (s[BuildingId.CRYSTAL_MINE] ?? 100) / 100;
+                const deutProd = (10 * deuteriumLevel * Math.pow(1.1, deuteriumLevel) * 1.0) * efficiency * (s[BuildingId.DEUTERIUM_SYNTH] ?? 100) / 100;
+
+                // Apply to resources
+                loadedResources.metal = Math.min(loadedResources.storage.metal, loadedResources.metal + (metalProd * timeDiff));
+                loadedResources.crystal = Math.min(loadedResources.storage.crystal, loadedResources.crystal + (crystalProd * timeDiff));
+                loadedResources.deuterium = Math.min(loadedResources.storage.deuterium, loadedResources.deuterium + (deutProd * timeDiff));
+            }
+
             // Merge loaded data
             setGameState(prev => ({
                 ...prev,
                 planetName: data.planet_name || prev.planetName,
-                nickname: data.nickname || prev.nickname || 'Player', // Load nickname
-                resources: { ...prev.resources, ...data.resources },
+                nickname: data.nickname || prev.nickname || 'Player',
+                resources: { ...prev.resources, ...loadedResources },
                 buildings: { ...prev.buildings, ...data.buildings },
                 research: { ...prev.research, ...data.research },
                 ships: { ...prev.ships, ...data.ships },
@@ -376,11 +419,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 productionSettings: { ...prev.productionSettings, ...data.production_settings },
                 avatarUrl: data.production_settings?.avatarUrl || prev.avatarUrl || initialState.avatarUrl,
                 planetType: data.production_settings?.planetType || prev.planetType || (['terran', 'desert', 'ice'][Math.floor(Math.random() * 3)]),
-                // Don't overwrite activeMissions from profile (legacy), we use missions table now
                 missionLogs: data.mission_logs || [],
                 galaxyCoords: data.galaxy_coords,
                 lastTick: Date.now()
             }));
+
+            // Sync offline production back to DB immediately so we don't recalculate it if user refreshes again
+            if (timeDiff > 1) {
+                supabase.from('profiles').update({
+                    resources: loadedResources
+                }).eq('id', session.user.id).then(({ error }) => {
+                    if (error) console.error("Failed to save offline production:", error);
+                });
+            }
+
         } else {
             if (error && (error.code === '401' || error.code === '403')) {
                 console.error("🛑 PROFILE LOAD FLOP: RLS Policy Missing");
@@ -1197,7 +1249,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     // Upgrades
-    const upgradeBuilding = (buildingId: BuildingId) => {
+    const upgradeBuilding = async (buildingId: BuildingId) => {
         const currentLevel = gameState.buildings[buildingId];
         const cost = getCost('building', buildingId, currentLevel);
         if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
@@ -1228,9 +1280,26 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 endTime: now + buildTime
             }]
         }));
+
+        await supabase.from('profiles').update({
+            resources: {
+                ...gameState.resources,
+                metal: gameState.resources.metal - cost.metal,
+                crystal: gameState.resources.crystal - cost.crystal,
+                deuterium: gameState.resources.deuterium - cost.deuterium
+            },
+            construction_queue: [...gameState.constructionQueue, {
+                id: now.toString(),
+                type: 'building',
+                itemId: buildingId,
+                targetLevel: currentLevel + 1,
+                startTime: now,
+                endTime: now + buildTime
+            }]
+        }).eq('id', session.user.id);
     };
 
-    const upgradeResearch = (researchId: ResearchId) => {
+    const upgradeResearch = async (researchId: ResearchId) => {
         const currentLevel = gameState.research[researchId];
         const cost = getCost('research', researchId, currentLevel);
         if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
@@ -1264,6 +1333,23 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 endTime: now + buildTime
             }]
         }));
+
+        await supabase.from('profiles').update({
+            resources: {
+                ...gameState.resources,
+                metal: gameState.resources.metal - cost.metal,
+                crystal: gameState.resources.crystal - cost.crystal,
+                deuterium: gameState.resources.deuterium - cost.deuterium
+            },
+            construction_queue: [...gameState.constructionQueue, {
+                id: now.toString(),
+                type: 'research',
+                itemId: researchId,
+                targetLevel: currentLevel + 1,
+                startTime: now,
+                endTime: now + buildTime
+            }]
+        }).eq('id', session.user.id);
     };
 
     const buildShip = async (shipId: ShipId, amount: number) => {
