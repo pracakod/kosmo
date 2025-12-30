@@ -63,10 +63,16 @@ const Galaxy: React.FC = () => {
             const pType = otherPlayer.production_settings?.planetType === 'ice' ? "Lodowa" : (otherPlayer.production_settings?.planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
             const avatar = otherPlayer.production_settings?.avatarUrl || "/kosmo/avatars/avatar_default.png";
 
+            // Calculate level from buildings
+            const buildings = otherPlayer.buildings || {};
+            const buildingLevels = Object.values(buildings) as number[];
+            const totalLevels = buildingLevels.reduce((sum, level) => sum + (Number(level) || 0), 0);
+            const playerLevel = Math.max(1, Math.floor(totalLevels / 3)); // Rough level estimate
+
             return {
                 name: otherPlayer.planet_name || "Nieznana Kolonia",
-                player: "Gracz", // TODO: Fetch username if available, currently profiles doesn't strict require it in select
-                rank: calculateRank(otherPlayer.points),
+                player: otherPlayer.production_settings?.nickname || "Gracz",
+                rank: playerLevel, // Now shows player level instead of dummy rank
                 img: IMAGES.planet, // Use generic planet or specific if user saved it
                 type: pType,
                 isPlayer: false,
@@ -247,7 +253,7 @@ const Galaxy: React.FC = () => {
                                             </span>
                                             {planet.activity && <span className="text-[9px] text-red-400">(*)</span>}
                                         </div>
-                                        {planet.rank && <div className="text-xs text-white/30">Rank #{planet.rank}</div>}
+                                        {planet.rank && <div className="text-xs text-green-400 font-mono">Level {planet.rank}</div>}
                                     </div>
                                 ) : (
                                     <span className="text-white/20 text-xs md:text-sm italic">Pusta przestrzeń</span>

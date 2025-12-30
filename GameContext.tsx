@@ -213,13 +213,31 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         gameStateRef.current = gameState;
     }, [gameState]);
 
+    // Debug version
+    useEffect(() => {
+        console.log('🚀 GameContext v2.0 LOADED - New Query Logic Active');
+    }, []);
+
     const findTargetUser = async (coords: { galaxy: number, system: number, position: number }) => {
-        const { data } = await supabase
+        // Query using JSON field - galaxy_coords contains {galaxy, system, position}
+        const { data, error } = await supabase
             .from('profiles')
-            .select('id')
-            .match({ galaxy: coords.galaxy, system: coords.system, position: coords.position })
-            .single();
-        return data?.id || null;
+            .select('id, galaxy_coords')
+            .not('galaxy_coords', 'is', null);
+
+        if (error) {
+            console.error('Error finding target user:', error);
+            return null;
+        }
+
+        // Filter in-memory since Supabase JSON querying can be tricky
+        const target = data?.find((profile: any) =>
+            profile.galaxy_coords?.galaxy === coords.galaxy &&
+            profile.galaxy_coords?.system === coords.system &&
+            profile.galaxy_coords?.position === coords.position
+        );
+
+        return target?.id || null;
     };
 
     // Replace fetching activeMissions from profile with fetching from 'missions' table
@@ -233,7 +251,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             .or(`owner_id.eq.${session.user.id},target_user_id.eq.${session.user.id}`);
 
         if (data && !error) {
-            // console.log('All missions data:', data); // DEBUG
+            console.log('📡 FETCH MISSIONS - Total fetched:', data.length, 'for user:', session.user.id);
+            console.log('📡 Raw missions data:', data);
             const mappedMissions: FleetMission[] = data.map((m: any) => ({
                 id: m.id,
                 ownerId: m.owner_id,
@@ -797,6 +816,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const now = Date.now();
         const missionId = crypto.randomUUID();
         const targetUserId = await findTargetUser(coords);
+        console.log('🎯 ATTACK: Target at coords', coords, 'resolved to userId:', targetUserId);
 
         // Optimistic
         const mission: FleetMission = {
@@ -821,7 +841,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         });
 
         // DB Insert
-        await supabase.from('missions').insert({
+        const { data: insertedData, error: insertError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
             target_user_id: targetUserId,
@@ -833,7 +853,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             arrival_time: now + duration, // ONE WAY
             return_time: now + (duration * 2), // Round trip
             status: 'flying'
-        });
+        }).select();
+
+        if (insertError) {
+            console.error('❌ ATTACK INSERT ERROR:', insertError);
+        } else {
+            console.log('✅ ATTACK INSERTED:', insertedData);
+        }
     };
 
     const sendSpyProbe = async (amount: number, coords: { galaxy: number, system: number, position: number }) => {
@@ -1097,8 +1123,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const getPlayersInSystem = async (galaxy: number, system: number) => {
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, planet_name, galaxy_coords, points, production_settings') // Removed nickname from select
-
+            .select('id, planet_name, galaxy_coords, points, production_settings, buildings')
             .contains('galaxy_coords', { galaxy, system });
 
         if (error) {

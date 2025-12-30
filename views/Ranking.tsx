@@ -10,6 +10,7 @@ interface RankedPlayer {
     production_settings?: any;
     planet_name?: string;
     nickname?: string;
+    galaxy_coords?: { galaxy: number; system: number; position: number };
 }
 
 const Ranking: React.FC = () => {
@@ -21,7 +22,7 @@ const Ranking: React.FC = () => {
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('id, points, production_settings, planet_name, nickname')
+                    .select('id, points, production_settings, planet_name, galaxy_coords')
                     .order('points', { ascending: false })
                     .limit(50);
 
@@ -34,7 +35,8 @@ const Ranking: React.FC = () => {
                         points: p.points || 0,
                         avatar_url: p.production_settings?.avatarUrl || IMAGES.avatar,
                         planet_name: p.planet_name || 'Nieznana Planeta',
-                        nickname: p.nickname || p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`
+                        nickname: p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`,
+                        galaxy_coords: p.galaxy_coords
                     }));
                     setPlayers(mapped);
                 } else if (error) {
