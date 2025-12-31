@@ -422,7 +422,7 @@ const ActiveMissionItem: React.FC<{ mission: FleetMission, onCancel: (id: string
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/5 pt-3">
                 <div className="flex flex-col gap-1 w-full md:w-auto">
                     <div className="flex items-center gap-3">
-                        <div className="text-white font-bold text-sm">Cel: [1:{mission.targetCoords.system}:{mission.targetCoords.position}]</div>
+                        <div className="text-white font-bold text-sm">Cel: [{mission.targetCoords.galaxy}:{mission.targetCoords.system}:{mission.targetCoords.position}]</div>
                         <div className="text-[#929bc9] text-xs">Flota: {Object.values(mission.ships).reduce((a: number, b: number) => a + Number(b), 0)} jedn.</div>
                     </div>
 

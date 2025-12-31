@@ -20,9 +20,9 @@ const Galaxy: React.FC = () => {
 
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
-    const [spyModal, setSpyModal] = useState<{ pos: number, name: string } | null>(null);
-    const [attackModal, setAttackModal] = useState<{ pos: number, name: string } | null>(null);
-    const [transportModal, setTransportModal] = useState<{ pos: number, name: string } | null>(null);
+    const [spyModal, setSpyModal] = useState<{ galaxy: number, system: number, pos: number, name: string } | null>(null);
+    const [attackModal, setAttackModal] = useState<{ galaxy: number, system: number, pos: number, name: string } | null>(null);
+    const [transportModal, setTransportModal] = useState<{ galaxy: number, system: number, pos: number, name: string } | null>(null);
     const [selectedShips, setSelectedShips] = useState<Record<string, number>>({});
     const [selectedResources, setSelectedResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [probeCount, setProbeCount] = useState(1);
@@ -124,7 +124,7 @@ const Galaxy: React.FC = () => {
     const openSpyModal = (pos: number) => {
         const planet = getPlanet(pos);
         if (planet) {
-            setSpyModal({ pos, name: planet.name });
+            setSpyModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
             setProbeCount(1);
             setStatusMessage(null);
         }
@@ -307,7 +307,7 @@ const Galaxy: React.FC = () => {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setAttackModal({ pos, name: planet.name });
+                                                setAttackModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
                                                 setSelectedShips({});
                                                 setStatusMessage(null);
                                             }}
@@ -316,7 +316,7 @@ const Galaxy: React.FC = () => {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setTransportModal({ pos, name: planet.name });
+                                                setTransportModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
                                                 setSelectedShips({});
                                                 setSelectedResources({ metal: 0, crystal: 0, deuterium: 0 });
                                                 setStatusMessage(null);
@@ -334,7 +334,7 @@ const Galaxy: React.FC = () => {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setAttackModal({ pos, name: planet.name });
+                                                setAttackModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
                                                 setSelectedShips({});
                                                 setStatusMessage(null);
                                             }}
@@ -362,7 +362,7 @@ const Galaxy: React.FC = () => {
                                 <span className="material-symbols-outlined text-purple-400 text-3xl">visibility</span>
                                 <div>
                                     <h3 className="text-xl font-bold text-white">Wyślij Sondy</h3>
-                                    <p className="text-xs text-[#929bc9]">Cel: {spyModal.name} [{coords.galaxy}:{coords.system}:{spyModal.pos}]</p>
+                                    <p className="text-xs text-[#929bc9]">Cel: {spyModal.name} [{spyModal.galaxy}:{spyModal.system}:{spyModal.pos}]</p>
                                 </div>
                             </div>
 
@@ -426,7 +426,7 @@ const Galaxy: React.FC = () => {
                                 <span className="material-symbols-outlined text-red-500 text-3xl">swords</span>
                                 <div>
                                     <h3 className="text-xl font-bold text-white">Rozpocznij Atak</h3>
-                                    <p className="text-xs text-[#929bc9]">Cel: {attackModal.name} [{coords.galaxy}:{coords.system}:{attackModal.pos}]</p>
+                                    <p className="text-xs text-[#929bc9]">Cel: {attackModal.name} [{attackModal.galaxy}:{attackModal.system}:{attackModal.pos}]</p>
                                 </div>
                             </div>
 
@@ -502,7 +502,7 @@ const Galaxy: React.FC = () => {
                                 <span className="material-symbols-outlined text-blue-500 text-3xl">local_shipping</span>
                                 <div>
                                     <h3 className="text-xl font-bold text-white">Transportuj Surowce</h3>
-                                    <p className="text-xs text-[#929bc9]">Cel: {transportModal.name} [{coords.galaxy}:{coords.system}:{transportModal.pos}]</p>
+                                    <p className="text-xs text-[#929bc9]">Cel: {transportModal.name} [{transportModal.galaxy}:{transportModal.system}:{transportModal.pos}]</p>
                                 </div>
                             </div>
 
