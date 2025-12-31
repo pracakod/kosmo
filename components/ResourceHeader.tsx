@@ -54,7 +54,7 @@ const ResourceHeader: React.FC = () => {
             <div className="flex flex-wrap gap-3 justify-between items-center w-full">
                 {/* Planet Switcher - visible on all devices */}
                 {planets && planets.length > 0 && (
-                    <div className="relative">
+                    <div className="relative lg:hidden">
                         <button
                             onClick={() => setShowPlanetMenu(!showPlanetMenu)}
                             className="flex items-center gap-2 px-3 py-2 bg-[#1c2136] border border-white/10 rounded-lg hover:border-primary/50 transition-colors"
