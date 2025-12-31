@@ -46,11 +46,50 @@ const ResourceItem: React.FC<{
 );
 
 const ResourceHeader: React.FC = () => {
-    const { resources, productionRates, logout } = useGame();
+    const { resources, productionRates, logout, planets, currentPlanetId, switchPlanet, planetName, galaxyCoords } = useGame();
+    const [showPlanetMenu, setShowPlanetMenu] = React.useState(false);
 
     return (
         <header className="bg-[#111422]/90 backdrop-blur-md border-b border-white/5 p-3 flex-shrink-0 z-20">
             <div className="flex flex-wrap gap-3 justify-between items-center w-full">
+                {/* Planet Switcher - visible on all devices */}
+                {planets && planets.length > 0 && (
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowPlanetMenu(!showPlanetMenu)}
+                            className="flex items-center gap-2 px-3 py-2 bg-[#1c2136] border border-white/10 rounded-lg hover:border-primary/50 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-primary text-sm">public</span>
+                            <span className="text-white text-xs font-bold truncate max-w-[80px]">{planetName}</span>
+                            <span className="material-symbols-outlined text-[#929bc9] text-xs">{showPlanetMenu ? 'expand_less' : 'expand_more'}</span>
+                        </button>
+
+                        {showPlanetMenu && (
+                            <div className="absolute top-full left-0 mt-1 bg-[#1c2136] border border-white/10 rounded-lg shadow-xl z-50 min-w-[160px]">
+                                {/* Main Planet */}
+                                <button
+                                    onClick={() => { switchPlanet('main'); setShowPlanetMenu(false); }}
+                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-white/5 transition-colors flex items-center gap-2 ${!currentPlanetId || currentPlanetId === 'main' ? 'text-primary bg-primary/10' : 'text-white'}`}
+                                >
+                                    <span className="material-symbols-outlined text-xs">home</span>
+                                    Główna
+                                </button>
+                                {/* Colony Planets */}
+                                {planets.map((p, i) => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => { switchPlanet(p.id); setShowPlanetMenu(false); }}
+                                        className={`w-full text-left px-3 py-2 text-sm hover:bg-white/5 transition-colors flex items-center gap-2 ${currentPlanetId === p.id ? 'text-primary bg-primary/10' : 'text-white'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-xs">public</span>
+                                        {p.planet_name || `Kolonia ${i + 1}`}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="flex gap-2 md:gap-3 flex-1 overflow-x-auto pb-2 items-center">
                     <ResourceItem
                         name="Metal"
