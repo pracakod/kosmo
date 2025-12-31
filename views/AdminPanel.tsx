@@ -30,9 +30,15 @@ export const AdminPanel: React.FC = () => {
         setLoading(true);
 
         // Step 1: Delete Missions (Try to remove both outgoing and incoming)
-        // Note: This relies on RLS allowing deletion.
-        await supabase.from('missions').delete().eq('owner_id', userId);
-        await supabase.from('missions').delete().eq('target_user_id', userId);
+        const d1 = await supabase.from('missions').delete().eq('owner_id', userId).select('*', { count: 'exact', head: true });
+        const d2 = await supabase.from('missions').delete().eq('target_user_id', userId).select('*', { count: 'exact', head: true });
+
+        if (d1.error || d2.error) {
+            console.error("Mission delete error:", d1.error, d2.error);
+            alert("Błąd usuwania misji (RLS?). Sprawdź konsolę. Kontynuuję usuwanie profilu...");
+        } else {
+            console.log(`Usunięto ${d1.count} misji własnych i ${d2.count} przychodzących.`);
+        }
 
         // Step 2: Delete Profile (Planet)
         const response = await supabase.from('profiles').delete().eq('id', userId).select('*', { count: 'exact', head: true });
