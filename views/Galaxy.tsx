@@ -86,19 +86,7 @@ const Galaxy: React.FC = () => {
             };
         }
 
-        // BOT PLANET: Only if slot not taken
-        if (coords.galaxy === 1 && coords.system === 1 && pos === 2 && !otherPlayer) {
-            return {
-                name: "Piracka Baza",
-                player: "SpacePirate",
-                rank: 666,
-                img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCttLEph3WsOd3HRlZC0zxgyo5HtGQLhoc_Nr46u_bMbqY6nTEQYuIV_gyR_hpfVBS-J_jj5GGZynbPPZti1oj5iZ3eOY_YBYNi3q8nw6c4ebgmqCgJnaJhFtJwFfpNu4nYT65VMgmQkWQU-ek95Y5Ue6RnI9LCcYQpDhod0Y_eUiJYtnqiu9_aD-u_ukPsujkP5hgKqFchbR8vhUje3E-LrA80lMR4QTQEfNKXUDobsJRFGe11_CQSYumUsrXBnYunhGfRGvl2epw",
-                type: "Pustynna",
-                isPlayer: false,
-                isBot: true,
-                activity: "15 min"
-            };
-        }
+
 
         // All other slots are empty
         return null;
