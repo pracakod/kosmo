@@ -95,6 +95,17 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         loot.deuterium = Math.floor((defenderResources.deuterium || 0) * 0.5);
     }
 
+    // Building Damage (only if attacker wins - 10% chance per building to lose 1 level)
+    const damagedBuildings: Record<string, number> = {};
+    if (attackerWin && defenderBuildings) {
+        Object.entries(defenderBuildings).forEach(([id, level]) => {
+            const lvl = level as number;
+            if (lvl > 0 && Math.random() < 0.10) { // 10% chance
+                damagedBuildings[id] = 1; // Lose 1 level
+            }
+        });
+    }
+
     return {
         survivingAttackerShips,
         survivingDefenderShips,
@@ -102,6 +113,7 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         attackerLosses,
         defenderLosses,
         defenderDefensesLost,
+        damagedBuildings, // New: buildings that lost levels
         loot,
         result: attackerWin ? 'attacker_win' : 'defender_win',
         rounds: 6, // Simulation placeholder
@@ -648,7 +660,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: `${mission.id} -def - log`, // Deterministic ID
                                 timestamp: Date.now(),
                                 title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.`,
+                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nUszkodzone Budynki: ${Object.entries(battle.damagedBuildings || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${BUILDINGS[id as BuildingId]?.name || id}: -${n} lvl`).join(', ') || 'Brak'}.`,
                                 outcome: 'danger' as 'danger',
                                 report: {
                                     rounds: battle.rounds,
@@ -664,9 +676,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             ...(targetProfile.mission_logs || [])
                         ].filter((log, index, self) => index === self.findIndex(t => t.id === log.id)).slice(0, 50);
 
+                        // Apply building damage
+                        const newBuildings = { ...targetProfile.buildings };
+                        Object.entries(battle.damagedBuildings || {}).forEach(([buildingId, damage]) => {
+                            if (newBuildings[buildingId] !== undefined) {
+                                newBuildings[buildingId] = Math.max(0, newBuildings[buildingId] - (damage as number));
+                            }
+                        });
+
                         await supabase.from('profiles').update({
                             ships: survivingDefender,
                             defenses: survivingDefenses, // Update defenses
+                            buildings: newBuildings, // Apply building damage
                             resources: {
                                 ...targetProfile.resources,
                                 metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
@@ -1719,11 +1740,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }).eq('id', session.user.id);
     };
 
-    const renamePlanet = async (newName: string) => {
-        setGameState(prev => ({ ...prev, planetName: newName }));
-        await supabase.from('profiles').update({ planet_name: newName }).eq('id', session.user.id);
-    };
-
     // ===== COLONIZATION SYSTEM =====
     const fetchPlanets = async () => {
         if (!session?.user?.id) return;
@@ -1927,6 +1943,27 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     // ===== END COLONIZATION SYSTEM =====
 
     const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
+
+    const renamePlanet = async (newName: string) => {
+        if (!newName.trim()) return;
+        setGameState(prev => ({ ...prev, planetName: newName.trim() }));
+        await supabase.from('profiles').update({ planet_name: newName.trim() }).eq('id', session.user.id);
+        console.log('🪐 Planet renamed to:', newName);
+    };
+
+    const renameUser = async (newNickname: string) => {
+        if (!newNickname.trim()) return;
+        setGameState(prev => ({
+            ...prev,
+            nickname: newNickname.trim(),
+            productionSettings: { ...prev.productionSettings, nickname: newNickname.trim() }
+        }));
+        await supabase.from('profiles').update({
+            nickname: newNickname.trim(),
+            production_settings: { ...gameState.productionSettings, nickname: newNickname.trim() }
+        }).eq('id', session.user.id);
+        console.log('👤 User renamed to:', newNickname);
+    };
     const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
     const clearLogs = async () => {
         setGameState(prev => ({ ...prev, missionLogs: [] }));
@@ -1975,11 +2012,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return [];
         }
         return data || [];
-    };
-
-    const renameUser = async (name: string) => {
-        setGameState(prev => ({ ...prev, nickname: name }));
-        await supabase.from('profiles').update({ nickname: name }).eq('id', session.user.id);
     };
 
     // Main Loop
