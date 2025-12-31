@@ -71,7 +71,7 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* ADMIN SHORTCUT */}
-                {['admin@kosmo.pl', 'dareg@kosmo.pl'].includes(session?.user?.email || '') && (
+                {['admin@kosmo.pl', 'dareg@kosmo.pl', 'admin@kosmo.com'].includes(session?.user?.email || '') && (
                     <div className="mt-8 pt-6 border-t border-white/10 text-center">
                         <h3 className="text-red-500 font-bold mb-2">Strefa Niebezpieczna</h3>
                         <button

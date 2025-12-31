@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         { id: 'settings', label: 'Opcje', icon: 'settings' },
     ];
 
-    const ADMIN_EMAILS = ['admin@kosmo.pl', 'dareg@kosmo.pl'];
+    const ADMIN_EMAILS = ['admin@kosmo.pl', 'dareg@kosmo.pl', 'admin@kosmo.com'];
     const userEmail = game.session?.user?.email?.toLowerCase();
 
     // DEBUG LOG

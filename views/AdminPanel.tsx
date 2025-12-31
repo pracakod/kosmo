@@ -44,7 +44,7 @@ export const AdminPanel: React.FC = () => {
     };
 
     // HARDCODED ADMIN CHECK (Replace with your email)
-    const ADMIN_EMAILS = ['admin@kosmo.pl', 'dareg@kosmo.pl']; // Add your email here
+    const ADMIN_EMAILS = ['admin@kosmo.pl', 'dareg@kosmo.pl', 'admin@kosmo.com']; // Add your email here
     const userEmail = session?.user?.email;
 
     if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
