@@ -92,11 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                     <span className="text-[#929bc9] text-xs font-bold uppercase tracking-wider">Status: Online</span>
                 </div>
-                <div className="text-[#555a7a] text-xs font-mono mb-1">v1.2.6 (Admin Debug)</div>
-                {/* DEBUG EMAIL DISPLAY */}
-                <div className="text-[#555a7a] text-[10px] break-all">
-                    {game.session?.user?.email || "No Email"}
-                </div>
+                <div className="text-[#555a7a] text-xs font-mono">v1.2.6</div>
             </div>
         </aside >
     );

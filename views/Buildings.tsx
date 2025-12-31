@@ -152,7 +152,8 @@ const Buildings: React.FC = () => {
                         resources.deuterium >= cost.deuterium;
 
                     const isThisBuilding = activeBuild?.itemId === building.id;
-                    const isAnyBuilding = !!activeBuild;
+                    const buildingQueueCount = constructionQueue.filter(x => x.type === 'building').length;
+                    const isQueueFull = buildingQueueCount >= 2;
                     const isUnlocked = checkRequirements(building.requirements);
 
                     const totalRes = cost.metal + cost.crystal;
@@ -212,9 +213,9 @@ const Buildings: React.FC = () => {
 
                                         <button
                                             onClick={() => upgradeBuilding(building.id)}
-                                            disabled={!canAfford || isAnyBuilding}
+                                            disabled={!canAfford || isQueueFull}
                                             className={`px-4 py-2 rounded text-xs font-bold uppercase transition-all shadow-lg
-                                                ${!canAfford || isAnyBuilding
+                                                ${!canAfford || isQueueFull
                                                     ? 'bg-[#232948] text-[#929bc9]/50 cursor-not-allowed'
                                                     : 'bg-primary hover:bg-blue-600 text-white hover:shadow-primary/30'
                                                 }
