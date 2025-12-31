@@ -746,6 +746,7 @@ const Galaxy: React.FC = () => {
                         <button
                             onClick={async () => {
                                 const targetCoords = { galaxy: colonizeModal.galaxy, system: colonizeModal.system, position: colonizeModal.pos };
+                                console.log('🎯 [COLONIZE] Sending to coords:', targetCoords);
                                 const success = await sendColonize(targetCoords, colonizeResources);
                                 if (success) {
                                     setColonizeModal(null);
