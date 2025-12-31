@@ -118,8 +118,7 @@ const Shipyard: React.FC = () => {
                         resources.crystal >= totalCost.crystal &&
                         resources.deuterium >= totalCost.deuterium;
 
-                    const GAME_SPEED = 100; // Must match GameContext
-                    const singleBuildTimeMs = (ship.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+                    const singleBuildTimeMs = (ship.buildTime * 1000) / (shipyardLevel + 1); // Real seconds
                     const totalBuildTimeSeconds = Math.max(1, Math.floor((singleBuildTimeMs * (amountToBuild || 1)) / 1000));
 
                     return (

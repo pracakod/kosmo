@@ -1609,7 +1609,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
         if (shipyardLevel === 0) return;
 
-        const singleBuildTime = (ship.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+        const singleBuildTime = (ship.buildTime * 1000) / (shipyardLevel + 1); // Real seconds, not sped up
         const now = Date.now();
         let startTime = now;
         if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
@@ -1653,7 +1653,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
         if (shipyardLevel === 0) return;
 
-        const singleBuildTime = (defense.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+        const singleBuildTime = (defense.buildTime * 1000) / (shipyardLevel + 1); // Real seconds, not sped up
         const now = Date.now();
         let startTime = now;
         if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
