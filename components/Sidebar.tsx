@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         <aside className="w-64 flex-shrink-0 flex flex-col bg-[#111422] border-r border-white/5 z-20 hidden lg:flex h-full">
             <div className="p-6 border-b border-white/5">
                 <div className="flex items-center gap-3">
-                    <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-primary"
+                    <div className="w-10 h-10 flex-shrink-0 aspect-square bg-center bg-no-repeat bg-cover rounded-full border-2 border-primary"
                         style={{ backgroundImage: `url("${avatarUrl}")` }}></div>
                     <div className="flex flex-col">
                         <h1 className="text-white text-base font-bold tracking-tight uppercase">Centrum Dowodzenia</h1>
