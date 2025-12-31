@@ -24,7 +24,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         { id: 'fleet', label: 'Flota', icon: 'flight_takeoff' },
         { id: 'shop', label: 'Sklep', icon: 'shopping_cart' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
-        { id: 'threats', label: 'Zagrożenia', icon: 'crisis_alert' },
         { id: 'clans', label: 'Klany', icon: 'groups' },
         { id: 'ranking', label: 'Ranking', icon: 'leaderboard' },
         { id: 'settings', label: 'Opcje', icon: 'settings' },

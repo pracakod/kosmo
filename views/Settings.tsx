@@ -180,10 +180,10 @@ const Settings: React.FC = () => {
 
                 <div className="flex flex-col gap-4">
                     <button
-                        onClick={() => { if (confirm('To usunie tylko dane z tego urządzenia (wyloguje). Aby usunąć konto z serwera, użyj drugiego przycisku.')) resetGame() }}
-                        className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all"
+                        onClick={() => { if (confirm('Czy na pewno chcesz się wylogować?')) logout() }}
+                        className="bg-yellow-500/10 hover:bg-yellow-500 text-yellow-400 hover:text-white border border-yellow-500/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all"
                     >
-                        Wyloguj i Wyczyść Konsolę
+                        Wyloguj się
                     </button>
 
                     <button

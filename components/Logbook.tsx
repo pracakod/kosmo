@@ -9,8 +9,13 @@ const Logbook: React.FC = () => {
     const [selectedDetail, setSelectedDetail] = useState<MissionLog | null>(null);
 
     // Helpers
-    const getLogType = (log: MissionLog): 'attack' | 'spy' | 'expedition' | 'transport' | 'other' => {
+    const getLogType = (log: MissionLog): 'attack' | 'spy' | 'expedition' | 'transport' | 'threats' | 'other' => {
         const t = log.title?.toLowerCase() || '';
+        const o = String(log.outcome || '').toLowerCase();
+
+        // Threats: danger/info outcomes or cancelled attacks or detected scans
+        if (o === 'danger' || o === 'info' || t.includes('anulowany') || t.includes('wykryto')) return 'threats';
+
         if (t.includes('bojowy') || t.includes('atak')) return 'attack';
         // Fix: "pozyskano" contains "skan", so check for expedition keywords first or exclude "pozyskano" from spy
         if (t.includes('ekspedycja') || t.includes('przestrzeń') || t.includes('pus') || t.includes('zasoby') || t.includes('pirat') || t.includes('obłok') || t.includes('znalez') || t.includes('statki') || t.includes('artefakt') || t.includes('materia') || t.includes('pozyskano')) return 'expedition';
@@ -26,6 +31,7 @@ const Logbook: React.FC = () => {
 
     const TABS = [
         { id: 'all', label: 'Wszystkie', icon: 'history' },
+        { id: 'threats', label: 'Zagrożenia', icon: 'crisis_alert' },
         { id: 'attack', label: 'Ataki', icon: 'swords' },
         { id: 'spy', label: 'Szpiegowskie', icon: 'visibility' },
         { id: 'expedition', label: 'Ekspedycje', icon: 'rocket_launch' },
