@@ -265,6 +265,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const [isSyncPaused, setIsSyncPaused] = useState(false); // Circuit breaker for Auth errors
     const [planets, setPlanets] = useState<any[]>([]);
     const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
+    const [mainPlanetCache, setMainPlanetCache] = useState<GameState | null>(null); // Cache main planet data when switching to colony
     const gameStateRef = useRef(gameState);
 
     // Keep ref synchronized
@@ -1857,14 +1858,29 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         console.log('🪐 Switching to planet:', planetId);
 
         if (planetId === 'main') {
-            // Switch back to main planet - reload main profile data
+            // Switch back to main planet - restore from cache if available
             setCurrentPlanetId('main');
-            await refreshProfile();
-            console.log('🪐 Switched to main planet');
+
+            if (mainPlanetCache) {
+                // Restore from cache
+                setGameState(mainPlanetCache);
+                setMainPlanetCache(null);
+                console.log('🪐 Restored main planet from cache');
+            } else {
+                // Fallback: reload from DB
+                await refreshProfile();
+                console.log('🪐 Reloaded main planet from DB (no cache)');
+            }
         } else {
             // Find the colony in planets array
             const colony = planets.find(p => p.id === planetId);
             if (colony) {
+                // Cache current main planet data if not already on colony
+                if (!currentPlanetId || currentPlanetId === 'main') {
+                    setMainPlanetCache({ ...gameState });
+                    console.log('🪐 Cached main planet data');
+                }
+
                 setCurrentPlanetId(planetId);
 
                 // Merge colony resources with defaults to prevent NaN/null
