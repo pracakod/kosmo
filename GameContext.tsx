@@ -1867,19 +1867,44 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             if (colony) {
                 setCurrentPlanetId(planetId);
 
+                // Merge colony resources with defaults to prevent NaN/null
+                const colonyResources = colony.resources || {};
+                const safeResources = {
+                    metal: colonyResources.metal ?? 500,
+                    crystal: colonyResources.crystal ?? 300,
+                    deuterium: colonyResources.deuterium ?? 100,
+                    darkMatter: colonyResources.darkMatter ?? 0,
+                    energy: 0,
+                    maxEnergy: 0,
+                    storage: {
+                        metal: colonyResources.storage?.metal ?? 10000,
+                        crystal: colonyResources.storage?.crystal ?? 10000,
+                        deuterium: colonyResources.storage?.deuterium ?? 10000
+                    }
+                };
+
+                // Colony buildings start at 0 (fresh colony)
+                const colonyBuildings = colony.buildings || {};
+                const safeBuildings: Record<string, number> = {};
+                Object.keys(initialState.buildings).forEach(key => {
+                    safeBuildings[key] = colonyBuildings[key] ?? 0;
+                });
+
                 // Load colony-specific data into gameState
                 setGameState(prev => ({
                     ...prev,
                     planetName: colony.planet_name || `Kolonia ${planets.indexOf(colony) + 1}`,
                     planetType: colony.planet_type || 'terran',
-                    resources: colony.resources || { ...initialState.resources },
-                    buildings: colony.buildings || { ...initialState.buildings },
+                    resources: safeResources,
+                    buildings: safeBuildings,
                     ships: colony.ships || {},
                     defenses: colony.defenses || {},
-                    galaxyCoords: colony.galaxy_coords
+                    galaxyCoords: colony.galaxy_coords,
+                    // Keep research from main planet (shared)
+                    // research: prev.research
                 }));
 
-                console.log('🪐 Switched to colony:', colony.planet_name, colony.galaxy_coords);
+                console.log('🪐 Switched to colony:', colony.planet_name, 'Resources:', safeResources);
             }
         }
     };
