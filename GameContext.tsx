@@ -499,11 +499,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         fetchMissions();
         fetchPlanets();
 
-        // Poll for updates (logs, missions, attacks)
+        // Poll for updates (logs, missions, attacks) - DO NOT call refreshProfile here, it overwrites local resources!
         const interval = setInterval(() => {
             if (document.visibilityState === 'visible' && !isSyncPaused) {
-                refreshProfile();
+                // Only fetch missions and logs, NOT full profile (which would overwrite local resource changes)
                 fetchMissions();
+
+                // Fetch only logs from DB without overwriting resources
+                supabase.from('profiles').select('mission_logs, nickname').eq('id', session?.user?.id).single().then(({ data }) => {
+                    if (data) {
+                        setGameState(prev => ({
+                            ...prev,
+                            missionLogs: data.mission_logs || prev.missionLogs,
+                            nickname: data.nickname || prev.nickname
+                        }));
+                    }
+                });
             }
         }, 10000); // 10 seconds
 
