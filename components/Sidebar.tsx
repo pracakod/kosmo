@@ -29,6 +29,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         { id: 'settings', label: 'Opcje', icon: 'settings' },
     ];
 
+    const ADMIN_EMAILS = ['admin@kosmo.pl', 'dareg@kosmo.pl'];
+    if (game.session?.user?.email && ADMIN_EMAILS.includes(game.session.user.email)) {
+        navItems.push({ id: 'admin', label: 'ADMIN', icon: 'shield_person' });
+    }
+
     return (
         <aside className="w-64 flex-shrink-0 flex flex-col bg-[#111422] border-r border-white/5 z-20 hidden lg:flex h-full">
             <div className="p-6 border-b border-white/5">

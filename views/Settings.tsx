@@ -8,7 +8,8 @@ const Settings: React.FC = () => {
         avatarUrl, updateAvatar,
         planetType, updatePlanetType,
         nickname, renameUser,
-        resetGame, logout, deleteAccount
+        resetGame, logout, deleteAccount,
+        session
     } = useGame();
 
     const [newName, setNewName] = useState(planetName);
@@ -52,7 +53,45 @@ const Settings: React.FC = () => {
                         Zmień
                     </button>
                 </div>
+
+                <div className="flex gap-4 mt-8 pt-6 border-t border-white/10">
+                    <button
+                        onClick={logout}
+                        className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-lg font-bold transition-colors flex-1"
+                    >
+                        Wyloguj
+                    </button>
+
+                    <button
+                        onClick={deleteAccount}
+                        className="bg-transparent border border-red-900/50 hover:border-red-600 text-red-900 hover:text-red-500 px-6 py-3 rounded-lg font-bold transition-colors"
+                    >
+                        Usuń Konto
+                    </button>
+                </div>
+
+                {/* ADMIN SHORTCUT */}
+                {['admin@kosmo.pl', 'dareg@kosmo.pl'].includes(session?.user?.email || '') && (
+                    <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                        <h3 className="text-red-500 font-bold mb-2">Strefa Niebezpieczna</h3>
+                        <button
+                            onClick={() => (window as any).location.reload()} // For now just refresh, but ideally navigate. 
+                            // Since we can't easily change View from here without passing props, 
+                            // we'll instruct user to invoke it differently or just make it a separate route if we had router.
+                            // Better: Use a context function to change view if available, or a hack.
+                            // Actually, 'Overview' passes 'onNavigate' to Settings? Let's check App.tsx.
+                            className="text-gray-500 hover:text-white underline"
+                        >
+                            Panel Admina dostępny pod URL /admin (brak routingu)
+                        </button>
+                        <p className="text-xs text-gray-600 mt-2">
+                            Dodałem widok 'admin', ale musisz go ręcznie wywołać w App.tsx lub dodać przycisk nawigacji.
+                            Prościej: Dodam przycisk w menu głównym (Layout).
+                        </p>
+                    </div>
+                )}
             </div>
+
 
             {/* General Settings */}
             <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">

@@ -148,6 +148,7 @@ interface GameContextType extends GameState {
     getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
     renameUser: (name: string) => void;
     getLevel: (points: number, settings?: any) => number;
+    session?: any;
 }
 
 const initialState: GameState = {
@@ -1869,7 +1870,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         updatePlanetType,
         getPlayersInSystem,
         renameUser,
-        getLevel
+        getLevel,
+        session
     };
 
     return (

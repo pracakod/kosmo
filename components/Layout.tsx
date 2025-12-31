@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import ResourceHeader from './ResourceHeader';
 import { useGame } from '../GameContext';
-import { useGame } from '../GameContext';
 import { formatTime, SHIPS, ShipId } from '../constants';
 
 interface LayoutProps {
