@@ -281,11 +281,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const [mainPlanetName, setMainPlanetName] = useState<string>('Główna');
     const [mainPlanetCache, setMainPlanetCache] = useState<GameState | null>(null); // Cache main planet data when switching to colony
     const gameStateRef = useRef(gameState);
+    const currentPlanetRef = useRef(currentPlanetId);
 
     // Keep ref synchronized
     useEffect(() => {
         gameStateRef.current = gameState;
-    }, [gameState]);
+        currentPlanetRef.current = currentPlanetId;
+    }, [gameState, currentPlanetId]);
 
     // Debug version
     useEffect(() => {
@@ -1943,8 +1945,45 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return true;
     };
 
+    // Helper to save planet state
+    const saveStateToPlanet = async (planetId: string, buildings: any, ships: any, defenses: any, resources: any, cQueue: any[], sQueue: any[]) => {
+        await supabase.from('planets').update({
+            buildings, ships, defenses, resources,
+            construction_queue: cQueue,
+            shipyard_queue: sQueue
+        }).eq('id', planetId);
+    };
+
     const switchPlanet = async (planetId: string) => {
         console.log('🪐 Switching to planet:', planetId);
+        const current = gameStateRef.current; // Use REF for latest state
+
+        // Force Save Current State before switching
+        if (currentPlanetId && currentPlanetId !== 'main') {
+            console.log('💾 Saving current colony before switch:', currentPlanetId);
+            await saveStateToPlanet(
+                currentPlanetId,
+                current.buildings,
+                current.ships,
+                current.defenses,
+                current.resources,
+                current.constructionQueue,
+                current.shipyardQueue
+            );
+            // Refresh planets data so we have the latest state when we switch back needed
+            fetchPlanets();
+        } else if (!currentPlanetId || currentPlanetId === 'main') {
+            console.log('💾 Saving main planet before switch');
+            await supabase.from('profiles').update({
+                buildings: current.buildings,
+                resources: current.resources,
+                ships: current.ships,
+                defenses: current.defenses,
+                construction_queue: current.constructionQueue,
+                shipyard_queue: current.shipyardQueue
+            }).eq('id', session.user.id);
+            // No need to fetchPlanets here, but maybe good practice
+        }
 
         if (planetId === 'main') {
             // Switch back to main planet - restore from cache if available
@@ -1961,12 +2000,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 console.log('🪐 Reloaded main planet from DB (no cache)');
             }
         } else {
-            // Find the colony in planets array
-            const colony = planets.find(p => p.id === planetId);
-            if (colony) {
+            // LOAD COLONY DATA FROM DB (Fetch fresh!)
+            console.log('🌍 Fetching colony data from DB:', planetId);
+            const { data: colony, error } = await supabase.from('planets').select('*').eq('id', planetId).single();
+
+            if (colony && !error) {
                 // Cache current main planet data if not already on colony
                 if (!currentPlanetId || currentPlanetId === 'main') {
-                    setMainPlanetCache({ ...gameState });
+                    setMainPlanetCache(current); // Use REF state
                     console.log('🪐 Cached main planet data');
                 }
 
@@ -2004,12 +2045,17 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     buildings: safeBuildings,
                     ships: colony.ships || {},
                     defenses: colony.defenses || {},
+                    constructionQueue: colony.construction_queue || [],
+                    shipyardQueue: colony.shipyard_queue || [],
                     galaxyCoords: colony.galaxy_coords,
                     // Keep research from main planet (shared)
                     // research: prev.research
                 }));
 
-                console.log('🪐 Switched to colony:', colony.planet_name, 'Resources:', safeResources);
+                console.log('🪐 Switched to colony (Fresh DB Load):', colony.planet_name);
+            } else {
+                console.error("Failed to load colony:", error);
+                alert("Błąd wczytywania kolonii.");
             }
         }
     };
@@ -2100,9 +2146,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             if (secondsPassed <= 0) return;
 
             const newResources = { ...prev.resources };
-            newResources.metal = Math.min(newResources.storage.metal, newResources.metal + (production.metal * secondsPassed));
-            newResources.crystal = Math.min(newResources.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
-            newResources.deuterium = Math.min(newResources.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
+            newResources.metal = Math.min(production.storage.metal, newResources.metal + (production.metal * secondsPassed));
+            newResources.crystal = Math.min(production.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
+            newResources.deuterium = Math.min(production.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
             newResources.energy = production.energy;
             newResources.maxEnergy = production.maxEnergy;
             newResources.storage = production.storage;
@@ -2149,19 +2195,38 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
 
             // Persist completed items or settings to Supabase
-            if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length) || settingsChanged) {
-                supabase.from('profiles').update({
-                    buildings: newBuildings,
-                    research: newResearch,
-                    ships: newShips,
-                    defenses: newDefenses,
-                    shipyard_queue: newShipQueue,
-                    construction_queue: newQueue,
-                    production_settings: settingsChanged ? updatedSettings : updatedSettings, // Correctly save settings
-                    points: currentPoints
-                }).eq('id', session.user.id).then(({ error }) => {
-                    if (error) console.error("Auto-save error:", error);
-                });
+            if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length) || settingsChanged || now - prev.lastTick > 30000) {
+                const currentPlanet = currentPlanetRef.current;
+
+                if (!currentPlanet || currentPlanet === 'main') {
+                    // Save to Profile (Main Planet)
+                    supabase.from('profiles').update({
+                        buildings: newBuildings,
+                        research: newResearch, // Research is global
+                        ships: newShips,
+                        defenses: newDefenses,
+                        resources: newResources, // SAVE RESOURCES!
+                        shipyard_queue: newShipQueue,
+                        construction_queue: newQueue,
+                        production_settings: settingsChanged ? updatedSettings : updatedSettings,
+                    }).eq('id', session.user.id).then(({ error }) => {
+                        if (error) console.error("Auto-save error (Main):", error);
+                    });
+
+                } else {
+                    // Save to Planet (Colony)
+                    saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, newResources, newQueue, newShipQueue);
+
+                    // Sync global settings (Research/Points) to Profile even when on Colony
+                    if (settingsChanged) {
+                        supabase.from('profiles').update({
+                            production_settings: updatedSettings,
+                            research: newResearch
+                        }).eq('id', session.user.id).then(res => {
+                            if (res.error) console.error("Settings sync error:", res.error);
+                        });
+                    }
+                }
             }
 
             setGameState(current => ({
