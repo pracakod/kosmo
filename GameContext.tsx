@@ -431,35 +431,53 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         console.log('🔍 [VALIDATE] Comparing loaded state vs last saved...');
         const issues: string[] = [];
 
-        // Check critical fields
-        const checkField = (name: string, loadedVal: any, savedVal: any) => {
-            if (loadedVal === undefined || loadedVal === null) {
-                issues.push(`⚠️ [DESYNC] ${name} is undefined/null after load`);
+        // Deep compare objects and show key-by-key differences
+        const compareObjects = (name: string, loadedObj: any, savedObj: any) => {
+            if (!savedObj || !loadedObj) {
+                if (savedObj !== loadedObj) {
+                    issues.push(`⚠️ [DESYNC] ${name}: one is null/undefined`);
+                }
                 return;
             }
-            if (typeof savedVal === 'object') {
-                const loadedStr = JSON.stringify(loadedVal);
-                const savedStr = JSON.stringify(savedVal);
-                if (loadedStr !== savedStr) {
-                    issues.push(`⚠️ [DESYNC] ${name} changed after refresh`);
-                    console.log(`   Saved: ${savedStr.substring(0, 100)}...`);
-                    console.log(`   Loaded: ${loadedStr.substring(0, 100)}...`);
+
+            const allKeys = new Set([...Object.keys(savedObj), ...Object.keys(loadedObj)]);
+            const diffs: string[] = [];
+
+            allKeys.forEach(key => {
+                const savedVal = savedObj[key];
+                const loadedVal = loadedObj[key];
+
+                if (typeof savedVal === 'object' && savedVal !== null) {
+                    // Nested object - compare recursively
+                    const savedStr = JSON.stringify(savedVal);
+                    const loadedStr = JSON.stringify(loadedVal);
+                    if (savedStr !== loadedStr) {
+                        diffs.push(`  ${key}: SAVED=${savedStr.substring(0, 50)} LOADED=${loadedStr?.substring(0, 50)}`);
+                    }
+                } else if (savedVal !== loadedVal) {
+                    diffs.push(`  ${key}: SAVED=${savedVal} → LOADED=${loadedVal}`);
                 }
-            } else if (loadedVal !== savedVal) {
-                issues.push(`⚠️ [DESYNC] ${name}: saved=${savedVal}, loaded=${loadedVal}`);
+            });
+
+            if (diffs.length > 0) {
+                issues.push(`⚠️ [DESYNC] ${name} has ${diffs.length} differences:`);
+                diffs.forEach(d => console.warn(d));
             }
         };
 
-        checkField('buildings', loaded.buildings, saved.buildings);
-        checkField('research', loaded.research, saved.research);
-        checkField('ships', loaded.ships, saved.ships);
-        checkField('defenses', loaded.defenses, saved.defenses);
-        checkField('resources', loaded.resources, saved.resources);
-        checkField('constructionQueue', loaded.constructionQueue, saved.constructionQueue);
-        checkField('shipyardQueue', loaded.shipyardQueue, saved.shipyardQueue);
-        checkField('nickname', loaded.nickname, saved.nickname);
-        checkField('planetName', loaded.planetName, saved.planetName);
-        checkField('galaxyCoords', loaded.galaxyCoords, saved.galaxyCoords);
+        compareObjects('buildings', loaded.buildings, saved.buildings);
+        compareObjects('research', loaded.research, saved.research);
+        compareObjects('ships', loaded.ships, saved.ships);
+        compareObjects('defenses', loaded.defenses, saved.defenses);
+        compareObjects('resources', loaded.resources, saved.resources);
+
+        // Simple comparisons
+        if (JSON.stringify(loaded.constructionQueue) !== JSON.stringify(saved.constructionQueue)) {
+            issues.push(`⚠️ [DESYNC] constructionQueue: SAVED=${saved.constructionQueue?.length} items, LOADED=${loaded.constructionQueue?.length} items`);
+        }
+        if (JSON.stringify(loaded.shipyardQueue) !== JSON.stringify(saved.shipyardQueue)) {
+            issues.push(`⚠️ [DESYNC] shipyardQueue: SAVED=${saved.shipyardQueue?.length} items, LOADED=${loaded.shipyardQueue?.length} items`);
+        }
 
         if (issues.length > 0) {
             console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
