@@ -10,7 +10,9 @@ export const AdminPanel: React.FC = () => {
 
     const fetchUsers = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('profiles').select('id, nickname, planet_name, galaxy_coords, last_updated, resources');
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, nickname, planet_name, galaxy_coords, last_updated, resources, points, buildings, ships, defense, research');
         if (error) {
             console.error("Admin fetch error", error);
             setMsg(`Błąd pobierania: ${error.message}`);
@@ -86,6 +88,8 @@ ON DELETE CASCADE;
         );
     }
 
+    const [inspectUser, setInspectUser] = useState<any | null>(null);
+
     return (
         <div className="p-4 md:p-8 text-gray-100 max-w-6xl mx-auto pb-24">
             <div className="flex justify-between items-center mb-6">
@@ -107,7 +111,7 @@ ON DELETE CASCADE;
                     <thead>
                         <tr className="bg-gray-800 text-gray-400 uppercase text-xs">
                             <th className="p-4 border-b border-gray-700">Nick</th>
-                            <th className="p-4 border-b border-gray-700">Planeta</th>
+                            <th className="p-4 border-b border-gray-700">Punkty</th>
                             <th className="p-4 border-b border-gray-700">Koordynaty</th>
                             <th className="p-4 border-b border-gray-700">Ostatnia Akt.</th>
                             <th className="p-4 border-b border-gray-700 text-right">Akcje</th>
@@ -116,18 +120,30 @@ ON DELETE CASCADE;
                     <tbody>
                         {users.map(u => (
                             <tr key={u.id} className="hover:bg-gray-800/50 transition-colors border-b border-gray-800">
-                                <td className="p-4 font-bold text-blue-300">{u.nickname || 'Nieznany'}</td>
-                                <td className="p-4">{u.planet_name}</td>
-                                <td className="p-4 font-mono text-yellow-500">
+                                <td className="p-4">
+                                    <div className="font-bold text-blue-300">{u.nickname || 'Nieznany'}</div>
+                                    <div className="text-xs text-gray-500">{u.planet_name}</div>
+                                    <div className="text-[10px] text-gray-600 font-mono">{u.id}</div>
+                                </td>
+                                <td className="p-4 font-mono text-yellow-400">
+                                    {(u.points || 0).toLocaleString()}
+                                </td>
+                                <td className="p-4 font-mono text-gray-300">
                                     {u.galaxy_coords ? `[${u.galaxy_coords.galaxy}:${u.galaxy_coords.system}:${u.galaxy_coords.position}]` : 'BRAK'}
                                 </td>
                                 <td className="p-4 text-sm text-gray-500">
                                     {u.last_updated ? new Date(u.last_updated).toLocaleString() : '-'}
                                 </td>
-                                <td className="p-4 text-right">
+                                <td className="p-4 text-right space-x-2">
+                                    <button
+                                        onClick={() => setInspectUser(u)}
+                                        className="bg-blue-600/20 hover:bg-blue-600 text-blue-500 hover:text-white px-3 py-1 rounded transition-colors font-bold text-xs"
+                                    >
+                                        INFO
+                                    </button>
                                     <button
                                         onClick={() => deleteUser(u.id, u.nickname)}
-                                        className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white p-2 rounded transition-colors font-bold"
+                                        className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white px-3 py-1 rounded transition-colors font-bold text-xs"
                                         title="Usuń Gracza i Planetę"
                                     >
                                         USUŃ
@@ -141,6 +157,63 @@ ON DELETE CASCADE;
                     </tbody>
                 </table>
             </div>
+
+            {/* INSPECT MODAL */}
+            {inspectUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-[#1c2136] border border-blue-500/30 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+                        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#111422]">
+                            <h2 className="text-xl font-bold text-blue-400">Szczegóły: {inspectUser.nickname}</h2>
+                            <button onClick={() => setInspectUser(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+                        </div>
+                        <div className="p-6 space-y-6">
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-[#111422] p-3 rounded border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase">Metal</div>
+                                    <div className="text-yellow-400 font-mono">{Math.floor(inspectUser.resources?.metal || 0).toLocaleString()}</div>
+                                </div>
+                                <div className="bg-[#111422] p-3 rounded border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase">Kryształ</div>
+                                    <div className="text-blue-400 font-mono">{Math.floor(inspectUser.resources?.crystal || 0).toLocaleString()}</div>
+                                </div>
+                                <div className="bg-[#111422] p-3 rounded border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase">Deuter</div>
+                                    <div className="text-green-400 font-mono">{Math.floor(inspectUser.resources?.deuterium || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase border-b border-white/10 pb-1">Budynki</h3>
+                                <pre className="text-xs font-mono bg-black/30 p-2 rounded text-gray-300 overflow-x-auto">
+                                    {JSON.stringify(inspectUser.buildings, null, 2)}
+                                </pre>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase border-b border-white/10 pb-1">Flota</h3>
+                                <pre className="text-xs font-mono bg-black/30 p-2 rounded text-gray-300 overflow-x-auto">
+                                    {JSON.stringify(inspectUser.ships, null, 2)}
+                                </pre>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase border-b border-white/10 pb-1">Badania</h3>
+                                <pre className="text-xs font-mono bg-black/30 p-2 rounded text-gray-300 overflow-x-auto">
+                                    {JSON.stringify(inspectUser.research, null, 2)}
+                                </pre>
+                            </div>
+
+                            <div className="text-xs text-gray-600 font-mono pt-4 border-t border-white/5">
+                                Raw Data Preview (Debug)
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-white/10 bg-[#111422] text-right">
+                            <button onClick={() => setInspectUser(null)} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white transition-colors">Zamknij</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
