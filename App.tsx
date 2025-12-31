@@ -15,9 +15,10 @@ import Ranking from './views/Ranking';
 import Settings from './views/Settings';
 import Defense from './views/Defense';
 import Clans from './views/Clans';
+import Threats from './views/Threats';
 import { AdminPanel } from './views/AdminPanel';
 
-export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings' | 'defense' | 'clans' | 'admin';
+export type ViewType = 'overview' | 'buildings' | 'research' | 'shipyard' | 'fleet' | 'galaxy' | 'shop' | 'ranking' | 'settings' | 'defense' | 'clans' | 'threats' | 'admin';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<any>(null);
@@ -116,6 +117,7 @@ const App: React.FC = () => {
             case 'ranking': return <Ranking />;
             case 'settings': return <Settings />;
             case 'defense': return <Defense />;
+            case 'threats': return <Threats />;
             case 'clans': return <Clans />;
             case 'admin': return <AdminPanel />;
             default: return <Overview onNavigate={setCurrentView} />;

@@ -24,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
         { id: 'fleet', label: 'Flota', icon: 'flight_takeoff' },
         { id: 'shop', label: 'Sklep', icon: 'shopping_cart' },
         { id: 'defense', label: 'Obrona', icon: 'shield' },
+        { id: 'threats', label: 'Zagrożenia', icon: 'crisis_alert' },
         { id: 'clans', label: 'Klany', icon: 'groups' },
         { id: 'ranking', label: 'Ranking', icon: 'leaderboard' },
         { id: 'settings', label: 'Opcje', icon: 'settings' },
@@ -88,11 +89,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
             </nav>
 
             <div className="p-4 border-t border-white/10">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                     <span className="text-[#929bc9] text-xs font-bold uppercase tracking-wider">Status: Online</span>
                 </div>
-                <div className="text-[#555a7a] text-xs font-mono">v1.2.6</div>
+                <div className="text-white text-sm font-medium mb-1">{userName}</div>
+                <div className="text-[#555a7a] text-xs font-mono">v1.2.7</div>
             </div>
         </aside >
     );
