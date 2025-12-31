@@ -21,8 +21,8 @@ const ResourceItem: React.FC<{
         <div className="flex flex-col justify-center">
             <span className="text-[9px] md:text-[10px] text-[#929bc9] font-bold uppercase tracking-wider mb-0.5">{name}</span>
             <div className="flex flex-col md:flex-row md:items-baseline md:gap-2">
-                <span className={`text-xs md:text-lg font-bold font-mono leading-none ${value < 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                    {Math.floor(value).toLocaleString()}
+                <span className={`text-xs md:text-lg font-bold font-mono leading-none ${(value ?? 0) < 0 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                    {Math.floor(value ?? 0).toLocaleString()}
                 </span>
 
                 {/* Production display optimized for mobile */}
@@ -30,14 +30,14 @@ const ResourceItem: React.FC<{
                     <div className="flex items-center gap-0.5 mt-0.5 md:mt-0">
                         <span className="material-symbols-outlined text-[10px] text-[#0bda65]">trending_up</span>
                         <span className="text-[#0bda65] text-[10px] font-medium font-mono leading-none whitespace-nowrap">
-                            {Math.floor(production * 3600).toLocaleString()}/h
+                            {Math.floor((production ?? 0) * 3600).toLocaleString()}/h
                         </span>
                     </div>
                 )}
 
                 {subValue !== undefined && (
                     <span className="text-[#929bc9] text-[10px] font-medium leading-none whitespace-nowrap mt-0.5 md:mt-0">
-                        / {subValue.toLocaleString()}
+                        / {(subValue ?? 0).toLocaleString()}
                     </span>
                 )}
             </div>
