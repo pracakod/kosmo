@@ -647,7 +647,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: `${mission.id} -def - log`, // Deterministic ID
                                 timestamp: Date.now(),
                                 title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${battle.attackerLosses} | Twoje Straty: ${battle.defenderLosses}.`,
+                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.`,
                                 outcome: 'danger' as 'danger',
                                 report: {
                                     rounds: battle.rounds,
@@ -1853,10 +1853,35 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return true;
     };
 
-    const switchPlanet = (planetId: string) => {
-        setCurrentPlanetId(planetId);
-        // TODO: In future, load planet-specific data
-        console.log('Switched to planet:', planetId);
+    const switchPlanet = async (planetId: string) => {
+        console.log('🪐 Switching to planet:', planetId);
+
+        if (planetId === 'main') {
+            // Switch back to main planet - reload main profile data
+            setCurrentPlanetId('main');
+            await refreshProfile();
+            console.log('🪐 Switched to main planet');
+        } else {
+            // Find the colony in planets array
+            const colony = planets.find(p => p.id === planetId);
+            if (colony) {
+                setCurrentPlanetId(planetId);
+
+                // Load colony-specific data into gameState
+                setGameState(prev => ({
+                    ...prev,
+                    planetName: colony.planet_name || `Kolonia ${planets.indexOf(colony) + 1}`,
+                    planetType: colony.planet_type || 'terran',
+                    resources: colony.resources || { ...initialState.resources },
+                    buildings: colony.buildings || { ...initialState.buildings },
+                    ships: colony.ships || {},
+                    defenses: colony.defenses || {},
+                    galaxyCoords: colony.galaxy_coords
+                }));
+
+                console.log('🪐 Switched to colony:', colony.planet_name, colony.galaxy_coords);
+            }
+        }
     };
     // ===== END COLONIZATION SYSTEM =====
 
