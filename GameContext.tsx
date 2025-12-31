@@ -2132,12 +2132,40 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     // Helper to save planet state
-    const saveStateToPlanet = async (planetId: string, buildings: any, ships: any, defenses: any, resources: any, cQueue: any[], sQueue: any[]) => {
-        await supabase.from('planets').update({
-            buildings, ships, defenses, resources,
+    const saveStateToPlanet = async (planetId: string, buildings: any, ships: any, defenses: any, resources: any, cQueue: any[], sQueue: any[]): Promise<boolean> => {
+        const payload = {
+            buildings,
+            ships,
+            defenses,
+            resources,
             construction_queue: cQueue,
             shipyard_queue: sQueue
-        }).eq('id', planetId);
+        };
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`💾 [COLONY SAVE] Planet: ${planetId}`);
+        console.log('💾 [COLONY SAVE] Payload:');
+        console.log('  🏗️ Buildings:', JSON.stringify(buildings));
+        console.log('  🚀 Ships:', JSON.stringify(ships));
+        console.log('  🛡️ Defenses:', JSON.stringify(defenses));
+        console.log('  📦 Resources:', JSON.stringify(resources));
+        console.log('  🔨 Queue:', cQueue?.length || 0, 'items');
+        console.log('  🔧 Shipyard:', sQueue?.length || 0, 'items');
+
+        const { error, data } = await supabase.from('planets').update(payload).eq('id', planetId).select();
+
+        if (error) {
+            console.error('❌ [COLONY SAVE ERROR]:', error.message);
+            console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            return false;
+        }
+
+        console.log('✅ [COLONY SAVE SUCCESS] Rows affected:', data?.length || 0);
+        if (data && data[0]) {
+            console.log('  📥 DB Response Buildings:', JSON.stringify(data[0].buildings));
+        }
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return true;
     };
 
     const switchPlanet = async (planetId: string) => {
