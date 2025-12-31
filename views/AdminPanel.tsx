@@ -32,12 +32,16 @@ export const AdminPanel: React.FC = () => {
         await supabase.from('missions').delete().eq('owner_id', userId);
 
         // Step 2: Delete Profile (Planet)
-        const { error } = await supabase.from('profiles').delete().eq('id', userId);
+        const response = await supabase.from('profiles').delete().eq('id', userId).select('*', { count: 'exact', head: true });
+        const error = response.error;
+        const count = response.count;
 
         if (error) {
-            alert(`Błąd usuwania: ${error.message}`);
+            alert(`Błąd usuwania (DB Error): ${error.message}`);
+        } else if (count === 0) {
+            alert(`BŁĄD: Nie usunięto żadnego wiersza. \nTo oznacza, że Supabase RLS (Row Level Security) blokuje usuwanie innych graczy.\n\nMusisz wejść w Supabase -> Authentication -> Policies i dodać regułę pozwalającą na DELETE dla admina.`);
         } else {
-            setMsg(`Użytkownik ${nickname || 'Nieznany'} (ID: ${userId}) został usunięty.`);
+            setMsg(`Użytkownik ${nickname || 'Nieznany'} (ID: ${userId}) został pomyślnie usunięty.`);
             fetchUsers();
         }
         setLoading(false);
