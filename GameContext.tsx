@@ -1390,61 +1390,76 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const upgradeBuilding = async (buildingId: BuildingId) => {
         const currentLevel = gameState.buildings[buildingId];
         const cost = getCost('building', buildingId, currentLevel);
-        if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-        // Check queue limit (Max 2 buildings)
+
+        // Resource check
+        if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) {
+            console.log("Not enough resources");
+            return;
+        }
+
+        // Check queue limit (Increased to 5)
         const currentQueue = gameState.constructionQueue.filter(q => q.type === 'building');
-        if (currentQueue.length >= 2) return;
+        if (currentQueue.length >= 5) {
+            console.log("Queue full");
+            return;
+        }
 
         const totalResources = cost.metal + cost.crystal;
         let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
         buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
         buildTimeMs = buildTimeMs / GAME_SPEED;
         const buildTime = Math.max(1000, buildTimeMs);
-        const now = Date.now();
 
         // Determine start time (After the last item in queue finishes, or Now)
+        // Note: Using gameState directly. If user clicks fast, this might still be slightly stale, 
+        // but 'upgradeBuilding' closure usually updates on render.
+        // For perfect safety, we could look at 'latest' state if we had a ref, but this is usually fine for React click handlers.
         const lastItem = currentQueue.sort((a, b) => b.endTime - a.endTime)[0];
         const startTime = lastItem ? lastItem.endTime : Date.now();
         const endTime = startTime + buildTime;
 
+        // Stable objects
+        const newItem: ConstructionItem = {
+            id: Date.now().toString(),
+            type: 'building',
+            itemId: buildingId,
+            targetLevel: currentLevel + 1,
+            startTime: startTime,
+            endTime: endTime
+        };
+
+        const newResources = {
+            metal: gameState.resources.metal - cost.metal,
+            crystal: gameState.resources.crystal - cost.crystal,
+            deuterium: gameState.resources.deuterium - cost.deuterium
+        };
+
+        const newQueue = [...gameState.constructionQueue, newItem];
+
+        // Update Local State with PRE-CALCULATED values
         setGameState(prev => ({
             ...prev,
             resources: {
                 ...prev.resources,
-                metal: prev.resources.metal - cost.metal,
-                crystal: prev.resources.crystal - cost.crystal,
-                deuterium: prev.resources.deuterium - cost.deuterium
+                ...newResources
             },
-            constructionQueue: [...prev.constructionQueue, {
-                id: Date.now().toString(),
-                type: 'building',
-                itemId: buildingId,
-                targetLevel: currentLevel + 1,
-                startTime: startTime,
-                endTime: endTime
-            }]
+            constructionQueue: [...prev.constructionQueue, newItem] // We can append to prev to be safe against race with other updates
         }));
 
+        // Sync with Supabase using the SAME calculated values
+        // Note: Supabase update might overwrite parallel updates if we are not careful.
+        // Ideally we should use RPC or careful checking, but for now sending the new full queue is better than mismatched IDs.
+        // We use 'newQueue' which is based on closure 'gameState'. 
+        // To be safer against 'prev' state changes, we strictly simply send what we think is the new state.
+
         const { error } = await supabase.from('profiles').update({
-            resources: {
-                ...gameState.resources,
-                metal: gameState.resources.metal - cost.metal,
-                crystal: gameState.resources.crystal - cost.crystal,
-                deuterium: gameState.resources.deuterium - cost.deuterium
-            },
-            construction_queue: [...gameState.constructionQueue, {
-                id: now.toString(),
-                type: 'building',
-                itemId: buildingId,
-                targetLevel: currentLevel + 1,
-                startTime: startTime,
-                endTime: endTime
-            }]
+            resources: newResources,
+            construction_queue: newQueue
         }).eq('id', session.user.id);
 
         if (error) {
-            console.error("Upgrade failed", error);
-            refreshProfile();
+            console.error("Building upgrade failed:", error);
+            refreshProfile(); // Revert
         }
     };
 
@@ -1569,9 +1584,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const buildShip = async (shipId: ShipId, amount: number) => {
+        const qty = Math.max(1, Math.floor(amount));
         const ship = SHIPS[shipId];
-        const totalCost = { metal: ship.baseCost.metal * amount, crystal: ship.baseCost.crystal * amount, deuterium: ship.baseCost.deuterium * amount };
+        const totalCost = { metal: ship.baseCost.metal * qty, crystal: ship.baseCost.crystal * qty, deuterium: ship.baseCost.deuterium * qty };
+
         if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
+
         const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
         if (shipyardLevel === 0) return;
 
@@ -1584,9 +1602,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             id: now.toString() + Math.random(),
             type: 'ship',
             itemId: shipId,
-            quantity: amount,
+            quantity: qty,
             startTime: startTime,
-            endTime: startTime + (singleBuildTime * amount)
+            endTime: startTime + (singleBuildTime * qty)
         };
 
         const newQueue = [...gameState.shipyardQueue, newItem];
@@ -1609,15 +1627,17 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const buildDefense = async (defenseId: DefenseId, amount: number) => {
+        const qty = Math.max(1, Math.floor(amount));
         const defense = DEFENSES[defenseId as keyof typeof DEFENSES];
         if (!defense) return;
-        const totalCost = { metal: defense.cost.metal * amount, crystal: defense.cost.crystal * amount, deuterium: defense.cost.deuterium * amount };
+        const totalCost = { metal: defense.cost.metal * qty, crystal: defense.cost.crystal * qty, deuterium: defense.cost.deuterium * qty };
+
         if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
 
         const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
         if (shipyardLevel === 0) return;
 
-        const buildTimeMs = (defense.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+        const singleBuildTime = (defense.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
         const now = Date.now();
         let startTime = now;
         if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
@@ -1626,10 +1646,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             id: `def - ${now} -${Math.random()} `,
             type: 'defense',
             itemId: defenseId,
-            quantity: amount,
+            quantity: qty,
             startTime: startTime,
-            endTime: startTime + (buildTimeMs * amount)
+            endTime: startTime + (singleBuildTime * qty)
         };
+
+        const newQueue = [...gameState.shipyardQueue, newItem];
 
         setGameState(prev => ({
             ...prev,
@@ -1639,12 +1661,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 crystal: prev.resources.crystal - totalCost.crystal,
                 deuterium: prev.resources.deuterium - totalCost.deuterium
             },
-            shipyardQueue: [...prev.shipyardQueue, newItem]
+            shipyardQueue: newQueue
         }));
 
         await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
-            shipyard_queue: [...gameState.shipyardQueue, newItem]
+            shipyard_queue: newQueue
         }).eq('id', session.user.id);
     };
 
