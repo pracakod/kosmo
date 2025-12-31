@@ -142,7 +142,10 @@ const Fleet: React.FC = () => {
                                 <span className="material-symbols-outlined text-primary">rocket_launch</span>
                                 Dostępna Flota
                             </h3>
-                            <button onClick={() => setSelectedShips({})} className="text-xs text-[#929bc9] hover:text-white underline">Zeruj wybór</button>
+                            <div className="flex gap-2">
+                                <button onClick={handleSelectAll} className="text-xs bg-primary/20 text-primary hover:bg-primary hover:text-white px-3 py-1 rounded font-bold transition-colors">Wybierz wszystkie</button>
+                                <button onClick={() => setSelectedShips({})} className="text-xs text-[#929bc9] hover:text-white underline">Zeruj wybór</button>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
