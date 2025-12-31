@@ -291,8 +291,185 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Debug version
     useEffect(() => {
-        console.log('🚀 GameContext v2.1 (Hotfix) LOADED - Auto-Save Circuit Breaker Active');
+        console.log('🚀 GameContext v3.0 (Persistence Audit) LOADED - Full Debug Active');
     }, []);
+
+    // Last saved state for validation
+    const lastSavedStateRef = useRef<GameState | null>(null);
+
+    // ========== CENTRALIZED SAVE FUNCTION ==========
+    const saveGame = async (reason: string): Promise<boolean> => {
+        if (isSyncPaused) {
+            console.warn('⚠️ [SAVE] Paused due to auth error');
+            return false;
+        }
+
+        const current = gameStateRef.current;
+        const targetPlanet = currentPlanetRef.current;
+        const isColony = targetPlanet && targetPlanet !== 'main';
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`💾 [SAVE START] Reason: ${reason}`);
+        console.log(`💾 [SAVE] Target: ${isColony ? `Colony (${targetPlanet})` : 'Main Planet'}`);
+        console.log('💾 [SAVE] Current State:');
+        console.log('  📦 Resources:', JSON.stringify(current.resources));
+        console.log('  🏗️ Buildings:', JSON.stringify(current.buildings));
+        console.log('  🔬 Research:', JSON.stringify(current.research));
+        console.log('  🚀 Ships:', JSON.stringify(current.ships));
+        console.log('  🛡️ Defenses:', JSON.stringify(current.defenses));
+        console.log('  🔨 ConstructionQueue:', current.constructionQueue?.length || 0, 'items');
+        console.log('  🔧 ShipyardQueue:', current.shipyardQueue?.length || 0, 'items');
+        console.log('  🌌 GalaxyCoords:', JSON.stringify(current.galaxyCoords));
+        console.log('  👤 Nickname:', current.nickname);
+        console.log('  🪐 PlanetName:', current.planetName);
+
+        // Save to LocalStorage first (backup)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+
+        let success = false;
+
+        if (isColony) {
+            // Save Colony to planets table
+            const payload = {
+                buildings: current.buildings,
+                ships: current.ships,
+                defenses: current.defenses,
+                resources: current.resources,
+                construction_queue: current.constructionQueue,
+                shipyard_queue: current.shipyardQueue,
+            };
+            console.log('💾 [SAVE] Colony Payload:', JSON.stringify(payload));
+
+            const { error } = await supabase.from('planets').update(payload).eq('id', targetPlanet);
+
+            if (error) {
+                console.error('❌ [SAVE ERROR] Colony:', error.message);
+            } else {
+                console.log('✅ [SAVE SUCCESS] Colony saved');
+                success = true;
+            }
+
+            // Also sync global data to Profile
+            const globalPayload = {
+                research: current.research,
+                production_settings: {
+                    ...current.productionSettings,
+                    avatarUrl: current.avatarUrl,
+                    planetType: current.planetType,
+                    nickname: current.nickname
+                },
+                nickname: current.nickname, // Save to root level too
+                points: calculatePoints(current.resources, current.buildings, current.ships),
+                last_updated: Date.now()
+            };
+            console.log('💾 [SAVE] Profile Sync Payload:', JSON.stringify(globalPayload));
+
+            const { error: profileError } = await supabase.from('profiles').update(globalPayload).eq('id', session.user.id);
+            if (profileError) {
+                console.error('❌ [SAVE ERROR] Profile Sync:', profileError.message);
+            } else {
+                console.log('✅ [SAVE SUCCESS] Profile synced');
+            }
+
+        } else {
+            // Save Main Planet to profiles table
+            const payload = {
+                id: session.user.id,
+                planet_name: current.planetName,
+                nickname: current.nickname, // Root level
+                resources: current.resources,
+                buildings: current.buildings,
+                research: current.research,
+                ships: current.ships,
+                defenses: current.defenses,
+                construction_queue: current.constructionQueue,
+                shipyard_queue: current.shipyardQueue,
+                production_settings: {
+                    ...current.productionSettings,
+                    avatarUrl: current.avatarUrl,
+                    planetType: current.planetType,
+                    nickname: current.nickname // Also in settings for legacy
+                },
+                active_missions: current.activeMissions,
+                mission_logs: current.missionLogs,
+                galaxy_coords: current.galaxyCoords,
+                points: calculatePoints(current.resources, current.buildings, current.ships),
+                last_updated: Date.now()
+            };
+            console.log('💾 [SAVE] Profile Payload:', JSON.stringify(payload));
+
+            const { error } = await supabase.from('profiles').upsert(payload);
+
+            if (error) {
+                console.error('❌ [SAVE ERROR] Profile:', error.message);
+                if (error.code === '401' || error.code === '403' || error.message.includes('JWT')) {
+                    console.error('🛑 [SAVE] Auth error - pausing sync');
+                    setIsSyncPaused(true);
+                }
+            } else {
+                console.log('✅ [SAVE SUCCESS] Profile saved');
+                success = true;
+            }
+        }
+
+        // Store for validation
+        lastSavedStateRef.current = JSON.parse(JSON.stringify(current));
+        console.log('💾 [SAVE END] Success:', success);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        return success;
+    };
+
+    // ========== VALIDATION FUNCTION ==========
+    const validateState = (loaded: Partial<GameState>, source: string) => {
+        const saved = lastSavedStateRef.current;
+        if (!saved) {
+            console.log('🔍 [VALIDATE] No previous state to compare');
+            return;
+        }
+
+        console.log('🔍 [VALIDATE] Comparing loaded state vs last saved...');
+        const issues: string[] = [];
+
+        // Check critical fields
+        const checkField = (name: string, loadedVal: any, savedVal: any) => {
+            if (loadedVal === undefined || loadedVal === null) {
+                issues.push(`⚠️ [DESYNC] ${name} is undefined/null after load`);
+                return;
+            }
+            if (typeof savedVal === 'object') {
+                const loadedStr = JSON.stringify(loadedVal);
+                const savedStr = JSON.stringify(savedVal);
+                if (loadedStr !== savedStr) {
+                    issues.push(`⚠️ [DESYNC] ${name} changed after refresh`);
+                    console.log(`   Saved: ${savedStr.substring(0, 100)}...`);
+                    console.log(`   Loaded: ${loadedStr.substring(0, 100)}...`);
+                }
+            } else if (loadedVal !== savedVal) {
+                issues.push(`⚠️ [DESYNC] ${name}: saved=${savedVal}, loaded=${loadedVal}`);
+            }
+        };
+
+        checkField('buildings', loaded.buildings, saved.buildings);
+        checkField('research', loaded.research, saved.research);
+        checkField('ships', loaded.ships, saved.ships);
+        checkField('defenses', loaded.defenses, saved.defenses);
+        checkField('resources', loaded.resources, saved.resources);
+        checkField('constructionQueue', loaded.constructionQueue, saved.constructionQueue);
+        checkField('shipyardQueue', loaded.shipyardQueue, saved.shipyardQueue);
+        checkField('nickname', loaded.nickname, saved.nickname);
+        checkField('planetName', loaded.planetName, saved.planetName);
+        checkField('galaxyCoords', loaded.galaxyCoords, saved.galaxyCoords);
+
+        if (issues.length > 0) {
+            console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.warn('🚨 [VALIDATION FAILED] Data desync detected:');
+            issues.forEach(i => console.warn(i));
+            console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        } else {
+            console.log('✅ [VALIDATE] State matches - no desync detected from', source);
+        }
+    };
 
     const findTargetUser = async (coords: { galaxy: number, system: number, position: number }) => {
         // Query using JSON field - galaxy_coords contains {galaxy, system, position}
@@ -439,22 +616,46 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             // Merge loaded data
             setMainPlanetName(data.planet_name || 'Główna');
-            setGameState(prev => ({
-                ...prev,
-                planetName: data.planet_name || prev.planetName,
-                nickname: data.nickname || prev.nickname || 'Player',
-                resources: { ...prev.resources, ...loadedResources },
-                buildings: { ...prev.buildings, ...data.buildings },
-                research: { ...prev.research, ...data.research },
-                ships: { ...prev.ships, ...data.ships },
-                defenses: { ...prev.defenses, ...data.defenses },
+
+            // DEBUG: Log what we loaded from DB
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📥 [LOAD] Profile loaded from Supabase');
+            console.log('📥 [LOAD] Raw DB Data:');
+            console.log('  📦 Resources:', JSON.stringify(data.resources));
+            console.log('  🏗️ Buildings:', JSON.stringify(data.buildings));
+            console.log('  🔬 Research:', JSON.stringify(data.research));
+            console.log('  🚀 Ships:', JSON.stringify(data.ships));
+            console.log('  🛡️ Defenses:', JSON.stringify(data.defenses));
+            console.log('  🔨 ConstructionQueue:', data.construction_queue?.length || 0, 'items');
+            console.log('  🔧 ShipyardQueue:', data.shipyard_queue?.length || 0, 'items');
+            console.log('  🌌 GalaxyCoords:', JSON.stringify(data.galaxy_coords));
+            console.log('  👤 Nickname:', data.nickname);
+            console.log('  🪐 PlanetName:', data.planet_name);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            const mergedState = {
+                planetName: data.planet_name || 'Nowa Kolonia',
+                nickname: data.nickname || data.production_settings?.nickname || 'Player',
+                resources: { ...initialState.resources, ...loadedResources },
+                buildings: { ...initialState.buildings, ...data.buildings },
+                research: { ...initialState.research, ...data.research },
+                ships: { ...initialState.ships, ...data.ships },
+                defenses: { ...initialState.defenses, ...data.defenses },
                 constructionQueue: data.construction_queue || [],
                 shipyardQueue: data.shipyard_queue || [],
-                productionSettings: { ...prev.productionSettings, ...data.production_settings },
-                avatarUrl: data.production_settings?.avatarUrl || prev.avatarUrl || initialState.avatarUrl,
-                planetType: data.production_settings?.planetType || prev.planetType || (['terran', 'desert', 'ice'][Math.floor(Math.random() * 3)]),
+                productionSettings: { ...initialState.productionSettings, ...data.production_settings },
+                avatarUrl: data.production_settings?.avatarUrl || initialState.avatarUrl,
+                planetType: data.production_settings?.planetType || 'terran',
                 missionLogs: data.mission_logs || [],
                 galaxyCoords: data.galaxy_coords,
+            };
+
+            // Validate if we have previous state
+            validateState(mergedState, 'refreshProfile (Main Planet)');
+
+            setGameState(prev => ({
+                ...prev,
+                ...mergedState,
                 lastTick: Date.now()
             }));
 
@@ -544,40 +745,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (!loaded || !session?.user || isSyncPaused) return;
 
         const save = async () => {
-            if (isSyncPaused) return;
-            const current = gameStateRef.current;
-
-            // Save to LocalStorage
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-
-            // Save to Supabase
-            const { error } = await supabase.from('profiles').upsert({
-                id: session.user.id,
-                planet_name: current.planetName,
-                // nickname removed from root level, stored in production_settings
-                resources: current.resources,
-                buildings: current.buildings,
-                research: current.research,
-                ships: current.ships,
-                defenses: current.defenses,
-                construction_queue: current.constructionQueue,
-                shipyard_queue: current.shipyardQueue,
-                production_settings: { ...current.productionSettings, avatarUrl: current.avatarUrl, planetType: current.planetType, nickname: current.nickname }, // Save nickname in production_settings for legacy/consistency
-                active_missions: current.activeMissions,
-                mission_logs: current.missionLogs,
-                galaxy_coords: current.galaxyCoords,
-                points: calculatePoints(current.resources, current.buildings, current.ships),
-                last_updated: Date.now()
-            });
-
-            if (error) {
-                if (error.code === '401' || error.code === '403' || error.message.includes('JWT')) {
-                    console.error("🛑 AUTO-SAVE DISABLED: 401 Unauthorized. Stopping loop.");
-                    setIsSyncPaused(true);
-                } else {
-                    console.error("Save error:", error.message);
-                }
-            }
+            await saveGame('Auto-Save (60s interval)');
         };
 
         const interval = setInterval(save, 60000); // Save every 60 seconds (optimized for DB limits)
@@ -2036,6 +2204,27 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     safeBuildings[key] = colonyBuildings[key] ?? 0;
                 });
 
+                // DEBUG: Log colony data
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('📥 [LOAD] Colony loaded from Supabase:', planetId);
+                console.log('  📦 Resources:', JSON.stringify(safeResources));
+                console.log('  🏗️ Buildings:', JSON.stringify(safeBuildings));
+                console.log('  🚀 Ships:', JSON.stringify(colony.ships));
+                console.log('  🛡️ Defenses:', JSON.stringify(colony.defenses));
+                console.log('  🔨 ConstructionQueue:', colony.construction_queue?.length || 0, 'items');
+                console.log('  🔧 ShipyardQueue:', colony.shipyard_queue?.length || 0, 'items');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                // Validate against last saved
+                validateState({
+                    buildings: safeBuildings,
+                    resources: safeResources,
+                    ships: colony.ships || {},
+                    defenses: colony.defenses || {},
+                    constructionQueue: colony.construction_queue || [],
+                    shipyardQueue: colony.shipyard_queue || []
+                }, `switchPlanet (Colony ${planetId})`);
+
                 // Load colony-specific data into gameState
                 setGameState(prev => ({
                     ...prev,
@@ -2197,24 +2386,32 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // Persist completed items or settings to Supabase
             if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length) || settingsChanged || now - prev.lastTick > 30000) {
                 const currentPlanet = currentPlanetRef.current;
+                const reason = finished.length > 0 ? 'Queue Completed' : (now - prev.lastTick > 30000 ? 'Tick 30s' : 'Settings Changed');
+                console.log(`💾 [TICK SAVE] Reason: ${reason}, Target: ${currentPlanet || 'main'}`);
 
                 if (!currentPlanet || currentPlanet === 'main') {
                     // Save to Profile (Main Planet)
-                    supabase.from('profiles').update({
+                    const payload = {
                         buildings: newBuildings,
-                        research: newResearch, // Research is global
+                        research: newResearch,
                         ships: newShips,
                         defenses: newDefenses,
-                        resources: newResources, // SAVE RESOURCES!
+                        resources: newResources,
                         shipyard_queue: newShipQueue,
                         construction_queue: newQueue,
-                        production_settings: settingsChanged ? updatedSettings : updatedSettings,
-                    }).eq('id', session.user.id).then(({ error }) => {
-                        if (error) console.error("Auto-save error (Main):", error);
+                        production_settings: updatedSettings,
+                        last_updated: Date.now()
+                    };
+                    console.log('💾 [TICK SAVE] Payload:', JSON.stringify(payload).substring(0, 200) + '...');
+
+                    supabase.from('profiles').update(payload).eq('id', session.user.id).then(({ error }) => {
+                        if (error) console.error("❌ [TICK SAVE ERROR] Main:", error);
+                        else console.log("✅ [TICK SAVE] Main Success");
                     });
 
                 } else {
                     // Save to Planet (Colony)
+                    console.log(`💾 [TICK SAVE] Colony ${currentPlanet} - Buildings:`, JSON.stringify(newBuildings));
                     saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, newResources, newQueue, newShipQueue);
 
                     // Sync global settings (Research/Points) to Profile even when on Colony
@@ -2227,6 +2424,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         });
                     }
                 }
+
+                // Update lastSavedStateRef for validation
+                lastSavedStateRef.current = {
+                    ...prev,
+                    buildings: newBuildings,
+                    research: newResearch,
+                    ships: newShips,
+                    defenses: newDefenses,
+                    resources: newResources,
+                    constructionQueue: newQueue,
+                    shipyardQueue: newShipQueue
+                };
             }
 
             setGameState(current => ({
