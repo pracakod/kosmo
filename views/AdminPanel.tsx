@@ -29,16 +29,19 @@ export const AdminPanel: React.FC = () => {
 
         setLoading(true);
 
-        // Step 1: Delete Missions (Try to remove both outgoing and incoming)
+        // DEBUG: Check if we can even SEE the missions
+        const { count: missionCount, error: countError } = await supabase
+            .from('missions')
+            .select('*', { count: 'exact', head: true })
+            .eq('owner_id', userId);
+
+        console.log(`[DEBUG] Found ${missionCount} missions (Error: ${countError?.message})`);
+
+        // Step 1: Delete Missions
         const d1 = await supabase.from('missions').delete().eq('owner_id', userId).select('*', { count: 'exact', head: true });
         const d2 = await supabase.from('missions').delete().eq('target_user_id', userId).select('*', { count: 'exact', head: true });
 
-        if (d1.error || d2.error) {
-            console.error("Mission delete error:", d1.error, d2.error);
-            alert("Błąd usuwania misji (RLS?). Sprawdź konsolę. Kontynuuję usuwanie profilu...");
-        } else {
-            console.log(`Usunięto ${d1.count} misji własnych i ${d2.count} przychodzących.`);
-        }
+        console.log(`[DEBUG] Deleted ${d1.count} outgoing, ${d2.count} incoming.`);
 
         // Step 2: Delete Profile (Planet)
         const response = await supabase.from('profiles').delete().eq('id', userId).select('*', { count: 'exact', head: true });
@@ -46,14 +49,23 @@ export const AdminPanel: React.FC = () => {
         const count = response.count;
 
         if (error) {
-            console.error("Delete error:", error);
+            console.error("Profile Delete error:", error);
             if (error.message?.includes("foreign key constraint") || error.code === '23503') {
-                alert(`BLOKADA: Gracz ma aktywne misje, których nie udało się usunąć.\n\nOznacza to, że brakuje polityki RLS dla tabeli 'missions'.\nWykonaj SQL:\n\nCREATE POLICY "Admin Delete Missions" ON missions FOR DELETE USING (auth.email() IN ('admin@kosmo.pl', 'admin@kosmo.com'));`);
+                const fixSQL = `
+ALTER TABLE missions
+DROP CONSTRAINT missions_owner_id_fkey,
+ADD CONSTRAINT missions_owner_id_fkey
+FOREIGN KEY (owner_id)
+REFERENCES profiles(id)
+ON DELETE CASCADE;
+`;
+                alert(`BLOKADA BAZY DANYCH (Foreign Key):\nNie można usunąć gracza, bo trzymają go misje (których admin nie widzi przez RLS).\n\nNAJLEPSZE ROZWIĄZANIE:\nWklej ten SQL w Supabase, aby misje usuwały się SAME automatycznie:\n\n${fixSQL}`);
+                console.log("SQL TO FIX:", fixSQL);
             } else {
                 alert(`Błąd usuwania (DB Error): ${error.message} (Code: ${error.code})`);
             }
         } else if (count === 0) {
-            alert(`BŁĄD: Nie usunięto wiersza (Count: 0).\nZablokowane przez RLS tabeli 'profiles'.\nWykonaj SQL:\nCREATE POLICY "Admin All Access" ON profiles FOR ALL USING (auth.email() IN ('admin@kosmo.pl', 'admin@kosmo.com'));`);
+            alert(`BŁĄD: Nie usunięto wiersza (Count: 0).\nZablokowane przez RLS tabeli 'profiles'.\nPotrzebna polityka: CREATE POLICY "Admin All Access" ...`);
         } else {
             setMsg(`Użytkownik ${nickname || 'Nieznany'} (ID: ${userId}) został pomyślnie usunięty.`);
             fetchUsers();
