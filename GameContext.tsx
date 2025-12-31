@@ -432,8 +432,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const issues: string[] = [];
 
         // Deep compare objects and show key-by-key differences
-        const compareObjects = (name: string, loadedObj: any, savedObj: any) => {
+        const compareObjects = (name: string, loadedObj: any, savedObj: any, skipKeys: string[] = []) => {
             if (!savedObj || !loadedObj) {
+                // Skip research comparison for colonies (research is global on profile)
+                if (name === 'research') {
+                    console.log('🔍 [VALIDATE] Skipping research (global, not per-planet)');
+                    return;
+                }
                 if (savedObj !== loadedObj) {
                     issues.push(`⚠️ [DESYNC] ${name}: one is null/undefined`);
                 }
@@ -444,6 +449,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             const diffs: string[] = [];
 
             allKeys.forEach(key => {
+                // Skip calculated fields
+                if (skipKeys.includes(key)) return;
+
                 const savedVal = savedObj[key];
                 const loadedVal = loadedObj[key];
 
@@ -466,10 +474,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         };
 
         compareObjects('buildings', loaded.buildings, saved.buildings);
-        compareObjects('research', loaded.research, saved.research);
+        compareObjects('research', loaded.research, saved.research); // Will skip if null (colony)
         compareObjects('ships', loaded.ships, saved.ships);
         compareObjects('defenses', loaded.defenses, saved.defenses);
-        compareObjects('resources', loaded.resources, saved.resources);
+        compareObjects('resources', loaded.resources, saved.resources, ['energy', 'maxEnergy']); // Skip calculated
 
         // Simple comparisons
         if (JSON.stringify(loaded.constructionQueue) !== JSON.stringify(saved.constructionQueue)) {
