@@ -90,6 +90,48 @@ ON DELETE CASCADE;
 
     const [inspectUser, setInspectUser] = useState<any | null>(null);
 
+    // Ship Gift Feature
+    const [giftNickname, setGiftNickname] = useState('');
+    const [giftShipId, setGiftShipId] = useState('colonyShip');
+    const [giftAmount, setGiftAmount] = useState(1);
+
+    const giveShip = async () => {
+        if (!giftNickname.trim()) {
+            alert('Podaj nick gracza!');
+            return;
+        }
+
+        // Find user by nickname
+        const { data: targetUser, error: findError } = await supabase
+            .from('profiles')
+            .select('id, nickname, ships')
+            .eq('nickname', giftNickname.trim())
+            .single();
+
+        if (findError || !targetUser) {
+            alert(`Nie znaleziono gracza o nicku: ${giftNickname}`);
+            return;
+        }
+
+        // Update ships
+        const newShips = { ...targetUser.ships, [giftShipId]: (targetUser.ships?.[giftShipId] || 0) + giftAmount };
+
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ ships: newShips })
+            .eq('id', targetUser.id);
+
+        if (updateError) {
+            alert(`Błąd: ${updateError.message}`);
+        } else {
+            alert(`✅ Dodano ${giftAmount}x ${giftShipId} graczowi ${giftNickname}`);
+            setGiftNickname('');
+            setGiftAmount(1);
+            fetchUsers();
+        }
+    };
+
+
     return (
         <div className="p-4 md:p-8 text-gray-100 max-w-6xl mx-auto pb-24">
             <div className="flex justify-between items-center mb-6">
@@ -105,6 +147,60 @@ ON DELETE CASCADE;
             </div>
 
             {msg && <div className="mb-4 p-3 bg-green-900 border border-green-700 rounded text-green-200">{msg}</div>}
+
+            {/* Ship Gift Section */}
+            <div className="mb-6 p-4 bg-gray-800 border border-gray-700 rounded-lg">
+                <h3 className="text-lg font-bold text-yellow-500 mb-4">🎁 Dodaj Statek Graczowi</h3>
+                <div className="flex flex-wrap gap-3 items-end">
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-400 mb-1">Nick Gracza</label>
+                        <input
+                            type="text"
+                            value={giftNickname}
+                            onChange={(e) => setGiftNickname(e.target.value)}
+                            placeholder="Wpisz nick..."
+                            className="px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-yellow-500 focus:outline-none"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-400 mb-1">Typ Statku</label>
+                        <select
+                            value={giftShipId}
+                            onChange={(e) => setGiftShipId(e.target.value)}
+                            className="px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-yellow-500 focus:outline-none"
+                        >
+                            <option value="colonyShip">Statek Kolonizacyjny</option>
+                            <option value="lightFighter">Myśliwiec Lekki</option>
+                            <option value="heavyFighter">Myśliwiec Ciężki</option>
+                            <option value="cruiser">Krążownik</option>
+                            <option value="battleship">Okręt Wojenny</option>
+                            <option value="destroyer">Niszczyciel</option>
+                            <option value="deathStar">Pogromca Planet</option>
+                            <option value="smallCargo">Mały Transporter</option>
+                            <option value="mediumCargo">Średni Transporter</option>
+                            <option value="hugeCargo">Ogromny Transporter</option>
+                            <option value="espionageProbe">Sonda Szpiegowska</option>
+                            <option value="pioneer">Pionier</option>
+                        </select>
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-400 mb-1">Ilość</label>
+                        <input
+                            type="number"
+                            value={giftAmount}
+                            onChange={(e) => setGiftAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                            min={1}
+                            className="w-20 px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-yellow-500 focus:outline-none"
+                        />
+                    </div>
+                    <button
+                        onClick={giveShip}
+                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded transition-colors"
+                    >
+                        Dodaj
+                    </button>
+                </div>
+            </div>
 
             <div className="overflow-x-auto bg-gray-900/80 rounded-lg border border-gray-700">
                 <table className="w-full text-left border-collapse">
