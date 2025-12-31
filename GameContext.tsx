@@ -493,10 +493,21 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     // Load from Supabase or LocalStorage
+    // Load from Supabase or LocalStorage
     useEffect(() => {
         refreshProfile();
         fetchMissions();
         fetchPlanets();
+
+        // Poll for updates (logs, missions, attacks)
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible' && !isSyncPaused) {
+                refreshProfile();
+                fetchMissions();
+            }
+        }, 10000); // 10 seconds
+
+        return () => clearInterval(interval);
     }, [session]);
 
     // Auto-save loop (Interval instead of debounce to prevent starvation by ticks)
