@@ -1789,7 +1789,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         }));
 
         // Create the new planet with starting resources
-        const { error } = await supabase.from('planets').insert({
+        console.log('🌍 Creating planet at:', coords, 'with resources:', resources);
+        const { data: insertedPlanet, error } = await supabase.from('planets').insert({
             owner_id: session.user.id,
             planet_name: `Kolonia ${planets.length + 1}`,
             planet_type: 'terran',
@@ -1807,11 +1808,24 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             ships: {},
             defenses: {},
             is_main: false
-        });
+        }).select();
+
+        console.log('🌍 Planet insert result:', { insertedPlanet, error });
 
         if (error) {
-            console.error('Colonization failed:', error);
-            alert('Błąd kolonizacji!');
+            console.error('❌ Colonization failed:', error);
+            alert(`Błąd kolonizacji: ${error.message}\n\nSprawdź czy tabela 'planets' istnieje w Supabase i ma poprawne RLS!`);
+            // Revert ship deduction
+            setGameState(prev => ({
+                ...prev,
+                ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
+                resources: {
+                    ...prev.resources,
+                    metal: prev.resources.metal + resources.metal,
+                    crystal: prev.resources.crystal + resources.crystal,
+                    deuterium: prev.resources.deuterium + resources.deuterium
+                }
+            }));
             return false;
         }
 
