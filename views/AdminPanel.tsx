@@ -101,6 +101,8 @@ ON DELETE CASCADE;
             return;
         }
 
+        console.log('🎁 Szukam gracza:', giftNickname.trim());
+
         // Find user by nickname
         const { data: targetUser, error: findError } = await supabase
             .from('profiles')
@@ -108,21 +110,31 @@ ON DELETE CASCADE;
             .eq('nickname', giftNickname.trim())
             .single();
 
+        console.log('🎁 Wynik szukania:', { targetUser, findError });
+
         if (findError || !targetUser) {
-            alert(`Nie znaleziono gracza o nicku: ${giftNickname}`);
+            alert(`Nie znaleziono gracza o nicku: ${giftNickname}\n\nBłąd: ${findError?.message || 'Brak danych'}`);
             return;
         }
 
         // Update ships
-        const newShips = { ...targetUser.ships, [giftShipId]: (targetUser.ships?.[giftShipId] || 0) + giftAmount };
+        const currentShips = targetUser.ships || {};
+        const newShips = { ...currentShips, [giftShipId]: (currentShips[giftShipId] || 0) + giftAmount };
 
-        const { error: updateError } = await supabase
+        console.log('🎁 Aktualizacja:', { currentShips, newShips, targetId: targetUser.id });
+
+        const { data: updateResult, error: updateError } = await supabase
             .from('profiles')
             .update({ ships: newShips })
-            .eq('id', targetUser.id);
+            .eq('id', targetUser.id)
+            .select();
+
+        console.log('🎁 Wynik aktualizacji:', { updateResult, updateError });
 
         if (updateError) {
-            alert(`Błąd: ${updateError.message}`);
+            alert(`Błąd aktualizacji: ${updateError.message}\n\nMoże brakować RLS policy pozwalającej adminowi edytować inne profile.`);
+        } else if (!updateResult || updateResult.length === 0) {
+            alert(`⚠️ Update nie zmienił żadnych rekordów!\n\nPrawdopodobnie RLS blokuje edycję innych graczy.\n\nDodaj w Supabase SQL:\nCREATE POLICY "admin_all_access" ON profiles FOR ALL USING (auth.jwt() ->> 'email' IN ('admin@kosmo.pl', 'dareg@kosmo.pl'));`);
         } else {
             alert(`✅ Dodano ${giftAmount}x ${giftShipId} graczowi ${giftNickname}`);
             setGiftNickname('');
@@ -130,6 +142,7 @@ ON DELETE CASCADE;
             fetchUsers();
         }
     };
+
 
 
     return (
