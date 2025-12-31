@@ -399,6 +399,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 const crystalProd = (20 * crystalLevel * Math.pow(1.1, crystalLevel)) * efficiency * (s[BuildingId.CRYSTAL_MINE] ?? 100) / 100;
                 const deutProd = (10 * deuteriumLevel * Math.pow(1.1, deuteriumLevel) * 1.0) * efficiency * (s[BuildingId.DEUTERIUM_SYNTH] ?? 100) / 100;
 
+                // Safety: Ensure storage structure exists
+                if (!loadedResources.storage) {
+                    loadedResources.storage = JSON.parse(JSON.stringify(initialState.resources.storage));
+                }
+
                 // Apply to resources
                 loadedResources.metal = Math.min(loadedResources.storage.metal, loadedResources.metal + (metalProd * timeDiff));
                 loadedResources.crystal = Math.min(loadedResources.storage.crystal, loadedResources.crystal + (crystalProd * timeDiff));
@@ -435,10 +440,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
 
         } else {
-            if (error && (error.code === '401' || error.code === '403')) {
-                console.error("🛑 PROFILE LOAD FLOP: RLS Policy Missing");
-                setIsSyncPaused(true);
+            if (error) {
+                console.error("Profile Load Error:", error);
+                if (error.code === '401' || error.code === '403') {
+                    console.error("🛑 RLS Policy Missing");
+                    setIsSyncPaused(true);
+                    return; // STOP!
+                }
+                // If generic error (e.g. timeout) and NOT "row not found" (PGRST116), unsafe to overwrite.
+                if (error.code !== 'PGRST116') {
+                    alert("Błąd połączenia z bazą danych (Profile Load). Nie nadpisuję danych.");
+                    return; // STOP!
+                }
             }
+
             // Fallback to localstorage only if user IDs match (security)
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
