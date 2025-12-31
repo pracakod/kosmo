@@ -118,7 +118,9 @@ const Shipyard: React.FC = () => {
                         resources.crystal >= totalCost.crystal &&
                         resources.deuterium >= totalCost.deuterium;
 
-                    const buildTimeSeconds = Math.floor((ship.buildTime * 1000) / (shipyardLevel + 1) / 1000);
+                    const GAME_SPEED = 100; // Must match GameContext
+                    const singleBuildTimeMs = (ship.buildTime * 1000) / (shipyardLevel + 1) / GAME_SPEED;
+                    const totalBuildTimeSeconds = Math.max(1, Math.floor((singleBuildTimeMs * (amountToBuild || 1)) / 1000));
 
                     return (
                         <div key={ship.id} className={`bg-[#1c2136] border border-white/10 rounded-xl overflow-hidden group hover:border-primary/50 transition-all duration-300 relative ${!isUnlocked ? 'opacity-50' : ''}`}>
@@ -159,7 +161,7 @@ const Shipyard: React.FC = () => {
                                         </div>
 
                                         <div className="flex items-center justify-between mb-3 text-xs text-[#929bc9]">
-                                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span> {formatTime(buildTimeSeconds)}</span>
+                                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span> {formatTime(totalBuildTimeSeconds)} (x{amountToBuild || 1})</span>
                                         </div>
 
                                         <div className="flex items-center gap-2 mt-4">
