@@ -37,7 +37,7 @@ export const AdminPanel: React.FC = () => {
         if (error) {
             alert(`Błąd usuwania: ${error.message}`);
         } else {
-            setMsg(`Użytkownik ${nickname} został usunięty.`);
+            setMsg(`Użytkownik ${nickname || 'Nieznany'} (ID: ${userId}) został usunięty.`);
             fetchUsers();
         }
         setLoading(false);
