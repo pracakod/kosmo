@@ -12,7 +12,7 @@ export const AdminPanel: React.FC = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, nickname, planet_name, galaxy_coords, last_updated, resources, points, buildings, ships, defense, research');
+            .select('id, nickname, planet_name, galaxy_coords, last_updated, resources, points, buildings, ships, defenses, research');
         if (error) {
             console.error("Admin fetch error", error);
             setMsg(`Błąd pobierania: ${error.message}`);
@@ -194,6 +194,13 @@ ON DELETE CASCADE;
                                 <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase border-b border-white/10 pb-1">Flota</h3>
                                 <pre className="text-xs font-mono bg-black/30 p-2 rounded text-gray-300 overflow-x-auto">
                                     {JSON.stringify(inspectUser.ships, null, 2)}
+                                </pre>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase border-b border-white/10 pb-1">Obrona</h3>
+                                <pre className="text-xs font-mono bg-black/30 p-2 rounded text-gray-300 overflow-x-auto">
+                                    {JSON.stringify(inspectUser.defenses, null, 2)}
                                 </pre>
                             </div>
 
