@@ -30,7 +30,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
     ];
 
     const ADMIN_EMAILS = ['admin@kosmo.pl', 'dareg@kosmo.pl'];
-    if (game.session?.user?.email && ADMIN_EMAILS.includes(game.session.user.email)) {
+    const userEmail = game.session?.user?.email?.toLowerCase();
+
+    // DEBUG LOG
+    console.log("Current Email:", userEmail, "Is Admin?", ADMIN_EMAILS.includes(userEmail));
+
+    if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
         navItems.push({ id: 'admin', label: 'ADMIN', icon: 'shield_person' });
     }
 
@@ -87,7 +92,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                     <span className="text-[#929bc9] text-xs font-bold uppercase tracking-wider">Status: Online</span>
                 </div>
-                <div className="text-[#555a7a] text-xs font-mono">v1.2.5 (Ranking & Security)</div>
+                <div className="text-[#555a7a] text-xs font-mono mb-1">v1.2.6 (Admin Debug)</div>
+                {/* DEBUG EMAIL DISPLAY */}
+                <div className="text-[#555a7a] text-[10px] break-all">
+                    {game.session?.user?.email || "No Email"}
+                </div>
             </div>
         </aside >
     );
