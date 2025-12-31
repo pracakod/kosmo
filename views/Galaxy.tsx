@@ -66,6 +66,27 @@ const Galaxy: React.FC = () => {
             };
         }
 
+        // CHECK PLAYER COLONIES (from planets table)
+        const myColony = planets.find(p =>
+            p.galaxy_coords?.galaxy === coords.galaxy &&
+            p.galaxy_coords?.system === coords.system &&
+            p.galaxy_coords?.position === pos
+        );
+        if (myColony) {
+            const pType = myColony.planet_type === 'ice' ? "Lodowa" : (myColony.planet_type === 'desert' ? "Pustynna" : "Ziemiopodobna");
+            return {
+                name: myColony.planet_name || "Kolonia",
+                player: "Ty (Kolonia)",
+                rank: 0,
+                img: PLANET_IMAGES[myColony.planet_type] || IMAGES.planet,
+                type: pType,
+                isPlayer: true,
+                isColony: true,
+                colonyId: myColony.id,
+                activity: ""
+            };
+        }
+
         // CHECK OTHER PLAYERS
         const otherPlayer = systemUsers.find(u => u.galaxy_coords?.position === pos && u.id !== userId);
         if (otherPlayer) {
