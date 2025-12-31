@@ -462,6 +462,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     if (savedStr !== loadedStr) {
                         diffs.push(`  ${key}: SAVED=${savedStr.substring(0, 50)} LOADED=${loadedStr?.substring(0, 50)}`);
                     }
+                } else if (typeof savedVal === 'number' && typeof loadedVal === 'number') {
+                    // Use tolerance for floats (production drift)
+                    const tolerance = Math.max(1, Math.abs(savedVal) * 0.01); // 1% or 1 unit
+                    if (Math.abs(savedVal - loadedVal) > tolerance) {
+                        diffs.push(`  ${key}: SAVED=${savedVal} → LOADED=${loadedVal}`);
+                    }
                 } else if (savedVal !== loadedVal) {
                     diffs.push(`  ${key}: SAVED=${savedVal} → LOADED=${loadedVal}`);
                 }
@@ -2308,9 +2314,30 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     const renamePlanet = async (newName: string) => {
         if (!newName.trim()) return;
-        setGameState(prev => ({ ...prev, planetName: newName.trim() }));
-        await supabase.from('profiles').update({ planet_name: newName.trim() }).eq('id', session.user.id);
-        console.log('🪐 Planet renamed to:', newName);
+        const trimmedName = newName.trim();
+        setGameState(prev => ({ ...prev, planetName: trimmedName }));
+
+        const currentPlanet = currentPlanetRef.current;
+
+        if (currentPlanet && currentPlanet !== 'main') {
+            // Rename colony in planets table
+            const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', currentPlanet);
+            if (error) {
+                console.error('❌ Colony rename error:', error);
+            } else {
+                console.log('🪐 Colony renamed to:', trimmedName);
+                fetchPlanets(); // Refresh planets list to update sidebar
+            }
+        } else {
+            // Rename main planet in profiles table
+            const { error } = await supabase.from('profiles').update({ planet_name: trimmedName }).eq('id', session.user.id);
+            if (error) {
+                console.error('❌ Planet rename error:', error);
+            } else {
+                console.log('🪐 Main planet renamed to:', trimmedName);
+                setMainPlanetName(trimmedName);
+            }
+        }
     };
 
     const renameUser = async (newNickname: string) => {
