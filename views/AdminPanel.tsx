@@ -28,8 +28,11 @@ export const AdminPanel: React.FC = () => {
         if (!confirm(`CZY NA PEWNO CHCESZ USUNĄĆ GRACZA ${nickname || userId}?\nTej operacji nie można cofnąć!`)) return;
 
         setLoading(true);
-        // Step 1: Delete Missions
+
+        // Step 1: Delete Missions (Try to remove both outgoing and incoming)
+        // Note: This relies on RLS allowing deletion.
         await supabase.from('missions').delete().eq('owner_id', userId);
+        await supabase.from('missions').delete().eq('target_user_id', userId);
 
         // Step 2: Delete Profile (Planet)
         const response = await supabase.from('profiles').delete().eq('id', userId).select('*', { count: 'exact', head: true });
@@ -37,9 +40,14 @@ export const AdminPanel: React.FC = () => {
         const count = response.count;
 
         if (error) {
-            alert(`Błąd usuwania (DB Error): ${error.message}`);
+            console.error("Delete error:", error);
+            if (error.message?.includes("foreign key constraint") || error.code === '23503') {
+                alert(`BLOKADA: Gracz ma aktywne misje, których nie udało się usunąć.\n\nOznacza to, że brakuje polityki RLS dla tabeli 'missions'.\nWykonaj SQL:\n\nCREATE POLICY "Admin Delete Missions" ON missions FOR DELETE USING (auth.email() IN ('admin@kosmo.pl', 'admin@kosmo.com'));`);
+            } else {
+                alert(`Błąd usuwania (DB Error): ${error.message} (Code: ${error.code})`);
+            }
         } else if (count === 0) {
-            alert(`BŁĄD: Nie usunięto żadnego wiersza. \nTo oznacza, że Supabase RLS (Row Level Security) blokuje usuwanie innych graczy.\n\nMusisz wejść w Supabase -> Authentication -> Policies i dodać regułę pozwalającą na DELETE dla admina.`);
+            alert(`BŁĄD: Nie usunięto wiersza (Count: 0).\nZablokowane przez RLS tabeli 'profiles'.\nWykonaj SQL:\nCREATE POLICY "Admin All Access" ON profiles FOR ALL USING (auth.email() IN ('admin@kosmo.pl', 'admin@kosmo.com'));`);
         } else {
             setMsg(`Użytkownik ${nickname || 'Nieznany'} (ID: ${userId}) został pomyślnie usunięty.`);
             fetchUsers();
