@@ -26,7 +26,7 @@ const Galaxy: React.FC = () => {
     const [selectedShips, setSelectedShips] = useState<Record<string, number>>({});
     const [selectedResources, setSelectedResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [probeCount, setProbeCount] = useState(1);
-    const [colonizeModal, setColonizeModal] = useState<{ pos: number } | null>(null);
+    const [colonizeModal, setColonizeModal] = useState<{ galaxy: number, system: number, pos: number } | null>(null);
     const [colonizeResources, setColonizeResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -290,7 +290,7 @@ const Galaxy: React.FC = () => {
                                                 alert('Osiągnąłeś limit 8 planet!');
                                                 return;
                                             }
-                                            setColonizeModal({ pos });
+                                            setColonizeModal({ galaxy: coords.galaxy, system: coords.system, pos });
                                             setColonizeResources({ metal: 0, crystal: 0, deuterium: 0 });
                                         }}
                                         className="w-8 h-8 rounded bg-white/5 hover:bg-green-500/20 hover:text-green-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors"
@@ -690,7 +690,7 @@ const Galaxy: React.FC = () => {
                             <span className="material-symbols-outlined text-green-400 text-3xl">flag</span>
                             <div>
                                 <h3 className="text-xl font-bold text-white">Kolonizuj Planetę</h3>
-                                <p className="text-xs text-[#929bc9]">[{coords.galaxy}:{coords.system}:{colonizeModal.pos}]</p>
+                                <p className="text-xs text-[#929bc9]">[{colonizeModal.galaxy}:{colonizeModal.system}:{colonizeModal.pos}]</p>
                             </div>
                         </div>
 
@@ -745,7 +745,7 @@ const Galaxy: React.FC = () => {
 
                         <button
                             onClick={async () => {
-                                const targetCoords = { galaxy: coords.galaxy, system: coords.system, position: colonizeModal.pos };
+                                const targetCoords = { galaxy: colonizeModal.galaxy, system: colonizeModal.system, position: colonizeModal.pos };
                                 const success = await sendColonize(targetCoords, colonizeResources);
                                 if (success) {
                                     setColonizeModal(null);
