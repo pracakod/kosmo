@@ -52,6 +52,50 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                 </div>
             </div>
 
+            {/* Planet Switcher */}
+            {game.planets && game.planets.length > 0 && (
+                <div className="mx-4 mt-4 p-3 bg-[#1a1f35] border border-white/10 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[#929bc9] uppercase font-bold">Twoje Planety</span>
+                        <span className="text-xs text-primary">{game.planets.length + 1}/8</span>
+                    </div>
+
+                    {/* Main Planet (from profile) */}
+                    <button
+                        onClick={() => game.switchPlanet('main')}
+                        className={`w-full text-left px-3 py-2 rounded mb-1 text-sm transition-colors ${!game.currentPlanetId || game.currentPlanetId === 'main'
+                                ? 'bg-primary/20 text-white border border-primary/50'
+                                : 'bg-white/5 text-[#929bc9] hover:bg-white/10 border border-transparent'
+                            }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm">home</span>
+                            <span className="truncate">{game.planetName}</span>
+                            {game.galaxyCoords && (
+                                <span className="text-xs text-gray-500 ml-auto">[{game.galaxyCoords.galaxy}:{game.galaxyCoords.system}:{game.galaxyCoords.position}]</span>
+                            )}
+                        </div>
+                    </button>
+
+                    {/* Colony Planets */}
+                    {game.planets.map(planet => (
+                        <button
+                            key={planet.id}
+                            onClick={() => game.switchPlanet(planet.id)}
+                            className={`w-full text-left px-3 py-2 rounded mb-1 text-sm transition-colors ${game.currentPlanetId === planet.id
+                                    ? 'bg-primary/20 text-white border border-primary/50'
+                                    : 'bg-white/5 text-[#929bc9] hover:bg-white/10 border border-transparent'
+                                }`}
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">public</span>
+                                <span className="truncate">{planet.planet_name}</span>
+                                <span className="text-xs text-gray-500 ml-auto">[{planet.galaxy_coords?.galaxy}:{planet.galaxy_coords?.system}:{planet.galaxy_coords?.position}]</span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
             {/* Attack Alert */}
             {
                 game.incomingMissions && game.incomingMissions.length > 0 && (

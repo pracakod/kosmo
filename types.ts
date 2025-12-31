@@ -125,7 +125,8 @@ export enum MissionType {
   EXPEDITION = 'expedition',
   ATTACK = 'attack',
   TRANSPORT = 'transport',
-  SPY = 'spy'
+  SPY = 'spy',
+  COLONIZE = 'colonize'
 }
 
 export interface MissionRewards {

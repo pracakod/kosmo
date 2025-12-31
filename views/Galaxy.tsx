@@ -16,7 +16,7 @@ interface SpyReport {
 const Galaxy: React.FC = () => {
     // Start at Galaxy 1, System 1 to see player immediately
     const [coords, setCoords] = useState({ galaxy: 1, system: 1 });
-    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, resources, galaxyCoords, planetType, getPlayersInSystem, userId, buildings } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, planetType, getPlayersInSystem, userId, buildings } = useGame();
 
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
@@ -26,6 +26,8 @@ const Galaxy: React.FC = () => {
     const [selectedShips, setSelectedShips] = useState<Record<string, number>>({});
     const [selectedResources, setSelectedResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [probeCount, setProbeCount] = useState(1);
+    const [colonizeModal, setColonizeModal] = useState<{ pos: number } | null>(null);
+    const [colonizeResources, setColonizeResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
     // Load users when coords change
@@ -257,7 +259,22 @@ const Galaxy: React.FC = () => {
                             {/* Actions (Mobile Friendly) */}
                             <div className="flex items-center gap-1">
                                 {!planet ? (
-                                    <button className="w-8 h-8 rounded bg-white/5 hover:bg-primary hover:text-white text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Kolonizuj">
+                                    <button
+                                        onClick={() => {
+                                            if ((ships[ShipId.COLONY_SHIP] || 0) < 1) {
+                                                alert('Potrzebujesz Statku Kolonizacyjnego!');
+                                                return;
+                                            }
+                                            if (planets.length >= 8) {
+                                                alert('Osiągnąłeś limit 8 planet!');
+                                                return;
+                                            }
+                                            setColonizeModal({ pos });
+                                            setColonizeResources({ metal: 0, crystal: 0, deuterium: 0 });
+                                        }}
+                                        className="w-8 h-8 rounded bg-white/5 hover:bg-green-500/20 hover:text-green-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors"
+                                        title={`Kolonizuj (Masz: ${ships[ShipId.COLONY_SHIP] || 0} statków kolonizacyjnych)`}
+                                    >
                                         <span className="material-symbols-outlined text-lg">flag</span>
                                     </button>
                                 ) : !planet.isPlayer && !planet.isBot ? (
@@ -639,6 +656,89 @@ const Galaxy: React.FC = () => {
                     </div>
                 )
             }
+
+            {/* Colonize Modal */}
+            {colonizeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[#1c2136] w-full max-w-md rounded-xl border border-green-500/50 shadow-2xl p-6 relative">
+                        <button onClick={() => setColonizeModal(null)} className="absolute top-4 right-4 text-[#929bc9] hover:text-white">
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                            <span className="material-symbols-outlined text-green-400 text-3xl">flag</span>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Kolonizuj Planetę</h3>
+                                <p className="text-xs text-[#929bc9]">[{coords.galaxy}:{coords.system}:{colonizeModal.pos}]</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-[#111422] p-4 rounded-lg border border-white/5 mb-4">
+                            <p className="text-sm text-[#929bc9] mb-2">Statek Kolonizacyjny zostanie zużyty.</p>
+                            <p className="text-xs text-green-400">Posiadasz: {ships[ShipId.COLONY_SHIP] || 0} statków kolonizacyjnych</p>
+                            <p className="text-xs text-yellow-400 mt-1">Planety: {planets.length}/8</p>
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-sm font-bold text-white mb-2">Wyślij surowce z nową kolonią:</p>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[#929bc9] text-xs w-16">Metal:</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={resources.metal}
+                                        value={colonizeResources.metal}
+                                        onChange={e => setColonizeResources(p => ({ ...p, metal: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                        className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
+                                    />
+                                    <span className="text-gray-500 text-xs">/ {resources.metal.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[#929bc9] text-xs w-16">Kryształ:</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={resources.crystal}
+                                        value={colonizeResources.crystal}
+                                        onChange={e => setColonizeResources(p => ({ ...p, crystal: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                        className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
+                                    />
+                                    <span className="text-gray-500 text-xs">/ {resources.crystal.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[#929bc9] text-xs w-16">Deuter:</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={resources.deuterium}
+                                        value={colonizeResources.deuterium}
+                                        onChange={e => setColonizeResources(p => ({ ...p, deuterium: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                        className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
+                                    />
+                                    <span className="text-gray-500 text-xs">/ {resources.deuterium.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={async () => {
+                                const targetCoords = { galaxy: coords.galaxy, system: coords.system, position: colonizeModal.pos };
+                                const success = await sendColonize(targetCoords, colonizeResources);
+                                if (success) {
+                                    setColonizeModal(null);
+                                    setStatusMessage('🎉 Nowa kolonia założona!');
+                                }
+                            }}
+                            className="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-outlined">rocket_launch</span>
+                            Kolonizuj!
+                        </button>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

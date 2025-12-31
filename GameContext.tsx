@@ -149,6 +149,13 @@ interface GameContextType extends GameState {
     renameUser: (name: string) => void;
     getLevel: (points: number, settings?: any) => number;
     session?: any;
+
+    // Colonization
+    planets: any[];
+    currentPlanetId: string | null;
+    sendColonize: (coords: { galaxy: number, system: number, position: number }, resources: { metal: number, crystal: number, deuterium: number }) => Promise<boolean>;
+    switchPlanet: (planetId: string) => void;
+    fetchPlanets: () => Promise<void>;
 }
 
 const initialState: GameState = {
@@ -256,6 +263,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const [gameState, setGameState] = useState<GameState>({ ...initialState, userId: session?.user.id });
     const [loaded, setLoaded] = useState(false);
     const [isSyncPaused, setIsSyncPaused] = useState(false); // Circuit breaker for Auth errors
+    const [planets, setPlanets] = useState<any[]>([]);
+    const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
     const gameStateRef = useRef(gameState);
 
     // Keep ref synchronized
@@ -487,6 +496,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     useEffect(() => {
         refreshProfile();
         fetchMissions();
+        fetchPlanets();
     }, [session]);
 
     // Auto-save loop (Interval instead of debounce to prevent starvation by ticks)
@@ -1690,6 +1700,130 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         setGameState(prev => ({ ...prev, planetName: newName }));
         await supabase.from('profiles').update({ planet_name: newName }).eq('id', session.user.id);
     };
+
+    // ===== COLONIZATION SYSTEM =====
+    const fetchPlanets = async () => {
+        if (!session?.user?.id) return;
+        const { data, error } = await supabase
+            .from('planets')
+            .select('*')
+            .eq('owner_id', session.user.id);
+
+        if (data && !error) {
+            setPlanets(data);
+        }
+    };
+
+    const sendColonize = async (coords: { galaxy: number, system: number, position: number }, resources: { metal: number, crystal: number, deuterium: number }): Promise<boolean> => {
+        // Check if player has colony ship
+        if ((gameState.ships[ShipId.COLONY_SHIP] || 0) < 1) {
+            alert('Potrzebujesz Statku Kolonizacyjnego!');
+            return false;
+        }
+
+        // Check planet limit (max 8)
+        if (planets.length >= 8) {
+            alert('Osiągnąłeś limit 8 planet!');
+            return false;
+        }
+
+        // Check if position is empty
+        const { data: existingPlanets } = await supabase
+            .from('planets')
+            .select('id')
+            .contains('galaxy_coords', coords);
+
+        const { data: existingProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .contains('galaxy_coords', coords);
+
+        if ((existingPlanets && existingPlanets.length > 0) || (existingProfiles && existingProfiles.length > 0)) {
+            alert('Ta pozycja jest już zajęta!');
+            return false;
+        }
+
+        // Check resources
+        if (gameState.resources.metal < resources.metal ||
+            gameState.resources.crystal < resources.crystal ||
+            gameState.resources.deuterium < resources.deuterium) {
+            alert('Brak wystarczających zasobów!');
+            return false;
+        }
+
+        // Deduct colony ship and resources
+        const newShips = { ...gameState.ships, [ShipId.COLONY_SHIP]: (gameState.ships[ShipId.COLONY_SHIP] || 0) - 1 };
+        const newResources = {
+            ...gameState.resources,
+            metal: gameState.resources.metal - resources.metal,
+            crystal: gameState.resources.crystal - resources.crystal,
+            deuterium: gameState.resources.deuterium - resources.deuterium
+        };
+
+        setGameState(prev => ({
+            ...prev,
+            ships: newShips,
+            resources: newResources
+        }));
+
+        // Create the new planet with starting resources
+        const { error } = await supabase.from('planets').insert({
+            owner_id: session.user.id,
+            planet_name: `Kolonia ${planets.length + 1}`,
+            planet_type: 'terran',
+            galaxy_coords: coords,
+            resources: {
+                metal: 500 + resources.metal,
+                crystal: 300 + resources.crystal,
+                deuterium: 100 + resources.deuterium,
+                darkMatter: 0,
+                energy: 0,
+                maxEnergy: 0,
+                storage: { metal: 10000, crystal: 10000, deuterium: 10000 }
+            },
+            buildings: {},
+            ships: {},
+            defenses: {},
+            is_main: false
+        });
+
+        if (error) {
+            console.error('Colonization failed:', error);
+            alert('Błąd kolonizacji!');
+            return false;
+        }
+
+        // Update profile with new ships and resources
+        await supabase.from('profiles').update({
+            ships: newShips,
+            resources: newResources
+        }).eq('id', session.user.id);
+
+        // Add log
+        const newLog = {
+            id: Date.now().toString(),
+            timestamp: Date.now(),
+            title: 'Nowa Kolonia!',
+            message: `Założono nową kolonię w [${coords.galaxy}:${coords.system}:${coords.position}]. Wysłano M:${resources.metal} C:${resources.crystal} D:${resources.deuterium}.`,
+            outcome: 'success' as 'success'
+        };
+        setGameState(prev => ({
+            ...prev,
+            missionLogs: [newLog, ...prev.missionLogs].slice(0, 50)
+        }));
+
+        // Refresh planets
+        await fetchPlanets();
+        return true;
+    };
+
+    const switchPlanet = (planetId: string) => {
+        setCurrentPlanetId(planetId);
+        // TODO: In future, load planet-specific data
+        console.log('Switched to planet:', planetId);
+    };
+    // ===== END COLONIZATION SYSTEM =====
+
     const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
     const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
     const clearLogs = async () => {
@@ -1871,7 +2005,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         getPlayersInSystem,
         renameUser,
         getLevel,
-        session
+        session,
+        // Colonization
+        planets,
+        currentPlanetId,
+        sendColonize,
+        switchPlanet,
+        fetchPlanets
     };
 
     return (
