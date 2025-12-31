@@ -159,6 +159,7 @@ interface GameContextType extends GameState {
     updatePlanetType: (type: string) => void;
     getPlayersInSystem: (galaxy: number, system: number) => Promise<any[]>;
     renameUser: (name: string) => void;
+    mainPlanetName?: string;
     getLevel: (points: number, settings?: any) => number;
     session?: any;
 
@@ -277,6 +278,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const [isSyncPaused, setIsSyncPaused] = useState(false); // Circuit breaker for Auth errors
     const [planets, setPlanets] = useState<any[]>([]);
     const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
+    const [mainPlanetName, setMainPlanetName] = useState<string>('Główna');
     const [mainPlanetCache, setMainPlanetCache] = useState<GameState | null>(null); // Cache main planet data when switching to colony
     const gameStateRef = useRef(gameState);
 
@@ -434,6 +436,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
 
             // Merge loaded data
+            setMainPlanetName(data.planet_name || 'Główna');
             setGameState(prev => ({
                 ...prev,
                 planetName: data.planet_name || prev.planetName,
@@ -604,7 +607,67 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         try {
             console.log('Processing Arrival:', mission.id, mission.type);
 
-            if (mission.type === MissionType.EXPEDITION) {
+            if (mission.type === MissionType.COLONIZE) {
+                // Check if position is still empty
+                const { data: existingPlanets } = await supabase.from('planets').select('id').contains('galaxy_coords', mission.targetCoords);
+                const { data: existingProfiles } = await supabase.from('profiles').select('id').contains('galaxy_coords', mission.targetCoords);
+
+                if ((existingPlanets && existingPlanets.length > 0) || (existingProfiles && existingProfiles.length > 0)) {
+                    // Position taken - Fail
+                    result = {
+                        id: `${mission.id}-fail`,
+                        timestamp: Date.now(),
+                        title: 'Kolonizacja Nieudana',
+                        message: `Pozycja [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}] została zajęta przed przybyciem floty.`,
+                        outcome: 'failure'
+                    };
+                    // Return fleet (survivingAttacker stays as mission.ships)
+                } else {
+                    // Success - Create Planet
+                    const { data: insertedPlanet, error } = await supabase.from('planets').insert({
+                        owner_id: mission.ownerId,
+                        planet_name: `Kolonia ${planets.length + 1}`,
+                        planet_type: 'terran',
+                        galaxy_coords: mission.targetCoords,
+                        resources: {
+                            metal: 500 + (mission.resources?.metal || 0),
+                            crystal: 300 + (mission.resources?.crystal || 0),
+                            deuterium: 100 + (mission.resources?.deuterium || 0),
+                            darkMatter: 0,
+                            energy: 0,
+                            maxEnergy: 0,
+                            storage: { metal: 10000, crystal: 10000, deuterium: 10000 }
+                        },
+                        buildings: {},
+                        ships: {},
+                        defenses: {},
+                        is_main: false
+                    }).select();
+
+                    if (!error) {
+                        result = {
+                            id: `${mission.id}-success`,
+                            timestamp: Date.now(),
+                            title: 'Kolonizacja Zakończona',
+                            message: `Założono nową kolonię na pozycji [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].`,
+                            outcome: 'success'
+                        };
+                        // Fleet consumed (set surviving to empty)
+                        survivingAttacker = {} as any;
+                        fetchPlanets();
+                    } else {
+                        // DB Error
+                        result = {
+                            id: `${mission.id}-error`,
+                            timestamp: Date.now(),
+                            title: 'Błąd Kolonizacji',
+                            message: `Wystąpił błąd systemowy podczas zakładania kolonii: ${error.message}`,
+                            outcome: 'failure'
+                        };
+                    }
+                }
+
+            } else if (mission.type === MissionType.EXPEDITION) {
                 const expeditionResult = calculateExpeditionOutcome(mission);
                 result = expeditionResult.log;
 
@@ -1799,74 +1862,84 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             deuterium: gameState.resources.deuterium - resources.deuterium
         };
 
+        const now = Date.now();
+        const MIN_COLONIZE_TIME = 60 * 1000; // 60s minimum
+        const origin = gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 };
+        let duration = MIN_COLONIZE_TIME;
+
+        if (origin.galaxy !== coords.galaxy) {
+            duration = 60 * 60 * 1000; // 1h
+        } else if (origin.system !== coords.system) {
+            const diff = Math.abs(origin.system - coords.system);
+            duration = MIN_COLONIZE_TIME + diff * 30 * 1000;
+        } else {
+            const diff = Math.abs(origin.position - coords.position);
+            duration = MIN_COLONIZE_TIME + diff * 10 * 1000;
+        }
+
+        const missionId = crypto.randomUUID();
+        const mission: FleetMission = {
+            id: missionId,
+            ownerId: session?.user.id,
+            type: MissionType.COLONIZE,
+            ships: { [ShipId.COLONY_SHIP]: 1 } as any,
+            targetCoords: coords,
+            targetUserId: session.user.id,
+            originCoords: origin,
+            startTime: now,
+            arrivalTime: now + duration,
+            returnTime: now + (duration * 2), // Return if failed
+            eventProcessed: false,
+            status: 'flying',
+            resources: resources
+        };
+
+        // Optimistic Update
         setGameState(prev => ({
             ...prev,
             ships: newShips,
-            resources: newResources
+            resources: newResources,
+            activeMissions: [...prev.activeMissions, mission]
         }));
 
-        // Create the new planet with starting resources
-        console.log('🌍 Creating planet at:', coords, 'with resources:', resources);
-        const { data: insertedPlanet, error } = await supabase.from('planets').insert({
+        // DB Updates
+        const { error: missionError } = await supabase.from('missions').insert({
+            id: missionId,
             owner_id: session.user.id,
-            planet_name: `Kolonia ${planets.length + 1}`,
-            planet_type: 'terran',
-            galaxy_coords: coords,
-            resources: {
-                metal: 500 + resources.metal,
-                crystal: 300 + resources.crystal,
-                deuterium: 100 + resources.deuterium,
-                darkMatter: 0,
-                energy: 0,
-                maxEnergy: 0,
-                storage: { metal: 10000, crystal: 10000, deuterium: 10000 }
-            },
-            buildings: {},
-            ships: {},
-            defenses: {},
-            is_main: false
-        }).select();
+            target_user_id: session.user.id,
+            mission_type: MissionType.COLONIZE,
+            ships: { [ShipId.COLONY_SHIP]: 1 },
+            target_coords: coords,
+            origin_coords: origin,
+            start_time: now,
+            arrival_time: now + duration,
+            return_time: now + (duration * 2),
+            status: 'flying',
+            resources: resources
+        });
 
-        console.log('🌍 Planet insert result:', { insertedPlanet, error });
-
-        if (error) {
-            console.error('❌ Colonization failed:', error);
-            alert(`Błąd kolonizacji: ${error.message}\n\nSprawdź czy tabela 'planets' istnieje w Supabase i ma poprawne RLS!`);
-            // Revert ship deduction
-            setGameState(prev => ({
-                ...prev,
-                ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
-                resources: {
-                    ...prev.resources,
-                    metal: prev.resources.metal + resources.metal,
-                    crystal: prev.resources.crystal + resources.crystal,
-                    deuterium: prev.resources.deuterium + resources.deuterium
-                }
-            }));
+        if (missionError) {
+            console.error('❌ COLONIZE MISSION ERROR:', missionError);
+            alert('Błąd wysyłania misji kolonizacyjnej.');
+            fetchMissions();
+            refreshProfile();
             return false;
         }
 
-        // Update profile with new ships and resources
-        await supabase.from('profiles').update({
-            ships: newShips,
-            resources: newResources
+        // Save deducted resources/ships
+        const { error: profileError } = await supabase.from('profiles').update({
+            resources: newResources,
+            ships: newShips
         }).eq('id', session.user.id);
 
-        // Add log
-        const newLog = {
-            id: Date.now().toString(),
-            timestamp: Date.now(),
-            title: 'Nowa Kolonia!',
-            message: `Założono nową kolonię w [${coords.galaxy}:${coords.system}:${coords.position}]. Wysłano M:${resources.metal} C:${resources.crystal} D:${resources.deuterium}.`,
-            outcome: 'success' as 'success'
-        };
-        setGameState(prev => ({
-            ...prev,
-            missionLogs: [newLog, ...prev.missionLogs].slice(0, 50)
-        }));
+        if (profileError) {
+            console.error('❌ PROFILE UPDATE ERROR:', profileError);
+        } else {
+            console.log('✅ Colonization mission sent!', mission);
+            alert(`Misja kolonizacyjna rozpoczęta! Czas lotu: ${(duration / 1000).toFixed(0)}s`);
+        }
 
-        // Refresh planets
-        await fetchPlanets();
+        // Remove old planet creation logic by returning here
         return true;
     };
 
@@ -2143,6 +2216,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         // Colonization
         planets,
         currentPlanetId,
+        mainPlanetName,
         sendColonize,
         switchPlanet,
         fetchPlanets

@@ -57,20 +57,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                 <div className="mx-4 mt-4 p-3 bg-[#1a1f35] border border-white/10 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-[#929bc9] uppercase font-bold">Twoje Planety</span>
-                        <span className="text-xs text-primary">{game.planets.length + 1}/8</span>
+                        <span className="text-xs text-primary">{game.planets.length + 1}/9</span>
                     </div>
 
                     {/* Main Planet (from profile) */}
                     <button
                         onClick={() => game.switchPlanet('main')}
                         className={`w-full text-left px-3 py-2 rounded mb-1 text-sm transition-colors ${!game.currentPlanetId || game.currentPlanetId === 'main'
-                                ? 'bg-primary/20 text-white border border-primary/50'
-                                : 'bg-white/5 text-[#929bc9] hover:bg-white/10 border border-transparent'
+                            ? 'bg-primary/20 text-white border border-primary/50'
+                            : 'bg-white/5 text-[#929bc9] hover:bg-white/10 border border-transparent'
                             }`}
                     >
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-sm">home</span>
-                            <span className="truncate">{game.planetName}</span>
+                            <span className="truncate">{game.mainPlanetName || game.planetName}</span>
                             {game.galaxyCoords && (
                                 <span className="text-xs text-gray-500 ml-auto">[{game.galaxyCoords.galaxy}:{game.galaxyCoords.system}:{game.galaxyCoords.position}]</span>
                             )}
@@ -83,8 +83,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                             key={planet.id}
                             onClick={() => game.switchPlanet(planet.id)}
                             className={`w-full text-left px-3 py-2 rounded mb-1 text-sm transition-colors ${game.currentPlanetId === planet.id
-                                    ? 'bg-primary/20 text-white border border-primary/50'
-                                    : 'bg-white/5 text-[#929bc9] hover:bg-white/10 border border-transparent'
+                                ? 'bg-primary/20 text-white border border-primary/50'
+                                : 'bg-white/5 text-[#929bc9] hover:bg-white/10 border border-transparent'
                                 }`}
                         >
                             <div className="flex items-center gap-2">
