@@ -735,7 +735,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         if (spyDiff >= 4 || attackerSpyLevel >= 8) {
                             const bld = targetProfile.buildings || {};
                             const bldList = Object.entries(bld).map(([id, lvl]) => `${BUILDINGS[id as BuildingId]?.name || id} (${lvl})`).join(', ');
-                            spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa) \n`;
+                            spyMessage += `Budynki: ${bldList || 'Brak'} \n`;
                         } else {
                             spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa) \n`;
                         }

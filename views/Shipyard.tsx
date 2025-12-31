@@ -71,7 +71,7 @@ const Shipyard: React.FC = () => {
                     {activeJob ? (
                         <div className="bg-primary/20 border border-primary/30 px-3 py-1 rounded text-xs text-primary flex items-center gap-2">
                             <span className="material-symbols-outlined text-sm animate-spin">settings</span>
-                            Budowa: {SHIPS[activeJob.itemId as ShipId].name} ({activeJob.quantity}) - {timeLeft}
+                            Budowa: {SHIPS[activeJob.itemId as ShipId]?.name || activeJob.itemId} ({activeJob.quantity}) - {timeLeft}
                         </div>
                     ) : (
                         <span className="text-sm text-[#929bc9]">Oczekuję na rozkazy</span>
@@ -89,7 +89,7 @@ const Shipyard: React.FC = () => {
                             <div key={item.id} className={`flex items-center justify-between p-2 rounded ${index === 0 ? 'bg-primary/10 border border-primary/20' : 'bg-[#111422] border border-white/5'}`}>
                                 <div className="flex items-center gap-3">
                                     <div className="text-xs font-mono text-[#929bc9] w-4">{index + 1}.</div>
-                                    <div className="font-bold text-sm text-white">{SHIPS[item.itemId as ShipId].name}</div>
+                                    <div className="font-bold text-sm text-white">{SHIPS[item.itemId as ShipId]?.name || item.itemId}</div>
                                     <div className="text-xs text-[#929bc9]">x{item.quantity}</div>
                                 </div>
                                 <div className="text-xs font-mono text-white">
