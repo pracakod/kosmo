@@ -4,7 +4,7 @@ import { IMAGES, PLANET_IMAGES, formatTime, SHIPS, DEFENSES } from '../constants
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
-    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel, cancelMission, cancelConstruction } = useGame();
+    const { constructionQueue, buildings, ships, resources, shipyardQueue, planetName, renamePlanet, planetType, galaxyCoords, incomingMissions, activeMissions, productionSettings, getLevel, cancelMission, cancelConstruction, level, xp } = useGame();
     const planetImage = planetType && PLANET_IMAGES[planetType] ? PLANET_IMAGES[planetType] : PLANET_IMAGES.default;
     const activeShipBuild = shipyardQueue[0];
     const [queueTimes, setQueueTimes] = useState<Record<string, string>>({});
@@ -147,17 +147,26 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                             </h4>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-[#111422] rounded-lg p-3 text-center">
-                                    <div className="text-yellow-400 font-bold text-2xl">
-                                        {(() => {
-                                            const resPoints = Math.floor(((resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0)) / 1000);
-                                            const buildPoints = Object.values(buildings).reduce((a, b) => a + (b || 0) * 100, 0);
-                                            const shipPoints = Object.values(ships).reduce((a, b) => a + (b || 0) * 50, 0);
-                                            const totalPoints = resPoints + buildPoints + shipPoints;
-                                            // FIX: Use getLevel to respect Level 16 Lock
-                                            return getLevel ? getLevel(totalPoints, productionSettings) : (Math.floor(totalPoints / 1000) + 1);
-                                        })()}
+                                    <div className="text-yellow-400 font-bold text-2xl relative group cursor-help">
+                                        {level || 1}
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-black/90 border border-white/20 rounded p-2 text-xs text-gray-300 hidden group-hover:block z-50 pointer-events-none shadow-xl">
+                                            <div className="font-bold text-yellow-400 mb-1">Doświadczenie (XP)</div>
+                                            <div>Aktualne: <span className="text-white">{Math.floor(xp || 0).toLocaleString()}</span></div>
+                                            <div>Następny poziom: <span className="text-white">{Math.floor(500 * Math.pow((level || 1), 2)).toLocaleString()}</span></div>
+                                        </div>
                                     </div>
-                                    <div className="text-[#929bc9] text-xs uppercase">Poziom</div>
+                                    <div className="text-[#929bc9] text-xs uppercase mb-2">Poziom</div>
+
+                                    {/* XP Progress Bar */}
+                                    <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-500"
+                                            style={{
+                                                width: `${Math.min(100, Math.max(0, ((xp || 0) - (500 * Math.pow(((level || 1) - 1), 2))) / ((500 * Math.pow((level || 1), 2)) - (500 * Math.pow(((level || 1) - 1), 2))) * 100))}%`
+                                            }}
+                                        ></div>
+                                    </div>
                                 </div>
                                 <div className="bg-[#111422] rounded-lg p-3 text-center">
                                     <div className="text-primary font-bold text-2xl">{totalShips}</div>

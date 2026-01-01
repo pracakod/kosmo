@@ -3057,16 +3057,34 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             console.log('⭐ Calculating Initial XP...');
             let totalXP = 0;
 
-            // 1. Buildings (1 XP per 1000 cost)
-            Object.entries(gameState.buildings).forEach(([id, level]) => {
-                const def = BUILDINGS[id as BuildingId];
-                if (!def) return;
-                let buildingCost = 0;
-                for (let l = 1; l <= (level as number); l++) {
-                    const factor = Math.pow(1.5, l - 1);
-                    buildingCost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor);
+            // 1. Main Planet Buildings (Current State - assuming we load on Main Planet or it's the primary one)
+            // Note: If we are on a colony, gameState.buildings is that colony. But usually this runs on login (Main Planet).
+            // For robustness, we sum Current Planet + All Known Colonies.
+            // (If we double count the current one if it's in `planets` list, we should be careful.
+            //  But `planets` usually stores *colonies*, and Main is separate in `profiles`. So simple sum is correct).
+
+            const calculateBuildingXP = (b: Record<string, number>) => {
+                let xp = 0;
+                Object.entries(b).forEach(([id, level]) => {
+                    const def = BUILDINGS[id as BuildingId];
+                    if (!def) return;
+                    let buildingCost = 0;
+                    for (let l = 1; l <= (level as number); l++) {
+                        const factor = Math.pow(1.5, l - 1);
+                        buildingCost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor);
+                    }
+                    xp += Math.floor(buildingCost / 1000);
+                });
+                return xp;
+            };
+
+            totalXP += calculateBuildingXP(gameState.buildings);
+
+            // 2. Colony Buildings (from planets state)
+            planets.forEach(planet => {
+                if (planet.buildings) {
+                    totalXP += calculateBuildingXP(planet.buildings);
                 }
-                totalXP += Math.floor(buildingCost / 1000);
             });
 
             // 2. Research (Level^2 * 10)
