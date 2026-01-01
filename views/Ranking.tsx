@@ -104,9 +104,12 @@ const Ranking: React.FC = () => {
                                 const isOnline = player.last_updated && (now - player.last_updated) < 5 * 60 * 1000;
 
                                 return (
-                                    <tr key={player.id} className="hover:bg-white/5 transition-colors group">
+                                    <tr key={player.id} className={`hover:bg-white/5 transition-colors group ${index === 0 ? 'bg-yellow-500/5' : ''}`}>
                                         <td className={`p-4 text-center font-bold ${rankColor} text-lg`}>
-                                            {isTop3 ? ['🥇', '🥈', '🥉'][index] : index + 1}
+                                            <div className="flex justify-center items-center gap-1">
+                                                {index === 0 && <span className="material-symbols-outlined text-yellow-500 animate-[bounce_2s_infinite]">crown</span>}
+                                                {isTop3 ? ['🥇', '🥈', '🥉'][index] : index + 1}
+                                            </div>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
@@ -127,6 +130,7 @@ const Ranking: React.FC = () => {
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-white group-hover:text-primary transition-colors flex items-center gap-2">
+                                                        {index === 0 && <span className="material-symbols-outlined text-yellow-400 text-sm animate-pulse">check_circle</span>}
                                                         {player.nickname}
                                                     </span>
                                                     <span className="text-xs text-[#929bc9] md:hidden">{player.planet_name}</span>

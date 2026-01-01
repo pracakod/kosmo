@@ -1979,7 +1979,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             constructionQueue: [...prev.constructionQueue, newItem] // We can append to prev to be safe against race with other updates
         }));
 
-        addXP(Math.floor(totalResources / 1000), 'Building Construction');
+        addXP(Math.floor(totalResources / 100), 'Building Construction');
 
         // Sync with Supabase using the SAME calculated values
         // Note: Supabase update might overwrite parallel updates if we are not careful.
@@ -2063,7 +2063,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         if (item.type === 'building') {
             const totalRefund = refundMetal + refundCrystal;
-            addXP(-Math.floor(totalRefund / 1000), 'Construction Cancelled');
+            addXP(-Math.floor(totalRefund / 100), 'Construction Cancelled');
         }
 
         // Sync with Supabase
@@ -2188,7 +2188,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             shipyardQueue: newQueue
         }));
 
-        addXP(Math.floor((totalCost.metal + totalCost.crystal) / 2000), 'Fleet Production');
+        addXP(Math.floor((totalCost.metal + totalCost.crystal) / 200), 'Fleet Production');
 
         const { error } = await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
@@ -2249,7 +2249,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             shipyardQueue: newQueue
         }));
 
-        addXP(Math.floor((totalCost.metal + totalCost.crystal) / 2000), 'Defense Production');
+        addXP(Math.floor((totalCost.metal + totalCost.crystal) / 200), 'Defense Production');
 
         const { error } = await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
@@ -3085,7 +3085,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     const factor = Math.pow(1.5, l - 1);
                     cost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor);
                 }
-                val += Math.floor(cost / 1000);
+                val += Math.floor(cost / 100);
             });
             return val;
         };
@@ -3097,7 +3097,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 const def = SHIPS[id as ShipId];
                 if (!def) return;
                 const unitCost = def.baseCost.metal + def.baseCost.crystal;
-                val += Math.floor((unitCost * (count as number)) / 2000); // 50% XP for fleet compared to buildings
+                val += Math.floor((unitCost * (count as number)) / 200); // 50% XP for fleet compared to buildings
             });
             return val;
         };
