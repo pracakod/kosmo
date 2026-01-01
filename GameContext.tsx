@@ -782,8 +782,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         const interval = setInterval(save, 60000); // Save every 60 seconds (optimized for DB limits)
 
-        // Save on unmount / refresh
-        const handleBeforeUnload = () => {
+        // Save on unmount / refresh - MUST be synchronous for beforeunload
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // Synchronous localStorage save (guaranteed to complete)
+            const current = gameStateRef.current;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+            localStorage.setItem(STORAGE_KEY + '_backup', JSON.stringify({
+                ...current,
+                _savedAt: Date.now(),
+                _savedBy: 'beforeunload'
+            }));
+            console.log('💾 [BEFOREUNLOAD] Saved to localStorage');
+
+            // Also try async DB save (best effort)
             save();
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -2633,15 +2644,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     console.log(`💾 [TICK SAVE] Colony ${currentPlanet} - Buildings:`, JSON.stringify(newBuildings));
                     saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, newResources, newQueue, newShipQueue);
 
-                    // Sync global settings (Research/Points) to Profile even when on Colony
-                    if (settingsChanged) {
-                        supabase.from('profiles').update({
-                            production_settings: updatedSettings,
-                            research: newResearch
-                        }).eq('id', session.user.id).then(res => {
-                            if (res.error) console.error("Settings sync error:", res.error);
-                        });
-                    }
+                    // ALWAYS sync global settings to Profile when on Colony (Level16, Research, Points)
+                    // This ensures Level16 flag is never lost
+                    supabase.from('profiles').update({
+                        production_settings: updatedSettings,
+                        research: newResearch,
+                        points: calculatePoints(newResources, newBuildings, newShips),
+                        last_updated: Date.now()
+                    }).eq('id', session.user.id).then(res => {
+                        if (res.error) console.error("Colony profile sync error:", res.error);
+                    });
                 }
 
                 // Update lastSavedStateRef for validation

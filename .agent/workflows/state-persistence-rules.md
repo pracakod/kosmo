@@ -37,58 +37,29 @@ if (error) {
 
 ## 3. Przy błędzie ZAWSZE cofać zmiany LOKALNIE
 
-Zapamiętaj wartości PRZED zmianą i przywróć je przy błędzie:
-
-```typescript
-const oldResources = { ...gameState.resources };
-setGameState(prev => ({ ...prev, resources: newResources }));
-
-const { error } = await supabase.update(...);
-if (error) {
-    setGameState(prev => ({ ...prev, resources: oldResources }));
-}
-```
-
 ## 4. KAŻDA zmiana stanu MUSI być zapisana do DB
 
-```typescript
-// ❌ ŹLE - tylko lokalnie:
-setGameState(prev => ({ ...prev, resources: newResources }));
-return 'success';
-
-// ✅ DOBRZE - z zapisem do DB:
-setGameState(prev => ({ ...prev, resources: newResources }));
-await supabase.from('profiles').update({ resources: newResources });
-```
-
-## 5. Wzorzec bezpiecznej operacji
+## 5. beforeunload MUSI używać synchronicznego localStorage
 
 ```typescript
-const safeOperation = async () => {
-    // 1. Walidacja
-    if (!canDoOperation()) return;
-    
-    // 2. Zapisz oryginalne wartości
-    const originalState = { ...gameState.relevantField };
-    
-    // 3. Optimistic update (lokalna zmiana)
-    setGameState(prev => ({ ...prev, relevantField: newValue }));
-    
-    // 4. Zapis do DB
-    const { error } = await supabase.from('profiles').update({ ... });
-    
-    // 5. Obsługa błędu z lokalnym cofnięciem
-    if (error) {
-        console.error('Operation failed:', error);
-        setGameState(prev => ({ ...prev, relevantField: originalState }));
-        return false;
-    }
-    
-    return true;
+// ✅ DOBRZE:
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameStateRef.current));
+    save(); // Async - best effort
 };
 ```
 
-## Lista funkcji z poprawną obsługą
+## 6. Na kolonii ZAWSZE synchronizuj profile (Level16, Research, Points)
+
+## 7. Dodaj NaN protection do wszystkich obliczeń UI z czasem
+
+```typescript
+if (isNaN(value) || !isFinite(value)) value = 0;
+```
+
+---
+
+# Lista funkcji z poprawną obsługą ✅
 
 | Funkcja | Status | 
 |---------|--------|
@@ -103,5 +74,38 @@ const safeOperation = async () => {
 | sendTransport | ✅ |
 | sendColonize | ✅ |
 | cancelMission | ✅ |
-| buyPremium | ✅ |
+| buyPremium | ✅ (async+DB) |
 | processMissionReturn | ✅ |
+| beforeunload | ✅ (localStorage) |
+| colony tick save | ✅ (always sync profile) |
+| Fleet timer | ✅ (NaN protected) |
+
+---
+
+# Struktura plików
+
+```
+GameContext.tsx (2740+ lines) - główna logika gry
+├── saveGame() - centralny zapis
+├── refreshProfile() - użyj TYLKO na initial load
+├── tick() - główna pętla (1s)
+├── checkMissions() - co 1s
+├── processMissionArrival() - dotarcie misji
+├── processMissionReturn() - powrót floty
+├── upgradeBuilding/Research/Ship/Defense
+├── send*(Expedition/Attack/SpyProbe/Transport/Colonize)
+└── switchPlanet() - przełączanie planet
+
+views/Fleet.tsx - wyświetlanie misji (z NaN protection)
+views/Overview.tsx - przegląd planety
+```
+
+---
+
+# Najczęstsze błędy do unikania
+
+1. **refreshProfile w error handler** → ZAWSZE lokalne revert
+2. **Brak await** przy supabase → Dodaj error handling
+3. **beforeunload bez localStorage** → ZAWSZE sync backup
+4. **Tick save na kolonii bez profile sync** → ALWAYS sync profile
+5. **UI bez NaN protection** → Dodaj isNaN() check

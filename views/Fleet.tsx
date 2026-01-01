@@ -353,18 +353,22 @@ const ActiveMissionItem: React.FC<{ mission: FleetMission, onCancel: (id: string
             if (now < mission.arrivalTime) {
                 // Outbound Phase (0 -> 100% to arrival)
                 setStatus('outbound');
-                const totalDuration = mission.arrivalTime - mission.startTime;
+                const totalDuration = (mission.arrivalTime - mission.startTime) || 60000; // Fallback 60s
                 const elapsed = now - mission.startTime;
-                p = Math.min(100, (elapsed / totalDuration) * 100);
-                remaining = (mission.arrivalTime - now) / 1000;
+                p = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+                remaining = Math.max(0, (mission.arrivalTime - now) / 1000);
             } else {
                 // Inbound Phase (0 -> 100% from arrival to home)
                 setStatus('inbound');
-                const totalDuration = mission.returnTime - mission.arrivalTime;
+                const totalDuration = (mission.returnTime - mission.arrivalTime) || 60000; // Fallback 60s
                 const elapsed = now - mission.arrivalTime;
-                p = Math.min(100, (elapsed / totalDuration) * 100);
-                remaining = (mission.returnTime - now) / 1000;
+                p = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+                remaining = Math.max(0, (mission.returnTime - now) / 1000);
             }
+
+            // NaN protection
+            if (isNaN(p) || !isFinite(p)) p = 0;
+            if (isNaN(remaining) || !isFinite(remaining)) remaining = 0;
 
             setProgress(p);
             setTimeLeft(formatTime(remaining));
