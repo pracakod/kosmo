@@ -2467,8 +2467,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 return; // CRITICAL: Stop switch to protect data
             }
 
-            // Refresh planets data so we have the latest state when we switch back needed
-            fetchPlanets();
+            // NOTE: Removed fetchPlanets() here - it was causing Galaxy view to flicker
+            // Planet data doesn't change during a switch, so no need to refresh
         } else if (!currentPlanetId || currentPlanetId === 'main') {
             console.log('💾 Saving main planet before switch');
             await supabase.from('profiles').update({
