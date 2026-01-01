@@ -3,6 +3,8 @@
  * Captures errors and warnings, stores them locally and optionally in Supabase.
  */
 
+import { supabase } from './supabase';
+
 export interface LogEntry {
     id: string;
     timestamp: number;
@@ -18,6 +20,12 @@ const STORAGE_KEY = 'kosmo_error_logs';
 // In-memory logs for current session
 let logs: LogEntry[] = [];
 let listeners: ((logs: LogEntry[]) => void)[] = [];
+let userId: string | null = null;
+
+// Set user ID for logging (call after login)
+export const setLoggerUserId = (id: string | null) => {
+    userId = id;
+};
 
 // Generate unique ID
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -53,6 +61,24 @@ const notifyListeners = () => {
     listeners.forEach(fn => fn([...logs]));
 };
 
+// Send error to Supabase (for admin viewing)
+const sendErrorToSupabase = async (entry: LogEntry) => {
+    try {
+        await supabase.from('error_logs').insert({
+            user_id: userId,
+            error_type: entry.type,
+            message: entry.message,
+            context: entry.context,
+            stack: entry.stack,
+            user_agent: navigator.userAgent,
+            url: window.location.href
+        });
+    } catch (e) {
+        // Silently fail - don't create infinite loop
+        console.warn('Failed to send error to Supabase:', e);
+    }
+};
+
 // Add a log entry
 export const addLog = (type: LogEntry['type'], message: string, context?: string, stack?: string) => {
     const entry: LogEntry = {
@@ -72,7 +98,10 @@ export const addLog = (type: LogEntry['type'], message: string, context?: string
 // Log error
 export const logError = (message: string, context?: string, error?: Error) => {
     console.error(`🔴 [ERROR] ${message}`, context, error);
-    return addLog('error', message, context, error?.stack);
+    const entry = addLog('error', message, context, error?.stack);
+    // Send to Supabase for admin
+    sendErrorToSupabase(entry);
+    return entry;
 };
 
 // Log warning
@@ -140,3 +169,4 @@ export const copyLogsToClipboard = async (): Promise<boolean> => {
         return false;
     }
 };
+

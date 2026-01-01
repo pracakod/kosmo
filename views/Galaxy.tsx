@@ -16,7 +16,7 @@ interface SpyReport {
 const Galaxy: React.FC = () => {
     // Start at Galaxy 1, System 1 to see player immediately
     const [coords, setCoords] = useState({ galaxy: 1, system: 1 });
-    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, planetType, getPlayersInSystem, userId, buildings } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, mainPlanetCoords, planetType, getPlayersInSystem, userId, buildings } = useGame();
 
     const [systemUsers, setSystemUsers] = useState<any[]>([]);
     const [spyReport, setSpyReport] = useState<SpyReport | null>(null);
@@ -30,21 +30,18 @@ const Galaxy: React.FC = () => {
     const [colonizeResources, setColonizeResources] = useState({ metal: 0, crystal: 0, deuterium: 0 });
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-    // Load users when coords change
+    // Get users in current system
     React.useEffect(() => {
-        const load = async () => {
-            const users = await getPlayersInSystem(coords.galaxy, coords.system);
-            setSystemUsers(users);
-        };
-        load();
+        getPlayersInSystem(coords.galaxy, coords.system).then(setSystemUsers);
     }, [coords.galaxy, coords.system, getPlayersInSystem]);
 
     const getPlanet = (pos: number) => {
-        // PLAYER HOME: Dynamic check
-        if (galaxyCoords &&
-            coords.galaxy === galaxyCoords.galaxy &&
-            coords.system === galaxyCoords.system &&
-            galaxyCoords.position === pos) {
+        // MAIN PLANET: Always check mainPlanetCoords (doesn't change when switching colonies)
+        const mainCoords = mainPlanetCoords || galaxyCoords;
+        if (mainCoords &&
+            coords.galaxy === mainCoords.galaxy &&
+            coords.system === mainCoords.system &&
+            mainCoords.position === pos) {
 
             const pType = planetType === 'ice' ? "Lodowa" : (planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
 

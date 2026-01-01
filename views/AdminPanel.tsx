@@ -5,8 +5,10 @@ import { supabase } from '../lib/supabase';
 export const AdminPanel: React.FC = () => {
     const { session } = useGame();
     const [users, setUsers] = useState<any[]>([]);
+    const [errorLogs, setErrorLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState('');
+    const [showErrors, setShowErrors] = useState(false);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -22,8 +24,20 @@ export const AdminPanel: React.FC = () => {
         setLoading(false);
     };
 
+    const fetchErrorLogs = async () => {
+        const { data, error } = await supabase
+            .from('error_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+        if (!error) {
+            setErrorLogs(data || []);
+        }
+    };
+
     useEffect(() => {
         fetchUsers();
+        fetchErrorLogs();
     }, []);
 
     const deleteUser = async (userId: string, nickname: string) => {
@@ -213,6 +227,60 @@ ON DELETE CASCADE;
                         Dodaj
                     </button>
                 </div>
+            </div>
+
+            {/* Error Logs Section */}
+            <div className="mb-6 p-4 bg-red-900/20 border border-red-700/50 rounded-lg">
+                <div
+                    className="flex justify-between items-center cursor-pointer"
+                    onClick={() => setShowErrors(!showErrors)}
+                >
+                    <h3 className="text-lg font-bold text-red-400 flex items-center gap-2">
+                        🐛 Błędy Użytkowników
+                        <span className="text-xs bg-red-600 px-2 py-0.5 rounded">{errorLogs.length}</span>
+                    </h3>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); fetchErrorLogs(); }}
+                            className="text-xs bg-red-600/30 hover:bg-red-600 px-2 py-1 rounded transition-colors"
+                        >Odśwież</button>
+                        <span className="text-red-400">{showErrors ? '▼' : '▶'}</span>
+                    </div>
+                </div>
+
+                {showErrors && (
+                    <div className="mt-4 max-h-[400px] overflow-y-auto">
+                        {errorLogs.length === 0 ? (
+                            <p className="text-gray-500 text-sm">Brak zgłoszonych błędów. Upewnij się, że tabela error_logs istnieje w Supabase.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {errorLogs.map((err, i) => (
+                                    <div key={i} className="bg-black/30 p-3 rounded border border-red-500/20 text-xs">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className={`font-bold ${err.error_type === 'error' ? 'text-red-400' : 'text-yellow-400'}`}>
+                                                {err.error_type === 'error' ? '🔴 ERROR' : '🟡 WARNING'}
+                                            </span>
+                                            <span className="text-gray-500">{new Date(err.created_at).toLocaleString('pl-PL')}</span>
+                                        </div>
+                                        <p className="text-white mb-1">{err.message}</p>
+                                        {err.context && <p className="text-gray-400 text-[10px]">📍 {err.context}</p>}
+                                        {err.user_id && (
+                                            <p className="text-gray-600 text-[10px] font-mono mt-1">
+                                                User: {err.user_id.slice(0, 8)}... | {err.user_agent?.slice(0, 50)}...
+                                            </p>
+                                        )}
+                                        {err.stack && (
+                                            <details className="mt-2">
+                                                <summary className="text-gray-500 cursor-pointer hover:text-gray-300">Stack trace</summary>
+                                                <pre className="text-[9px] text-gray-600 mt-1 whitespace-pre-wrap">{err.stack}</pre>
+                                            </details>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="overflow-x-auto bg-gray-900/80 rounded-lg border border-gray-700">

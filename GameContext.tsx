@@ -166,6 +166,7 @@ interface GameContextType extends GameState {
     // Colonization
     planets: any[];
     currentPlanetId: string | null;
+    mainPlanetCoords?: { galaxy: number, system: number, position: number } | null;
     sendColonize: (coords: { galaxy: number, system: number, position: number }, resources: { metal: number, crystal: number, deuterium: number }) => Promise<boolean>;
     switchPlanet: (planetId: string) => void;
     fetchPlanets: () => Promise<void>;
@@ -279,6 +280,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const [planets, setPlanets] = useState<any[]>([]);
     const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
     const [mainPlanetName, setMainPlanetName] = useState<string>('Główna');
+    const [mainPlanetCoords, setMainPlanetCoords] = useState<{ galaxy: number, system: number, position: number } | null>(null);
     const [mainPlanetCache, setMainPlanetCache] = useState<GameState | null>(null); // Cache main planet data when switching to colony
     const gameStateRef = useRef(gameState);
     const currentPlanetRef = useRef(currentPlanetId);
@@ -695,6 +697,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 missionLogs: data.mission_logs || [],
                 galaxyCoords: data.galaxy_coords,
             };
+
+            // Store main planet coords permanently (doesn't change when switching colonies)
+            if (data.galaxy_coords) {
+                setMainPlanetCoords(data.galaxy_coords);
+            }
 
             // Validate if we have previous state
             validateState(mergedState, 'refreshProfile (Main Planet)');
@@ -2904,6 +2911,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         planets,
         currentPlanetId,
         mainPlanetName,
+        mainPlanetCoords,
         sendColonize,
         switchPlanet,
         fetchPlanets
