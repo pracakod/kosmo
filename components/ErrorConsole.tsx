@@ -11,6 +11,7 @@ const ErrorConsole: React.FC<ErrorConsoleProps> = ({ visible, onClose }) => {
     const [filter, setFilter] = useState<'all' | 'error' | 'warning'>('all');
     const [expanded, setExpanded] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [minimized, setMinimized] = useState(false);
 
     useEffect(() => {
         setLogs(getLogs());
@@ -44,15 +45,16 @@ const ErrorConsole: React.FC<ErrorConsoleProps> = ({ visible, onClose }) => {
             bottom: 0,
             left: 0,
             right: 0,
-            height: '50vh',
-            maxHeight: '400px',
+            height: minimized ? '40px' : '50vh',
+            maxHeight: minimized ? '40px' : '400px',
             background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
             borderTop: '2px solid #e94560',
             zIndex: 9999,
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'monospace',
-            fontSize: '12px'
+            fontSize: '12px',
+            transition: 'height 0.2s, max-height 0.2s'
         }}>
             {/* Header */}
             <div style={{
@@ -61,62 +63,81 @@ const ErrorConsole: React.FC<ErrorConsoleProps> = ({ visible, onClose }) => {
                 alignItems: 'center',
                 padding: '8px 12px',
                 background: 'rgba(0,0,0,0.3)',
-                borderBottom: '1px solid rgba(255,255,255,0.1)'
-            }}>
+                borderBottom: minimized ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                cursor: 'pointer'
+            }} onClick={() => setMinimized(!minimized)}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ color: '#e94560', fontWeight: 'bold' }}>🐛 Debug Console</span>
                     <span style={{ color: '#666', fontSize: '10px' }}>({logs.length} wpisów)</span>
+                    {minimized && logs.filter(l => l.type === 'error').length > 0 && (
+                        <span style={{ color: '#ff4444', fontSize: '10px' }}>
+                            • {logs.filter(l => l.type === 'error').length} błędów
+                        </span>
+                    )}
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* Filter buttons */}
-                    <button onClick={() => setFilter('all')} style={{
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {!minimized && (
+                        <>
+                            {/* Filter buttons - hidden on mobile when not minimized */}
+                            <div className="hidden sm:flex" style={{ gap: '8px' }}>
+                                <button onClick={(e) => { e.stopPropagation(); setFilter('all'); }} style={{
+                                    padding: '4px 8px',
+                                    background: filter === 'all' ? '#e94560' : '#333',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '10px'
+                                }}>Wszystkie</button>
+                                <button onClick={(e) => { e.stopPropagation(); setFilter('error'); }} style={{
+                                    padding: '4px 8px',
+                                    background: filter === 'error' ? '#ff4444' : '#333',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '10px'
+                                }}>🔴 Błędy</button>
+                                <button onClick={(e) => { e.stopPropagation(); setFilter('warning'); }} style={{
+                                    padding: '4px 8px',
+                                    background: filter === 'warning' ? '#ffaa00' : '#333',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontSize: '10px'
+                                }}>🟡 Ostrzeżenia</button>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); handleCopy(); }} style={{
+                                padding: '4px 12px',
+                                background: copied ? '#4CAF50' : '#0f3460',
+                                border: 'none',
+                                borderRadius: '4px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '10px'
+                            }}>{copied ? '✓' : '📋'}</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleClear(); }} style={{
+                                padding: '4px 12px',
+                                background: '#333',
+                                border: 'none',
+                                borderRadius: '4px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '10px'
+                            }}>🗑️</button>
+                        </>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); setMinimized(!minimized); }} style={{
                         padding: '4px 8px',
-                        background: filter === 'all' ? '#e94560' : '#333',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '10px'
-                    }}>Wszystkie</button>
-                    <button onClick={() => setFilter('error')} style={{
-                        padding: '4px 8px',
-                        background: filter === 'error' ? '#ff4444' : '#333',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '10px'
-                    }}>🔴 Błędy</button>
-                    <button onClick={() => setFilter('warning')} style={{
-                        padding: '4px 8px',
-                        background: filter === 'warning' ? '#ffaa00' : '#333',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '10px'
-                    }}>🟡 Ostrzeżenia</button>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={handleCopy} style={{
-                        padding: '4px 12px',
-                        background: copied ? '#4CAF50' : '#0f3460',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '10px'
-                    }}>{copied ? '✓ Skopiowano!' : '📋 Kopiuj'}</button>
-                    <button onClick={handleClear} style={{
-                        padding: '4px 12px',
                         background: '#333',
                         border: 'none',
                         borderRadius: '4px',
                         color: 'white',
                         cursor: 'pointer',
-                        fontSize: '10px'
-                    }}>🗑️ Wyczyść</button>
-                    <button onClick={onClose} style={{
+                        fontSize: '14px'
+                    }}>{minimized ? '▲' : '▼'}</button>
+                    <button onClick={(e) => { e.stopPropagation(); onClose(); }} style={{
                         padding: '4px 12px',
                         background: '#e94560',
                         border: 'none',
@@ -124,71 +145,74 @@ const ErrorConsole: React.FC<ErrorConsoleProps> = ({ visible, onClose }) => {
                         color: 'white',
                         cursor: 'pointer',
                         fontSize: '10px'
-                    }}>✕ Zamknij</button>
+                    }}>✕</button>
                 </div>
             </div>
 
-            {/* Log list */}
-            <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '8px'
-            }}>
-                {filteredLogs.length === 0 ? (
-                    <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
-                        Brak logów do wyświetlenia
-                    </div>
-                ) : (
-                    [...filteredLogs].reverse().map(log => (
-                        <div
-                            key={log.id}
-                            onClick={() => setExpanded(expanded === log.id ? null : log.id)}
-                            style={{
-                                padding: '8px',
-                                marginBottom: '4px',
-                                background: log.type === 'error' ? 'rgba(255,68,68,0.1)' :
-                                    log.type === 'warning' ? 'rgba(255,170,0,0.1)' :
-                                        'rgba(68,136,255,0.1)',
-                                borderLeft: `3px solid ${log.type === 'error' ? '#ff4444' :
-                                    log.type === 'warning' ? '#ffaa00' : '#4488ff'}`,
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                                <span style={{ color: '#666', minWidth: '70px' }}>{formatTime(log.timestamp)}</span>
-                                <span style={{
-                                    color: log.type === 'error' ? '#ff4444' :
-                                        log.type === 'warning' ? '#ffaa00' : '#4488ff',
-                                    fontWeight: 'bold',
-                                    minWidth: '80px'
-                                }}>
-                                    {log.type === 'error' ? '🔴 ERROR' :
-                                        log.type === 'warning' ? '🟡 WARN' : '🔵 INFO'}
-                                </span>
-                                <span style={{ color: '#eee', flex: 1 }}>{log.message}</span>
-                            </div>
-                            {log.context && (
-                                <div style={{ color: '#888', marginTop: '4px', paddingLeft: '158px', fontSize: '11px' }}>
-                                    📍 {log.context}
-                                </div>
-                            )}
-                            {expanded === log.id && log.stack && (
-                                <pre style={{
-                                    color: '#666',
-                                    marginTop: '8px',
-                                    paddingLeft: '158px',
-                                    fontSize: '10px',
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-all'
-                                }}>
-                                    {log.stack}
-                                </pre>
-                            )}
+            {/* Log list - hidden when minimized */}
+            {!minimized && (
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '8px'
+                }}>
+                    {filteredLogs.length === 0 ? (
+                        <div style={{ color: '#666', textAlign: 'center', padding: '20px' }}>
+                            Brak logów do wyświetlenia
                         </div>
-                    ))
-                )}
-            </div>
+                    ) : (
+                        [...filteredLogs].reverse().map(log => (
+                            <div
+                                key={log.id}
+                                onClick={() => setExpanded(expanded === log.id ? null : log.id)}
+                                style={{
+                                    padding: '8px',
+                                    marginBottom: '4px',
+                                    background: log.type === 'error' ? 'rgba(255,68,68,0.1)' :
+                                        log.type === 'warning' ? 'rgba(255,170,0,0.1)' :
+                                            'rgba(68,136,255,0.1)',
+                                    borderLeft: `3px solid ${log.type === 'error' ? '#ff4444' :
+                                        log.type === 'warning' ? '#ffaa00' : '#4488ff'}`,
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                    <span style={{ color: '#666', minWidth: '60px', fontSize: '10px' }}>{formatTime(log.timestamp)}</span>
+                                    <span style={{
+                                        color: log.type === 'error' ? '#ff4444' :
+                                            log.type === 'warning' ? '#ffaa00' : '#4488ff',
+                                        fontWeight: 'bold',
+                                        fontSize: '10px'
+                                    }}>
+                                        {log.type === 'error' ? '🔴' :
+                                            log.type === 'warning' ? '🟡' : '🔵'}
+                                    </span>
+                                    <span style={{ color: '#eee', flex: 1, fontSize: '11px', wordBreak: 'break-word' }}>{log.message}</span>
+                                </div>
+                                {log.context && (
+                                    <div style={{ color: '#888', marginTop: '4px', fontSize: '10px' }}>
+                                        📍 {log.context}
+                                    </div>
+                                )}
+                                {expanded === log.id && log.stack && (
+                                    <pre style={{
+                                        color: '#666',
+                                        marginTop: '8px',
+                                        fontSize: '9px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordBreak: 'break-all',
+                                        maxHeight: '150px',
+                                        overflow: 'auto'
+                                    }}>
+                                        {log.stack}
+                                    </pre>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 };
@@ -209,21 +233,21 @@ export const DebugButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
             onClick={onClick}
             style={{
                 position: 'fixed',
-                bottom: '20px',
-                right: '20px',
-                width: '50px',
-                height: '50px',
+                bottom: '80px', // Higher on mobile to avoid bottom nav
+                right: '10px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
-                background: errorCount > 0 ? '#e94560' : '#0f3460',
+                background: errorCount > 0 ? '#e94560' : 'rgba(15, 52, 96, 0.8)',
                 border: '2px solid rgba(255,255,255,0.2)',
                 color: 'white',
-                fontSize: '20px',
+                fontSize: '16px',
                 cursor: 'pointer',
                 zIndex: 9998,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                 transition: 'all 0.2s'
             }}
             title="Otwórz konsolę debug"
@@ -237,9 +261,9 @@ export const DebugButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
                     background: '#ff4444',
                     color: 'white',
                     borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
-                    fontSize: '10px',
+                    width: '18px',
+                    height: '18px',
+                    fontSize: '9px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -253,3 +277,4 @@ export const DebugButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
 };
 
 export default ErrorConsole;
+
