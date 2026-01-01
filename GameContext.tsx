@@ -1274,13 +1274,26 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         fetchMissions();
 
         // 1. Listen for new/updated missions (Attacks, Returns, Expeditions)
-        const missionsChannel = supabase
-            .channel('missions-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => {
+        // OPTIMIZATION: Split into two channels to filter only RELEVANT missions (My missions OR Missions targeting me)
+        // This vastly reduces Supabase Realtime usage compared to listening to global '*' events.
+        const missionsChannel = supabase.channel('missions-changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'missions',
+                filter: `source_user=eq.${session.user.id}` // My fleets
+            }, () => fetchMissions())
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'missions',
+                filter: `target_user=eq.${session.user.id}` // Attacks on me
+            }, () => {
+                console.log('⚠️ Incoming mission detected via Realtime');
                 fetchMissions();
             })
             .subscribe((status) => {
-                if (status === 'SUBSCRIBED') console.log('📡 Connected to Missions stream');
+                if (status === 'SUBSCRIBED') console.log('📡 Connected to Missions stream (Filtered)');
             });
 
         // 2. Listen for Profile updates (Logs, Messages - primarily)
