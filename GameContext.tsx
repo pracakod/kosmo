@@ -145,7 +145,7 @@ interface GameContextType extends GameState {
     cancelMission: (missionId: string) => Promise<void>;
     cancelConstruction: (constructionId: string) => Promise<void>;
     sendSpyProbe: (amount: number, coords: { galaxy: number, system: number, position: number }) => Promise<boolean>;
-    buyPremium: (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }) => TransactionStatus;
+    buyPremium: (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }) => Promise<TransactionStatus>;
     getCost: (type: 'building' | 'research', id: string, currentLevel: number) => { metal: number, crystal: number, deuterium: number };
     checkRequirements: (reqs?: Requirement[]) => boolean;
     renamePlanet: (newName: string) => void;
@@ -1333,22 +1333,40 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
 
     // Actions
-    const buyPremium = (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }): TransactionStatus => {
+    const buyPremium = async (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }): Promise<TransactionStatus> => {
         if (gameState.resources.darkMatter < cost) return 'no_funds';
         if (reward.metal && (gameState.resources.metal + reward.metal > gameState.resources.storage.metal)) return 'storage_full';
         if (reward.crystal && (gameState.resources.crystal + reward.crystal > gameState.resources.storage.crystal)) return 'storage_full';
         if (reward.deuterium && (gameState.resources.deuterium + reward.deuterium > gameState.resources.storage.deuterium)) return 'storage_full';
 
+        const newResources = {
+            ...gameState.resources,
+            darkMatter: gameState.resources.darkMatter - cost,
+            metal: Math.min(gameState.resources.storage.metal, gameState.resources.metal + (reward.metal || 0)),
+            crystal: Math.min(gameState.resources.storage.crystal, gameState.resources.crystal + (reward.crystal || 0)),
+            deuterium: Math.min(gameState.resources.storage.deuterium, gameState.resources.deuterium + (reward.deuterium || 0)),
+        };
+
         setGameState(prev => ({
             ...prev,
-            resources: {
-                ...prev.resources,
-                darkMatter: prev.resources.darkMatter - cost,
-                metal: Math.min(prev.resources.storage.metal, prev.resources.metal + (reward.metal || 0)),
-                crystal: Math.min(prev.resources.storage.crystal, prev.resources.crystal + (reward.crystal || 0)),
-                deuterium: Math.min(prev.resources.storage.deuterium, prev.resources.deuterium + (reward.deuterium || 0)),
-            }
+            resources: newResources
         }));
+
+        // CRITICAL: Save to database!
+        const { error } = await supabase.from('profiles').update({
+            resources: newResources
+        }).eq('id', session.user.id);
+
+        if (error) {
+            console.error('buyPremium DB save failed:', error);
+            // Revert locally
+            setGameState(prev => ({
+                ...prev,
+                resources: gameState.resources
+            }));
+            return 'no_funds';
+        }
+
         return 'success';
     };
 
@@ -1758,7 +1776,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (error) {
             console.error("Failed to cancel mission:", error);
             alert("Błąd anulowania misji.");
-            fetchMissions();
+            // SAFE REVERT: Restore original mission status locally
+            setGameState(prev => ({
+                ...prev,
+                activeMissions: prev.activeMissions.map(m =>
+                    m.id === missionId
+                        ? { ...m, status: 'flying', returnTime: mission.returnTime, arrivalTime: mission.arrivalTime }
+                        : m
+                )
+            }));
         }
     };
 
@@ -1941,6 +1967,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const buildTime = Math.max(1000, buildTimeMs);
         const now = Date.now();
 
+        const newItem = {
+            id: now.toString(),
+            type: 'research' as const,
+            itemId: researchId,
+            targetLevel: currentLevel + 1,
+            startTime: now,
+            endTime: now + buildTime
+        };
+
         setGameState(prev => ({
             ...prev,
             resources: {
@@ -1949,32 +1984,33 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 crystal: prev.resources.crystal - cost.crystal,
                 deuterium: prev.resources.deuterium - cost.deuterium
             },
-            constructionQueue: [...prev.constructionQueue, {
-                id: now.toString(),
-                type: 'research',
-                itemId: researchId,
-                targetLevel: currentLevel + 1,
-                startTime: now,
-                endTime: now + buildTime
-            }]
+            constructionQueue: [...prev.constructionQueue, newItem]
         }));
 
-        await supabase.from('profiles').update({
+        const { error } = await supabase.from('profiles').update({
             resources: {
                 ...gameState.resources,
                 metal: gameState.resources.metal - cost.metal,
                 crystal: gameState.resources.crystal - cost.crystal,
                 deuterium: gameState.resources.deuterium - cost.deuterium
             },
-            construction_queue: [...gameState.constructionQueue, {
-                id: now.toString(),
-                type: 'research',
-                itemId: researchId,
-                targetLevel: currentLevel + 1,
-                startTime: now,
-                endTime: now + buildTime
-            }]
+            construction_queue: [...gameState.constructionQueue, newItem]
         }).eq('id', session.user.id);
+
+        if (error) {
+            console.error('upgradeResearch DB save failed:', error);
+            // SAFE REVERT: Restore resources and remove research from queue
+            setGameState(prev => ({
+                ...prev,
+                resources: {
+                    ...prev.resources,
+                    metal: prev.resources.metal + cost.metal,
+                    crystal: prev.resources.crystal + cost.crystal,
+                    deuterium: prev.resources.deuterium + cost.deuterium
+                },
+                constructionQueue: prev.constructionQueue.filter(q => q.id !== newItem.id)
+            }));
+        }
     };
 
     const buildShip = async (shipId: ShipId, amount: number) => {
@@ -2014,10 +2050,25 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             shipyardQueue: newQueue
         }));
 
-        await supabase.from('profiles').update({
+        const { error } = await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
             shipyard_queue: newQueue
         }).eq('id', session.user.id);
+
+        if (error) {
+            console.error('buildShip DB save failed:', error);
+            // SAFE REVERT: Restore resources and remove from queue
+            setGameState(prev => ({
+                ...prev,
+                resources: {
+                    ...prev.resources,
+                    metal: prev.resources.metal + totalCost.metal,
+                    crystal: prev.resources.crystal + totalCost.crystal,
+                    deuterium: prev.resources.deuterium + totalCost.deuterium
+                },
+                shipyardQueue: prev.shipyardQueue.filter(q => q.id !== newItem.id)
+            }));
+        }
     };
 
     const buildDefense = async (defenseId: DefenseId, amount: number) => {
@@ -2058,10 +2109,25 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             shipyardQueue: newQueue
         }));
 
-        await supabase.from('profiles').update({
+        const { error } = await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
             shipyard_queue: newQueue
         }).eq('id', session.user.id);
+
+        if (error) {
+            console.error('buildDefense DB save failed:', error);
+            // SAFE REVERT: Restore resources and remove from queue
+            setGameState(prev => ({
+                ...prev,
+                resources: {
+                    ...prev.resources,
+                    metal: prev.resources.metal + totalCost.metal,
+                    crystal: prev.resources.crystal + totalCost.crystal,
+                    deuterium: prev.resources.deuterium + totalCost.deuterium
+                },
+                shipyardQueue: prev.shipyardQueue.filter(q => q.id !== newItem.id)
+            }));
+        }
     };
 
     // ===== COLONIZATION SYSTEM =====
@@ -2205,6 +2271,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         if (profileError) {
             console.error('❌ PROFILE UPDATE ERROR:', profileError);
+            // Mission was saved but profile wasn't updated - need to retry or warn user
+            // For safety, log warning but don't revert mission (it's already in DB)
+            console.warn('⚠️ Mission sent but profile not updated - will sync on next save');
         } else {
             console.log('✅ Colonization mission sent!', mission);
             alert(`Misja kolonizacyjna rozpoczęta! Czas lotu: ${(duration / 1000).toFixed(0)}s`);
