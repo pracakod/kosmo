@@ -338,6 +338,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 construction_queue: current.constructionQueue,
                 shipyard_queue: current.shipyardQueue,
             };
+
+            // CRITICAL FIX: Update Reference State immediately to match loaded colony
+            // This prevents "Data desync" warnings when validation runs
+            lastSavedStateRef.current = {
+                resources: current.resources,
+                buildings: current.buildings,
+                ships: current.ships,
+                defenses: current.defenses,
+                research: gameState.research, // Research is global, not per-planet
+                constructionQueue: current.constructionQueue,
+                shipyardQueue: current.shipyardQueue,
+                missionLogs: gameState.missionLogs // Mission logs are global
+            };
+
             console.log('💾 [SAVE] Colony Payload:', JSON.stringify(payload));
 
             const { error } = await supabase.from('planets').update(payload).eq('id', targetPlanet);
@@ -865,123 +879,58 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             message: `Założono nową kolonię na pozycji [${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}].`,
                             outcome: 'success'
                         };
-                        // Fleet consumed (set surviving to empty)
-                        survivingAttacker = {} as any;
-                        fetchPlanets();
-                    } else {
-                        // DB Error
-                        result = {
-                            id: `${mission.id}-error`,
-                            timestamp: Date.now(),
-                            title: 'Błąd Kolonizacji',
-                            message: `Wystąpił błąd systemowy podczas zakładania kolonii: ${error.message}`,
-                            outcome: 'failure'
-                        };
-                    }
-                }
+                    };
+                    // Fleet consumed (set surviving to empty)
+                    survivingAttacker = {} as any;
+                    fetchPlanets();
 
-            } else if (mission.type === MissionType.EXPEDITION) {
-                const expeditionResult = calculateExpeditionOutcome(mission);
-                result = expeditionResult.log;
-
-                // Add resources/ships from expedition to return cargo
-                if (expeditionResult.rewards) loot = expeditionResult.rewards;
-
-            } else if (mission.type === MissionType.ATTACK) {
-                if (mission.targetUserId) {
-                    // Fetch target data
-                    const { data: targetProfile, error: targetError } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
-
-                    if (targetError) throw new Error(`Target profile fetch error: ${targetError.message} `);
-
-
-                    if (targetProfile) {
-                        const battle = generatePvPBattleResult(
-                            mission.ships,
-                            targetProfile.ships,
-                            targetProfile.defenses || {}, // Pass defenses
-                            targetProfile.buildings,
-                            targetProfile.research,
-                            targetProfile.resources
-                        );
-
-                        result = {
-                            id: `${mission.id} -result`, // Deterministic ID to avoid duplicates
-                            timestamp: Date.now(),
-                            title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
-                            message: `Walka zakończona.Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}.Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek.Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)} `,
-                            outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
-                            rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
-                            report: {
-                                rounds: battle.rounds,
-                                attackerLosses: battle.attackerLosses,
-                                defenderLosses: battle.defenderLosses,
-                                defenderDefensesLost: battle.defenderDefensesLost,
-                                finalAttackerShips: battle.survivingAttackerShips,
-                                finalDefenderShips: battle.survivingDefenderShips,
-                                finalDefenderDefenses: battle.survivingDefenderDefenses,
-                                loot: battle.loot
-                            }
-                        };
-
-                        loot = battle.loot;
-                        survivingAttacker = battle.survivingAttackerShips;
-                        const survivingDefender = battle.survivingDefenderShips;
-                        const survivingDefenses = battle.survivingDefenderDefenses;
-
-                        // Update Defender (Apply damage) only if timestamp check allows (idempotency check improved by DB constraint but here logic helps too)
-                        // Note: For duplicate log prevention on defender side, we use a deterministic ID logic or check existing
-                        const newTargetLogs = [
-                            {
-                                id: `${mission.id} -def - log`, // Deterministic ID
-                                timestamp: Date.now(),
-                                title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nUszkodzone Budynki: ${Object.entries(battle.damagedBuildings || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${BUILDINGS[id as BuildingId]?.name || id}: -${n} lvl`).join(', ') || 'Brak'}.`,
-                                outcome: 'danger' as 'danger',
-                                report: {
-                                    rounds: battle.rounds,
-                                    attackerLosses: battle.attackerLosses,
-                                    defenderLosses: battle.defenderLosses,
-                                    defenderDefensesLost: battle.defenderDefensesLost,
-                                    finalAttackerShips: battle.survivingAttackerShips,
-                                    finalDefenderShips: battle.survivingDefenderShips,
-                                    finalDefenderDefenses: battle.survivingDefenderDefenses,
-                                    loot: battle.loot
-                                }
-                            },
-                            ...(targetProfile.mission_logs || [])
-                        ].filter((log, index, self) => index === self.findIndex(t => t.id === log.id)).slice(0, 50);
-
-                        // Apply building damage
-                        const newBuildings = { ...targetProfile.buildings };
-                        Object.entries(battle.damagedBuildings || {}).forEach(([buildingId, damage]) => {
-                            if (newBuildings[buildingId] !== undefined) {
-                                newBuildings[buildingId] = Math.max(0, newBuildings[buildingId] - (damage as number));
-                            }
-                        });
-
-                        await supabase.from('profiles').update({
-                            ships: survivingDefender,
-                            defenses: survivingDefenses, // Update defenses
-                            buildings: newBuildings, // Apply building damage
-                            resources: {
-                                ...targetProfile.resources,
-                                metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
-                                crystal: Math.max(0, targetProfile.resources.crystal - (loot.crystal || 0)),
-                                deuterium: Math.max(0, targetProfile.resources.deuterium - (loot.deuterium || 0))
-                            },
-                            mission_logs: newTargetLogs
-                        }).eq('id', mission.targetUserId);
-                    }
+                    // Force refresh main state or update ref to acknowledge resources spent
+                    // Usually colonization spends resources BEFORE flying, so no resource update here on Main?
+                    // Actually, resources were spent at LAUNCH. This is just Planet creation.
+                    // So no resources to sync here for main profile.
                 } else {
-                    // PvE (Pirates)
-                    const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
+                    // DB Error
                     result = {
-                        id: `${mission.id} -pve - result`,
+                        id: `${mission.id}-error`,
                         timestamp: Date.now(),
-                        title: 'Bitwa z Piratami',
-                        message: battle.log.message,
-                        outcome: 'success',
+                        title: 'Błąd Kolonizacji',
+                        message: `Wystąpił błąd systemowy podczas zakładania kolonii: ${error.message}`,
+                        outcome: 'failure'
+                    };
+                }
+            }
+
+        } else if (mission.type === MissionType.EXPEDITION) {
+            const expeditionResult = calculateExpeditionOutcome(mission);
+            result = expeditionResult.log;
+
+            // Add resources/ships from expedition to return cargo
+            if (expeditionResult.rewards) loot = expeditionResult.rewards;
+
+        } else if (mission.type === MissionType.ATTACK) {
+            if (mission.targetUserId) {
+                // Fetch target data
+                const { data: targetProfile, error: targetError } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+
+                if (targetError) throw new Error(`Target profile fetch error: ${targetError.message} `);
+
+
+                if (targetProfile) {
+                    const battle = generatePvPBattleResult(
+                        mission.ships,
+                        targetProfile.ships,
+                        targetProfile.defenses || {}, // Pass defenses
+                        targetProfile.buildings,
+                        targetProfile.research,
+                        targetProfile.resources
+                    );
+
+                    result = {
+                        id: `${mission.id} -result`, // Deterministic ID to avoid duplicates
+                        timestamp: Date.now(),
+                        title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
+                        message: `Walka zakończona.Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}.Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek.Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)} `,
+                        outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
                         rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
                         report: {
                             rounds: battle.rounds,
@@ -994,1068 +943,1024 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             loot: battle.loot
                         }
                     };
+
                     loot = battle.loot;
                     survivingAttacker = battle.survivingAttackerShips;
-                }
-            } else if (mission.type === MissionType.SPY) {
-                if (mission.targetUserId) {
-                    const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
-                    if (targetProfile) {
-                        // Espionage Logic
-                        const attackerSpyLevel = gameStateRef.current.research[ResearchId.ESPIONAGE_TECH] || 0;
-                        const defenderSpyLevel = targetProfile.research?.[ResearchId.ESPIONAGE_TECH] || 0;
-                        const spyDiff = attackerSpyLevel - defenderSpyLevel;
+                    const survivingDefender = battle.survivingDefenderShips;
+                    const survivingDefenses = battle.survivingDefenderDefenses;
 
-                        // Base Info: Resources (always visible if spy successful, maybe chance based later)
-                        let spyMessage = `Cel: ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}: ${mission.targetCoords.system}: ${mission.targetCoords.position}].\n`;
-                        spyMessage += `Zasoby: M:${Math.floor(targetProfile.resources?.metal || 0).toLocaleString()} C:${Math.floor(targetProfile.resources?.crystal || 0).toLocaleString()} D:${Math.floor(targetProfile.resources?.deuterium || 0).toLocaleString()} \n`;
-
-                        // Details based on Tech Difference
-                        // Level Difference >= 2: Show Fleet
-                        if (spyDiff >= 2 || attackerSpyLevel >= 4) { // Allow brute force with high level
-                            const sh = targetProfile.ships || {};
-                            const shipList = Object.entries(sh).map(([id, count]) => `${SHIPS[id as ShipId]?.name || id}: ${count} `).join(', ');
-                            spyMessage += `Flota: ${shipList || 'Brak'} \n`;
-                        } else {
-                            spyMessage += `Flota: (Wymagany wyższy poziom szpiegostwa) \n`;
-                        }
-
-                        // Level Difference >= 3: Show Defense
-                        if (spyDiff >= 3 || attackerSpyLevel >= 6) {
-                            const def = targetProfile.defenses || {};
-                            const defList = Object.entries(def).map(([id, count]) => `${DEFENSES[id as DefenseId]?.name || id}: ${count} `).join(', ');
-                            spyMessage += `Obrona: ${defList || 'Brak'} \n`;
-                        } else {
-                            spyMessage += `Obrona: (Wymagany wyższy poziom szpiegostwa) \n`;
-                        }
-
-                        // Level Difference >= 4: Show Buildings
-                        if (spyDiff >= 4 || attackerSpyLevel >= 8) {
-                            const bld = targetProfile.buildings || {};
-                            const bldList = Object.entries(bld).map(([id, lvl]) => `${BUILDINGS[id as BuildingId]?.name || id} (${lvl})`).join(', ');
-                            spyMessage += `Budynki: ${bldList || 'Brak'} \n`;
-                        } else {
-                            spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa) \n`;
-                        }
-
-                        result = {
-                            id: Date.now().toString(),
+                    // Update Defender (Apply damage) only if timestamp check allows (idempotency check improved by DB constraint but here logic helps too)
+                    // Note: For duplicate log prevention on defender side, we use a deterministic ID logic or check existing
+                    const newTargetLogs = [
+                        {
+                            id: `${mission.id} -def - log`, // Deterministic ID
                             timestamp: Date.now(),
-                            outcome: 'success' as 'success',
-                            title: 'Raport Szpiegowski',
-                            message: spyMessage
-                        };
+                            title: "ZOSTAŁEŚ ZAATAKOWANY!",
+                            message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nUszkodzone Budynki: ${Object.entries(battle.damagedBuildings || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${BUILDINGS[id as BuildingId]?.name || id}: -${n} lvl`).join(', ') || 'Brak'}.`,
+                            outcome: 'danger' as 'danger',
+                            report: {
+                                rounds: battle.rounds,
+                                attackerLosses: battle.attackerLosses,
+                                defenderLosses: battle.defenderLosses,
+                                defenderDefensesLost: battle.defenderDefensesLost,
+                                finalAttackerShips: battle.survivingAttackerShips,
+                                finalDefenderShips: battle.survivingDefenderShips,
+                                finalDefenderDefenses: battle.survivingDefenderDefenses,
+                                loot: battle.loot
+                            }
+                        },
+                        ...(targetProfile.mission_logs || [])
+                    ].filter((log, index, self) => index === self.findIndex(t => t.id === log.id)).slice(0, 50);
 
-                        const newTargetLogs = [
-                            {
-                                id: Date.now().toString(),
-                                timestamp: Date.now(),
-                                title: "Wykryto Skanowanie!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] przeskanował Twoją planetę.`,
-                                outcome: 'danger' as 'danger'
-                            },
-                            ...(targetProfile.mission_logs || [])
-                        ].slice(0, 50);
+                    // Apply building damage
+                    const newBuildings = { ...targetProfile.buildings };
+                    Object.entries(battle.damagedBuildings || {}).forEach(([buildingId, damage]) => {
+                        if (newBuildings[buildingId] !== undefined) {
+                            newBuildings[buildingId] = Math.max(0, newBuildings[buildingId] - (damage as number));
+                        }
+                    });
 
-                        await supabase.from('profiles').update({ mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
-                    }
-                } else {
-                    result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'success' as 'success', title: 'Raport', message: 'Opuszczona planeta. Brak oznak życia.' };
+                    await supabase.from('profiles').update({
+                        ships: survivingDefender,
+                        defenses: survivingDefenses, // Update defenses
+                        buildings: newBuildings, // Apply building damage
+                        resources: {
+                            ...targetProfile.resources,
+                            metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
+                            crystal: Math.max(0, targetProfile.resources.crystal - (loot.crystal || 0)),
+                            deuterium: Math.max(0, targetProfile.resources.deuterium - (loot.deuterium || 0))
+                        },
+                        mission_logs: newTargetLogs
+                    }).eq('id', mission.targetUserId);
                 }
-            } else if (mission.type === MissionType.TRANSPORT) {
-                if (mission.targetUserId) {
-                    const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
-                    if (targetProfile) {
-                        const newRes = {
-                            metal: (targetProfile.resources?.metal || 0) + (mission.resources?.metal || 0),
-                            crystal: (targetProfile.resources?.crystal || 0) + (mission.resources?.crystal || 0),
-                            deuterium: (targetProfile.resources?.deuterium || 0) + (mission.resources?.deuterium || 0),
-                        };
-
-                        const newTargetLogs = [
-                            { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz ${session.user.email?.split('@')[0]} dostarczył: M:${mission.resources?.metal} C:${mission.resources?.crystal} D:${mission.resources?.deuterium} `, outcome: 'success' as 'success' },
-                            ...(targetProfile.mission_logs || [])
-                        ].slice(0, 50);
-
-                        await supabase.from('profiles').update({ resources: newRes, mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
-
-                        result = {
-                            id: Date.now().toString(),
-                            timestamp: Date.now(),
-                            outcome: 'success' as 'success',
-                            title: 'Transport',
-                            message: `Surowce dostarczone do gracza ${targetProfile.nickname || targetProfile.email || 'Nieznany'} [${mission.targetCoords.galaxy}: ${mission.targetCoords.system}: ${mission.targetCoords.position}].`
-                        };
+            } else {
+                // PvE (Pirates)
+                const battle = generatePvPBattleResult(mission.ships, {}, {}, {}, {}, { metal: 5000, crystal: 3000, deuterium: 500 } as any, true);
+                result = {
+                    id: `${mission.id} -pve - result`,
+                    timestamp: Date.now(),
+                    title: 'Bitwa z Piratami',
+                    message: battle.log.message,
+                    outcome: 'success',
+                    rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
+                    report: {
+                        rounds: battle.rounds,
+                        attackerLosses: battle.attackerLosses,
+                        defenderLosses: battle.defenderLosses,
+                        defenderDefensesLost: battle.defenderDefensesLost,
+                        finalAttackerShips: battle.survivingAttackerShips,
+                        finalDefenderShips: battle.survivingDefenderShips,
+                        finalDefenderDefenses: battle.survivingDefenderDefenses,
+                        loot: battle.loot
                     }
-                } else {
-                    result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'neutral' as 'neutral', title: 'Transport', message: 'Nie znaleziono kolonii docelowej. Flota zawraca.' };
-                    loot = mission.resources || {};
-                }
+                };
+                loot = battle.loot;
+                survivingAttacker = battle.survivingAttackerShips;
             }
+        } else if (mission.type === MissionType.SPY) {
+            if (mission.targetUserId) {
+                const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+                if (targetProfile) {
+                    // Espionage Logic
+                    const attackerSpyLevel = gameStateRef.current.research[ResearchId.ESPIONAGE_TECH] || 0;
+                    const defenderSpyLevel = targetProfile.research?.[ResearchId.ESPIONAGE_TECH] || 0;
+                    const spyDiff = attackerSpyLevel - defenderSpyLevel;
 
-            // Update Mission in DB (Start Return)
-            const duration = (mission.returnTime - mission.startTime) / 2; // Approximate way home
+                    // Base Info: Resources (always visible if spy successful, maybe chance based later)
+                    let spyMessage = `Cel: ${targetProfile.nickname || 'Nieznany'} [${mission.targetCoords.galaxy}: ${mission.targetCoords.system}: ${mission.targetCoords.position}].\n`;
+                    spyMessage += `Zasoby: M:${Math.floor(targetProfile.resources?.metal || 0).toLocaleString()} C:${Math.floor(targetProfile.resources?.crystal || 0).toLocaleString()} D:${Math.floor(targetProfile.resources?.deuterium || 0).toLocaleString()} \n`;
 
-            await supabase.from('missions').update({
-                status: 'returning',
-                resources: loot, // Attacker carries this
-                ships: survivingAttacker,
-                result: result,
-                return_time: Date.now() + duration
-            }).eq('id', mission.id);
+                    // Details based on Tech Difference
+                    // Level Difference >= 2: Show Fleet
+                    if (spyDiff >= 2 || attackerSpyLevel >= 4) { // Allow brute force with high level
+                        const sh = targetProfile.ships || {};
+                        const shipList = Object.entries(sh).map(([id, count]) => `${SHIPS[id as ShipId]?.name || id}: ${count} `).join(', ');
+                        spyMessage += `Flota: ${shipList || 'Brak'} \n`;
+                    } else {
+                        spyMessage += `Flota: (Wymagany wyższy poziom szpiegostwa) \n`;
+                    }
 
-            // Refresh local state
-            fetchMissions();
+                    // Level Difference >= 3: Show Defense
+                    if (spyDiff >= 3 || attackerSpyLevel >= 6) {
+                        const def = targetProfile.defenses || {};
+                        const defList = Object.entries(def).map(([id, count]) => `${DEFENSES[id as DefenseId]?.name || id}: ${count} `).join(', ');
+                        spyMessage += `Obrona: ${defList || 'Brak'} \n`;
+                    } else {
+                        spyMessage += `Obrona: (Wymagany wyższy poziom szpiegostwa) \n`;
+                    }
 
-        } catch (err: any) {
-            console.error('Critical Error in processMissionArrival:', err);
-            alert(`BŁĄD PRZYLOTU: ${err.message || err} `);
+                    // Level Difference >= 4: Show Buildings
+                    if (spyDiff >= 4 || attackerSpyLevel >= 8) {
+                        const bld = targetProfile.buildings || {};
+                        const bldList = Object.entries(bld).map(([id, lvl]) => `${BUILDINGS[id as BuildingId]?.name || id} (${lvl})`).join(', ');
+                        spyMessage += `Budynki: ${bldList || 'Brak'} \n`;
+                    } else {
+                        spyMessage += `Budynki: (Wymagany wyższy poziom szpiegostwa) \n`;
+                    }
+
+                    result = {
+                        id: Date.now().toString(),
+                        timestamp: Date.now(),
+                        outcome: 'success' as 'success',
+                        title: 'Raport Szpiegowski',
+                        message: spyMessage
+                    };
+
+                    const newTargetLogs = [
+                        {
+                            id: Date.now().toString(),
+                            timestamp: Date.now(),
+                            title: "Wykryto Skanowanie!",
+                            message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] przeskanował Twoją planetę.`,
+                            outcome: 'danger' as 'danger'
+                        },
+                        ...(targetProfile.mission_logs || [])
+                    ].slice(0, 50);
+
+                    await supabase.from('profiles').update({ mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
+                }
+            } else {
+                result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'success' as 'success', title: 'Raport', message: 'Opuszczona planeta. Brak oznak życia.' };
+            }
+        } else if (mission.type === MissionType.TRANSPORT) {
+            if (mission.targetUserId) {
+                const { data: targetProfile } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+                if (targetProfile) {
+                    const newRes = {
+                        metal: (targetProfile.resources?.metal || 0) + (mission.resources?.metal || 0),
+                        crystal: (targetProfile.resources?.crystal || 0) + (mission.resources?.crystal || 0),
+                        deuterium: (targetProfile.resources?.deuterium || 0) + (mission.resources?.deuterium || 0),
+                    };
+
+                    const newTargetLogs = [
+                        { id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Gracz ${session.user.email?.split('@')[0]} dostarczył: M:${mission.resources?.metal} C:${mission.resources?.crystal} D:${mission.resources?.deuterium} `, outcome: 'success' as 'success' },
+                        ...(targetProfile.mission_logs || [])
+                    ].slice(0, 50);
+
+                    await supabase.from('profiles').update({ resources: newRes, mission_logs: newTargetLogs }).eq('id', mission.targetUserId);
+
+                    result = {
+                        id: Date.now().toString(),
+                        timestamp: Date.now(),
+                        outcome: 'success' as 'success',
+                        title: 'Transport',
+                        message: `Surowce dostarczone do gracza ${targetProfile.nickname || targetProfile.email || 'Nieznany'} [${mission.targetCoords.galaxy}: ${mission.targetCoords.system}: ${mission.targetCoords.position}].`
+                    };
+                }
+            } else {
+                result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'neutral' as 'neutral', title: 'Transport', message: 'Nie znaleziono kolonii docelowej. Flota zawraca.' };
+                loot = mission.resources || {};
+            }
         }
-    };
 
-    // Process Mission Return (Home reached)
-    const processMissionReturn = async (localMission: FleetMission) => {
-        try {
-            console.log('Processing Return:', localMission.id);
-            // Fetch fresh mission data to ensure we have the latest result/resources from DB
-            const { data: missionData } = await supabase.from('missions').select('*').eq('id', localMission.id).single();
+        // Update Mission in DB (Start Return)
+        const duration = (mission.returnTime - mission.startTime) / 2; // Approximate way home
 
-            // Fallback to local if fetch fails (shouldn't happen) but prefer DB data
-            const mission = missionData ? {
-                ...localMission,
-                resources: missionData.resources,
-                result: missionData.result,
-                ships: missionData.ships || localMission.ships, // CRITICAL: Use DB ships (contains battle losses)
-                type: missionData.mission_type as MissionType,
-                startTime: missionData.start_time,
-                returnTime: missionData.return_time
-            } : localMission;
+        await supabase.from('missions').update({
+            status: 'returning',
+            resources: loot, // Attacker carries this
+            ships: survivingAttacker,
+            result: result,
+            return_time: Date.now() + duration
+        }).eq('id', mission.id);
 
-            const { data: myProfile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        // Refresh local state
+        fetchMissions();
 
-            if (error) throw new Error(`Profile fetch error: ${error.message} `);
-            if (!myProfile) return;
+    } catch (err: any) {
+        console.error('Critical Error in processMissionArrival:', err);
+        alert(`BŁĄD PRZYLOTU: ${err.message || err} `);
+    }
+};
 
-            const newShips = { ...myProfile.ships };
-            if (mission.ships) {
-                Object.entries(mission.ships).forEach(([id, count]) => {
-                    // Ensure we are adding numbers, even if DB returns strings
+// Process Mission Return (Home reached)
+const processMissionReturn = async (localMission: FleetMission) => {
+    try {
+        console.log('Processing Return:', localMission.id);
+        // Fetch fresh mission data to ensure we have the latest result/resources from DB
+        const { data: missionData } = await supabase.from('missions').select('*').eq('id', localMission.id).single();
+
+        // Fallback to local if fetch fails (shouldn't happen) but prefer DB data
+        const mission = missionData ? {
+            ...localMission,
+            resources: missionData.resources,
+            result: missionData.result,
+            ships: missionData.ships || localMission.ships, // CRITICAL: Use DB ships (contains battle losses)
+            type: missionData.mission_type as MissionType,
+            startTime: missionData.start_time,
+            returnTime: missionData.return_time
+        } : localMission;
+
+        const { data: myProfile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+
+        if (error) throw new Error(`Profile fetch error: ${error.message} `);
+        if (!myProfile) return;
+
+        const newShips = { ...myProfile.ships };
+        if (mission.ships) {
+            Object.entries(mission.ships).forEach(([id, count]) => {
+                // Ensure we are adding numbers, even if DB returns strings
+                const currentVal = Number(newShips[id]) || 0;
+                const valToAdd = Number(count) || 0;
+                newShips[id] = currentVal + valToAdd;
+            });
+        }
+
+        const newRes = { ...myProfile.resources };
+        if (mission.resources) {
+            newRes.metal = (Number(newRes.metal) || 0) + (Number(mission.resources.metal) || 0);
+            newRes.crystal = (Number(newRes.crystal) || 0) + (Number(mission.resources.crystal) || 0);
+            newRes.deuterium = (Number(newRes.deuterium) || 0) + (Number(mission.resources.deuterium) || 0);
+            newRes.darkMatter = (Number(newRes.darkMatter) || 0) + (Number(mission.resources.darkMatter) || 0);
+
+            // Add found ships (Expedition Rewards)
+            if (mission.resources.ships) {
+                Object.entries(mission.resources.ships).forEach(([id, count]) => {
                     const currentVal = Number(newShips[id]) || 0;
                     const valToAdd = Number(count) || 0;
                     newShips[id] = currentVal + valToAdd;
                 });
             }
+        }
 
-            const newRes = { ...myProfile.resources };
-            if (mission.resources) {
-                newRes.metal = (Number(newRes.metal) || 0) + (Number(mission.resources.metal) || 0);
-                newRes.crystal = (Number(newRes.crystal) || 0) + (Number(mission.resources.crystal) || 0);
-                newRes.deuterium = (Number(newRes.deuterium) || 0) + (Number(mission.resources.deuterium) || 0);
-                newRes.darkMatter = (Number(newRes.darkMatter) || 0) + (Number(mission.resources.darkMatter) || 0);
+        const title = mission.result?.title || `Powrót Floty`;
+        const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
+        const outcome = (mission.result?.outcome as 'success' | 'failure' | 'neutral' | 'danger') || 'success';
 
-                // Add found ships (Expedition Rewards)
-                if (mission.resources.ships) {
-                    Object.entries(mission.resources.ships).forEach(([id, count]) => {
-                        const currentVal = Number(newShips[id]) || 0;
-                        const valToAdd = Number(count) || 0;
-                        newShips[id] = currentVal + valToAdd;
-                    });
-                }
-            }
+        // IDEMPOTENCY CHECK: Use deterministic ID to prevent double-payouts
+        const logId = `${mission.id}-return`;
+        const alreadyProcessed = myProfile.mission_logs?.some((l: any) => l.id === logId);
 
-            const title = mission.result?.title || `Powrót Floty`;
-            const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
-            const outcome = (mission.result?.outcome as 'success' | 'failure' | 'neutral' | 'danger') || 'success';
-
-            // IDEMPOTENCY CHECK: Use deterministic ID to prevent double-payouts
-            const logId = `${mission.id}-return`;
-            const alreadyProcessed = myProfile.mission_logs?.some((l: any) => l.id === logId);
-
-            if (alreadyProcessed) {
-                console.warn("⚠️ Mission return already processed (log found). Skipping payout.");
-                // Just mark as complete in DB to stop it from reappearing
-                await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
-                fetchMissions();
-                return;
-            }
-
-            const newLogs = [
-                { id: logId, timestamp: Date.now(), title, message, outcome, rewards: mission.resources },
-                ...(myProfile.mission_logs || [])
-            ].slice(0, 50);
-
-            // Robust update
-            const { error: updateError } = await supabase.from('profiles').update({
-                ships: newShips,
-                resources: newRes,
-                mission_logs: newLogs,
-                points: calculatePoints(newRes, gameState.buildings, newShips)
-            }).eq('id', session.user.id);
-
-            if (updateError) throw new Error(`Profile Update Failed: ${updateError.message} `);
-
-            // Update Local State immediately to prevent race condition with Autosaver
-            setGameState(prev => ({
-                ...prev,
-                ships: newShips,
-                resources: newRes,
-                missionLogs: newLogs
-            }));
-
-            // Mark completed
+        if (alreadyProcessed) {
+            console.warn("⚠️ Mission return already processed (log found). Skipping payout.");
+            // Just mark as complete in DB to stop it from reappearing
             await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
-            // REMOVED: refreshProfile() - DO NOT call here! It may load cached/stale data and overwrite the just-saved state
-            // Local state was already updated above in setGameState, and DB was already updated in supabase.from('profiles').update
             fetchMissions();
-
-        } catch (err: any) {
-            console.error('Critical Error in processMissionReturn:', err);
-            // Temporary debug alert
-            alert(`BŁĄD MISJI: ${err.message || err} `);
-        }
-    };
-
-
-
-    // Subscribe to DB changes (Realtime)
-    useEffect(() => {
-        if (!session?.user) return;
-        fetchMissions();
-
-        // 1. Listen for new/updated missions (Attacks, Returns, Expeditions)
-        const missionsChannel = supabase
-            .channel('missions-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => {
-                fetchMissions();
-            })
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') console.log('📡 Connected to Missions stream');
-            });
-
-        // 2. Listen for Profile updates (Logs, Messages - primarily)
-        // Filter by OUR user ID to avoid receiving events for other players (saves bandwidth)
-        const profileChannel = supabase
-            .channel('profile-changes')
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'profiles',
-                filter: `id=eq.${session.user.id}`
-            }, (payload: any) => {
-                const newData = payload.new;
-                if (newData) {
-                    console.log('📡 Profile update received via Realtime');
-                    // SAFE UPDATE: Only update logs and nickname.
-                    // DO NOT update resources/buildings from here to avoid overwriting local opportunistic state.
-                    setGameState(prev => ({
-                        ...prev,
-                        missionLogs: newData.mission_logs || prev.missionLogs,
-                        nickname: newData.nickname || prev.nickname
-                    }));
-                }
-            })
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') console.log('📡 Connected to Profile stream');
-            });
-
-        return () => {
-            supabase.removeChannel(missionsChannel);
-            supabase.removeChannel(profileChannel);
-        };
-    }, [session]);
-
-
-
-    // Mission Processing Watcher
-    useEffect(() => {
-        if (!loaded || !session?.user) return;
-        let pollCounter = 0;
-
-        const checkMissions = async () => {
-            const now = Date.now();
-            // Access state via ref to avoid dependency loop
-            const missions = gameStateRef.current.activeMissions;
-
-            // Poll for incoming attacks every 30 seconds (backup for Realtime)
-            pollCounter++;
-            if (pollCounter >= 30) {
-                pollCounter = 0;
-                fetchMissions(); // Refresh both active and incoming missions
-            }
-
-            // Check Arrivals (OWNER processes normally, TARGET processes if stuck > 10s)
-            const arriving = missions.filter(m =>
-                m.status === 'flying' &&
-                now >= m.arrivalTime &&
-                !m.eventProcessed &&
-                (m.ownerId === session.user.id || (m.targetUserId === session.user.id && now > m.arrivalTime + 10000))
-            );
-
-            for (const m of arriving) {
-                // Mark processed locally to prevent race in loop
-                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.map(am => am.id === m.id ? { ...am, eventProcessed: true } : am) }));
-                await processMissionArrival(m);
-            }
-
-            // Check Returns
-            const returning = missions.filter(m => m.status === 'returning' && now >= m.returnTime && m.ownerId === session.user.id);
-            for (const m of returning) {
-                // Mark processed
-                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.filter(am => am.id !== m.id) })); // Optimistic remove
-                await processMissionReturn(m);
-            }
-        };
-
-        // Also fetch immediately on load
-        fetchMissions();
-
-        const interval = setInterval(checkMissions, 1000);
-        return () => clearInterval(interval);
-        // Removed gameState.activeMissions from dependencies to prevent loop
-    }, [loaded, session]);
-    // Re-implementing helper functions for context clarity
-    const getCost = (type: 'building' | 'research', id: string, currentLevel: number) => {
-        const def = type === 'building' ? BUILDINGS[id as BuildingId] : RESEARCH[id as ResearchId];
-        const factor = Math.pow(1.5, currentLevel);
-        return {
-            metal: Math.floor(def.baseCost.metal * factor),
-            crystal: Math.floor(def.baseCost.crystal * factor),
-            deuterium: Math.floor(def.baseCost.deuterium * factor),
-        };
-    };
-
-    const checkRequirements = (reqs?: Requirement[]) => {
-        if (!reqs) return true;
-        for (const req of reqs) {
-            if (req.type === 'building') {
-                if (gameState.buildings[req.id as BuildingId] < req.level) return false;
-            } else if (req.type === 'research') {
-                if (gameState.research[req.id as ResearchId] < req.level) return false;
-            }
-        }
-        return true;
-    };
-
-    const calculateProduction = (state: GameState) => {
-        const settings = state.productionSettings;
-        const getPct = (id: BuildingId) => (settings[id] !== undefined ? settings[id]! : 100) / 100;
-        const metalLvl = state.buildings[BuildingId.METAL_MINE];
-        const metalPct = getPct(BuildingId.METAL_MINE);
-        const metalProd = Math.floor(30 * metalLvl * Math.pow(1.1, metalLvl)) * GAME_SPEED * metalPct;
-        const metalCons = Math.floor(20 * metalLvl * Math.pow(1.1, metalLvl)) * metalPct;
-        const crystalLvl = state.buildings[BuildingId.CRYSTAL_MINE];
-        const crystalPct = getPct(BuildingId.CRYSTAL_MINE);
-        const crystalProd = Math.floor(20 * crystalLvl * Math.pow(1.1, crystalLvl)) * GAME_SPEED * crystalPct;
-        const crystalCons = Math.floor(20 * crystalLvl * Math.pow(1.1, crystalLvl)) * crystalPct;
-        const deutLvl = state.buildings[BuildingId.DEUTERIUM_SYNTH];
-        const deutPct = getPct(BuildingId.DEUTERIUM_SYNTH);
-        const deuteriumProd = Math.floor(10 * deutLvl * Math.pow(1.1, deutLvl)) * GAME_SPEED * deutPct;
-        const deuteriumCons = Math.floor(40 * deutLvl * Math.pow(1.1, deutLvl)) * deutPct;
-        const solarLvl = state.buildings[BuildingId.SOLAR_PLANT];
-        const solarPct = getPct(BuildingId.SOLAR_PLANT);
-        const fusionLvl = state.buildings[BuildingId.FUSION_REACTOR];
-        const fusionPct = getPct(BuildingId.FUSION_REACTOR);
-        const energyTechLvl = state.research[ResearchId.ENERGY_TECH] || 0;
-        let energyProd = Math.floor(20 * solarLvl * Math.pow(1.1, solarLvl)) * solarPct;
-        energyProd += Math.floor(30 * fusionLvl * Math.pow(1.05 + 0.01 * energyTechLvl, fusionLvl)) * fusionPct;
-        const fusionDeutCons = Math.floor(10 * fusionLvl * Math.pow(1.1, fusionLvl)) * fusionPct;
-        const energyCons = metalCons + crystalCons + deuteriumCons;
-        const netEnergy = energyProd - energyCons;
-        const productionFactor = netEnergy >= 0 ? 1 : Math.max(0, energyProd / (energyCons || 1));
-        const metalStorageLvl = state.buildings[BuildingId.METAL_STORAGE];
-        const crystalStorageLvl = state.buildings[BuildingId.CRYSTAL_STORAGE];
-        const deutStorageLvl = state.buildings[BuildingId.DEUTERIUM_TANK];
-        const maxMetal = 10000 + 5000 * Math.floor(Math.pow(2.5, metalStorageLvl));
-        const maxCrystal = 10000 + 5000 * Math.floor(Math.pow(2.5, crystalStorageLvl));
-        const maxDeuterium = 10000 + 5000 * Math.floor(Math.pow(2.5, deutStorageLvl));
-        return {
-            metal: (metalProd * productionFactor) / 3600,
-            crystal: (crystalProd * productionFactor) / 3600,
-            deuterium: ((deuteriumProd - fusionDeutCons) * productionFactor) / 3600,
-            energy: netEnergy,
-            maxEnergy: energyProd,
-            storage: { metal: maxMetal, crystal: maxCrystal, deuterium: maxDeuterium }
-        };
-    };
-
-    const getLevel = (points: number, settings?: any) => {
-        const rawLevel = Math.floor(points / 1000) + 1;
-        if (settings?.reachedLevel16) {
-            return Math.max(16, rawLevel);
-        }
-        return rawLevel;
-    };
-
-
-    // Actions
-    const buyPremium = async (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }): Promise<TransactionStatus> => {
-        if (gameState.resources.darkMatter < cost) return 'no_funds';
-        if (reward.metal && (gameState.resources.metal + reward.metal > gameState.resources.storage.metal)) return 'storage_full';
-        if (reward.crystal && (gameState.resources.crystal + reward.crystal > gameState.resources.storage.crystal)) return 'storage_full';
-        if (reward.deuterium && (gameState.resources.deuterium + reward.deuterium > gameState.resources.storage.deuterium)) return 'storage_full';
-
-        const newResources = {
-            ...gameState.resources,
-            darkMatter: gameState.resources.darkMatter - cost,
-            metal: Math.min(gameState.resources.storage.metal, gameState.resources.metal + (reward.metal || 0)),
-            crystal: Math.min(gameState.resources.storage.crystal, gameState.resources.crystal + (reward.crystal || 0)),
-            deuterium: Math.min(gameState.resources.storage.deuterium, gameState.resources.deuterium + (reward.deuterium || 0)),
-        };
-
-        setGameState(prev => ({
-            ...prev,
-            resources: newResources
-        }));
-
-        // CRITICAL: Save to database!
-        const { error } = await supabase.from('profiles').update({
-            resources: newResources
-        }).eq('id', session.user.id);
-
-        if (error) {
-            console.error('buyPremium DB save failed:', error);
-            // Revert locally
-            setGameState(prev => ({
-                ...prev,
-                resources: gameState.resources
-            }));
-            return 'no_funds';
-        }
-
-        return 'success';
-    };
-
-    const sendExpedition = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        const duration = 10 * 1000; // 10 seconds for testing
-
-        const now = Date.now();
-        const missionId = crypto.randomUUID();
-
-        // Optimistic update
-        const mission: FleetMission = {
-            id: missionId,
-            ownerId: session?.user.id,
-            type: MissionType.EXPEDITION,
-            ships: ships,
-            targetCoords: coords,
-            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            startTime: now,
-            arrivalTime: now + (duration / 2),
-            returnTime: now + duration,
-            eventProcessed: false,
-            status: 'flying'
-        };
-
-        setGameState(prev => {
-            const newShips = { ...prev.ships };
-            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
-            return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
-        });
-
-        // DB Insert
-        const { error: insertError } = await supabase.from('missions').insert({
-            id: missionId,
-            owner_id: session.user.id,
-            mission_type: MissionType.EXPEDITION,
-            ships: ships,
-            target_coords: coords,
-            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            start_time: now,
-            arrival_time: now + (duration / 2),
-            return_time: now + duration,
-            status: 'flying'
-        });
-
-        if (insertError) {
-            console.error("Failed to start expedition:", insertError);
-            alert("Błąd wysyłania ekspedycji. Spróbuj ponownie.");
-            // SAFE REVERT: Restore ships and remove mission locally instead of refreshProfile
-            setGameState(prev => {
-                const revertedShips = { ...prev.ships };
-                Object.entries(ships).forEach(([id, count]) => {
-                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
-                });
-                return {
-                    ...prev,
-                    ships: revertedShips,
-                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-                };
-            });
             return;
         }
+
+        const newLogs = [
+            { id: logId, timestamp: Date.now(), title, message, outcome, rewards: mission.resources },
+            ...(myProfile.mission_logs || [])
+        ].slice(0, 50);
+
+        // Robust update
+        const { error: updateError } = await supabase.from('profiles').update({
+            ships: newShips,
+            resources: newRes,
+            mission_logs: newLogs,
+            points: calculatePoints(newRes, gameState.buildings, newShips)
+        }).eq('id', session.user.id);
+
+        // Update Reference State for Validation to know this is "saved"
+        // This prevents "Data desync" warnings when validation runs against old ref vs new DB data
+        lastSavedStateRef.current = {
+            ...lastSavedStateRef.current,
+            ships: newShips,
+            resources: newRes,
+            missionLogs: newLogs
+        };
+
+        if (updateError) throw new Error(`Profile Update Failed: ${updateError.message} `);
+
+        // Update Local State immediately to prevent race condition with Autosaver
+        setGameState(prev => ({
+            ...prev,
+            ships: newShips,
+            resources: newRes,
+            missionLogs: newLogs
+        }));
+
+        // Mark completed
+        await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
+        // REMOVED: refreshProfile() - DO NOT call here! It may load cached/stale data and overwrite the just-saved state
+        // Local state was already updated above in setGameState, and DB was already updated in supabase.from('profiles').update
+        fetchMissions();
+
+    } catch (err: any) {
+        console.error('Critical Error in processMissionReturn:', err);
+        // Temporary debug alert
+        alert(`BŁĄD MISJI: ${err.message || err} `);
+    }
+};
+
+
+
+// Subscribe to DB changes (Realtime)
+useEffect(() => {
+    if (!session?.user) return;
+    fetchMissions();
+
+    // 1. Listen for new/updated missions (Attacks, Returns, Expeditions)
+    const missionsChannel = supabase
+        .channel('missions-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => {
+            fetchMissions();
+        })
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') console.log('📡 Connected to Missions stream');
+        });
+
+    // 2. Listen for Profile updates (Logs, Messages - primarily)
+    // Filter by OUR user ID to avoid receiving events for other players (saves bandwidth)
+    const profileChannel = supabase
+        .channel('profile-changes')
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${session.user.id}`
+        }, (payload: any) => {
+            const newData = payload.new;
+            if (newData) {
+                console.log('📡 Profile update received via Realtime');
+                // SAFE UPDATE: Only update logs and nickname.
+                // DO NOT update resources/buildings from here to avoid overwriting local opportunistic state.
+                setGameState(prev => ({
+                    ...prev,
+                    missionLogs: newData.mission_logs || prev.missionLogs,
+                    nickname: newData.nickname || prev.nickname
+                }));
+            }
+        })
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') console.log('📡 Connected to Profile stream');
+        });
+
+    return () => {
+        supabase.removeChannel(missionsChannel);
+        supabase.removeChannel(profileChannel);
+    };
+}, [session]);
+
+
+
+// Mission Processing Watcher
+useEffect(() => {
+    if (!loaded || !session?.user) return;
+    let pollCounter = 0;
+
+    const checkMissions = async () => {
+        const now = Date.now();
+        // Access state via ref to avoid dependency loop
+        const missions = gameStateRef.current.activeMissions;
+
+        // Poll for incoming attacks every 30 seconds (backup for Realtime)
+        pollCounter++;
+        if (pollCounter >= 30) {
+            pollCounter = 0;
+            fetchMissions(); // Refresh both active and incoming missions
+        }
+
+        // Check Arrivals (OWNER processes normally, TARGET processes if stuck > 10s)
+        const arriving = missions.filter(m =>
+            m.status === 'flying' &&
+            now >= m.arrivalTime &&
+            !m.eventProcessed &&
+            (m.ownerId === session.user.id || (m.targetUserId === session.user.id && now > m.arrivalTime + 10000))
+        );
+
+        for (const m of arriving) {
+            // Mark processed locally to prevent race in loop
+            setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.map(am => am.id === m.id ? { ...am, eventProcessed: true } : am) }));
+            await processMissionArrival(m);
+        }
+
+        // Check Returns
+        const returning = missions.filter(m => m.status === 'returning' && now >= m.returnTime && m.ownerId === session.user.id);
+        for (const m of returning) {
+            // Mark processed
+            setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.filter(am => am.id !== m.id) })); // Optimistic remove
+            await processMissionReturn(m);
+        }
+    };
+
+    // Also fetch immediately on load
+    fetchMissions();
+
+    const interval = setInterval(checkMissions, 1000);
+    return () => clearInterval(interval);
+    // Removed gameState.activeMissions from dependencies to prevent loop
+}, [loaded, session]);
+// Re-implementing helper functions for context clarity
+const getCost = (type: 'building' | 'research', id: string, currentLevel: number) => {
+    const def = type === 'building' ? BUILDINGS[id as BuildingId] : RESEARCH[id as ResearchId];
+    const factor = Math.pow(1.5, currentLevel);
+    return {
+        metal: Math.floor(def.baseCost.metal * factor),
+        crystal: Math.floor(def.baseCost.crystal * factor),
+        deuterium: Math.floor(def.baseCost.deuterium * factor),
+    };
+};
+
+const checkRequirements = (reqs?: Requirement[]) => {
+    if (!reqs) return true;
+    for (const req of reqs) {
+        if (req.type === 'building') {
+            if (gameState.buildings[req.id as BuildingId] < req.level) return false;
+        } else if (req.type === 'research') {
+            if (gameState.research[req.id as ResearchId] < req.level) return false;
+        }
+    }
+    return true;
+};
+
+const calculateProduction = (state: GameState) => {
+    const settings = state.productionSettings;
+    const getPct = (id: BuildingId) => (settings[id] !== undefined ? settings[id]! : 100) / 100;
+    const metalLvl = state.buildings[BuildingId.METAL_MINE];
+    const metalPct = getPct(BuildingId.METAL_MINE);
+    const metalProd = Math.floor(30 * metalLvl * Math.pow(1.1, metalLvl)) * GAME_SPEED * metalPct;
+    const metalCons = Math.floor(20 * metalLvl * Math.pow(1.1, metalLvl)) * metalPct;
+    const crystalLvl = state.buildings[BuildingId.CRYSTAL_MINE];
+    const crystalPct = getPct(BuildingId.CRYSTAL_MINE);
+    const crystalProd = Math.floor(20 * crystalLvl * Math.pow(1.1, crystalLvl)) * GAME_SPEED * crystalPct;
+    const crystalCons = Math.floor(20 * crystalLvl * Math.pow(1.1, crystalLvl)) * crystalPct;
+    const deutLvl = state.buildings[BuildingId.DEUTERIUM_SYNTH];
+    const deutPct = getPct(BuildingId.DEUTERIUM_SYNTH);
+    const deuteriumProd = Math.floor(10 * deutLvl * Math.pow(1.1, deutLvl)) * GAME_SPEED * deutPct;
+    const deuteriumCons = Math.floor(40 * deutLvl * Math.pow(1.1, deutLvl)) * deutPct;
+    const solarLvl = state.buildings[BuildingId.SOLAR_PLANT];
+    const solarPct = getPct(BuildingId.SOLAR_PLANT);
+    const fusionLvl = state.buildings[BuildingId.FUSION_REACTOR];
+    const fusionPct = getPct(BuildingId.FUSION_REACTOR);
+    const energyTechLvl = state.research[ResearchId.ENERGY_TECH] || 0;
+    let energyProd = Math.floor(20 * solarLvl * Math.pow(1.1, solarLvl)) * solarPct;
+    energyProd += Math.floor(30 * fusionLvl * Math.pow(1.05 + 0.01 * energyTechLvl, fusionLvl)) * fusionPct;
+    const fusionDeutCons = Math.floor(10 * fusionLvl * Math.pow(1.1, fusionLvl)) * fusionPct;
+    const energyCons = metalCons + crystalCons + deuteriumCons;
+    const netEnergy = energyProd - energyCons;
+    const productionFactor = netEnergy >= 0 ? 1 : Math.max(0, energyProd / (energyCons || 1));
+    const metalStorageLvl = state.buildings[BuildingId.METAL_STORAGE];
+    const crystalStorageLvl = state.buildings[BuildingId.CRYSTAL_STORAGE];
+    const deutStorageLvl = state.buildings[BuildingId.DEUTERIUM_TANK];
+    const maxMetal = 10000 + 5000 * Math.floor(Math.pow(2.5, metalStorageLvl));
+    const maxCrystal = 10000 + 5000 * Math.floor(Math.pow(2.5, crystalStorageLvl));
+    const maxDeuterium = 10000 + 5000 * Math.floor(Math.pow(2.5, deutStorageLvl));
+    return {
+        metal: (metalProd * productionFactor) / 3600,
+        crystal: (crystalProd * productionFactor) / 3600,
+        deuterium: ((deuteriumProd - fusionDeutCons) * productionFactor) / 3600,
+        energy: netEnergy,
+        maxEnergy: energyProd,
+        storage: { metal: maxMetal, crystal: maxCrystal, deuterium: maxDeuterium }
+    };
+};
+
+const getLevel = (points: number, settings?: any) => {
+    const rawLevel = Math.floor(points / 1000) + 1;
+    if (settings?.reachedLevel16) {
+        return Math.max(16, rawLevel);
+    }
+    return rawLevel;
+};
+
+
+// Actions
+const buyPremium = async (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }): Promise<TransactionStatus> => {
+    if (gameState.resources.darkMatter < cost) return 'no_funds';
+    if (reward.metal && (gameState.resources.metal + reward.metal > gameState.resources.storage.metal)) return 'storage_full';
+    if (reward.crystal && (gameState.resources.crystal + reward.crystal > gameState.resources.storage.crystal)) return 'storage_full';
+    if (reward.deuterium && (gameState.resources.deuterium + reward.deuterium > gameState.resources.storage.deuterium)) return 'storage_full';
+
+    const newResources = {
+        ...gameState.resources,
+        darkMatter: gameState.resources.darkMatter - cost,
+        metal: Math.min(gameState.resources.storage.metal, gameState.resources.metal + (reward.metal || 0)),
+        crystal: Math.min(gameState.resources.storage.crystal, gameState.resources.crystal + (reward.crystal || 0)),
+        deuterium: Math.min(gameState.resources.storage.deuterium, gameState.resources.deuterium + (reward.deuterium || 0)),
+    };
+
+    setGameState(prev => ({
+        ...prev,
+        resources: newResources
+    }));
+
+    // CRITICAL: Save to database!
+    const { error } = await supabase.from('profiles').update({
+        resources: newResources
+    }).eq('id', session.user.id);
+
+    if (error) {
+        console.error('buyPremium DB save failed:', error);
+        // Revert locally
+        setGameState(prev => ({
+            ...prev,
+            resources: gameState.resources
+        }));
+        return 'no_funds';
+    }
+
+    // Update Reference to prevent Desync warning
+    lastSavedStateRef.current = {
+        ...lastSavedStateRef.current,
+        resources: newResources
+    };
+
+    // Update Reference
+    lastSavedStateRef.current = {
+        ...lastSavedStateRef.current,
+        resources: newResources
+    };
+
+    return 'success';
+};
+
+const sendExpedition = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
+    const duration = 10 * 1000; // 10 seconds for testing
+
+    const now = Date.now();
+    const missionId = crypto.randomUUID();
+
+    // Optimistic update
+    const mission: FleetMission = {
+        id: missionId,
+        ownerId: session?.user.id,
+        type: MissionType.EXPEDITION,
+        ships: ships,
+        targetCoords: coords,
+        originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        startTime: now,
+        arrivalTime: now + (duration / 2),
+        returnTime: now + duration,
+        eventProcessed: false,
+        status: 'flying'
+    };
+
+    setGameState(prev => {
+        const newShips = { ...prev.ships };
+        Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
+        return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
+    });
+
+    // DB Insert
+    const { error: insertError } = await supabase.from('missions').insert({
+        id: missionId,
+        owner_id: session.user.id,
+        mission_type: MissionType.EXPEDITION,
+        ships: ships,
+        target_coords: coords,
+        origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        start_time: now,
+        arrival_time: now + (duration / 2),
+        return_time: now + duration,
+        status: 'flying'
+    });
+
+    if (insertError) {
+        console.error("Failed to start expedition:", insertError);
+        alert("Błąd wysyłania ekspedycji. Spróbuj ponownie.");
+        // SAFE REVERT: Restore ships and remove mission locally instead of refreshProfile
+        setGameState(prev => {
+            const revertedShips = { ...prev.ships };
+            Object.entries(ships).forEach(([id, count]) => {
+                revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
+            });
+            return {
+                ...prev,
+                ships: revertedShips,
+                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+            };
+        });
+        return;
+    }
+
+    // Update Profile (Deduct Ships)
+    const currentShips = { ...gameState.ships };
+    Object.entries(ships).forEach(([id, count]) => {
+        currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
+    });
+
+    await supabase.from('profiles').update({
+        ships: currentShips,
+        points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
+    }).eq('id', session.user.id);
+};
+
+const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
+    // Distance-based duration calculation - MINIMUM 5 minutes for attacks
+    const origin = gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 };
+    let duration: number;
+    const MIN_ATTACK_TIME = 5 * 60 * 1000; // 5 minutes minimum
+
+    if (origin.galaxy !== coords.galaxy) {
+        // Different galaxy = 1 hour
+        duration = 60 * 60 * 1000;
+    } else if (origin.system !== coords.system) {
+        // Different system = 5 min + system difference * 30 seconds (max 15 min)
+        const systemDiff = Math.abs(origin.system - coords.system);
+        duration = Math.min(15 * 60 * 1000, MIN_ATTACK_TIME + systemDiff * 30 * 1000);
+    } else {
+        // Same system = 5 min + position difference * 10 seconds
+        const posDiff = Math.abs(origin.position - coords.position);
+        duration = MIN_ATTACK_TIME + posDiff * 10 * 1000;
+    }
+
+    const now = Date.now();
+    const missionId = crypto.randomUUID();
+    const targetUserId = await findTargetUser(coords);
+    console.log('🎯 ATTACK: Target at coords', coords, 'resolved to userId:', targetUserId);
+
+    if (targetUserId) {
+        // Newbie Protection Check
+        const { data: targetProfile, error: targetError } = await supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', targetUserId)
+            .single();
+
+        if (!targetError && targetProfile) {
+            // Determine level based on points (Level = Cube Root of Points)
+            // Assuming standard OGame-like formula: Points = Level^3 approx (or use your specific formula)
+            // User requirement: "Protection for small level e.g. 7"
+            // Let's use the inverse of whatever points formula we have or just raw points threshold.
+            // If we assume Level 1 = 0 pts, Level 7 is roughly ?
+            // Let's rely on the requested "Level 7" logic.
+            // Since we don't store 'active' level in DB, we calculate it or just use points.
+            // Level = Math.floor(Math.pow(targetProfile.points || 0, 1/3)) is a common approximation if not stored.
+            // However, based on our previous Ranking.tsx: const computedLevel = Math.floor(Math.pow(profile.points || 0, 1/3));
+            const targetLevel = Math.floor(Math.pow(targetProfile.points || 0, 1 / 3));
+
+            if (targetLevel < 7) {
+                alert(`Ten gracz znajduje się pod ochroną początkujących(Poziom ${targetLevel} < 7).Atak niemożliwy.`);
+                return;
+            }
+        }
+    }
+
+    // Optimistic
+    const mission: FleetMission = {
+        id: missionId,
+        ownerId: session?.user.id,
+        type: MissionType.ATTACK,
+        ships: ships,
+        targetCoords: coords,
+        targetUserId: targetUserId,
+        originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        startTime: now,
+        arrivalTime: now + duration, // Duration is ONE WAY flight time
+        returnTime: now + (duration * 2), // Round trip = 2x one-way
+        eventProcessed: false,
+        status: 'flying'
+    };
+
+    setGameState(prev => {
+        const newShips = { ...prev.ships };
+        Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
+        return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
+    });
+
+    // DB Insert
+    const { data: insertedData, error: insertError } = await supabase.from('missions').insert({
+        id: missionId,
+        owner_id: session.user.id,
+        target_user_id: targetUserId,
+        mission_type: MissionType.ATTACK,
+        ships: ships,
+        target_coords: coords,
+        origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        start_time: now,
+        arrival_time: now + duration, // ONE WAY
+        return_time: now + (duration * 2), // Round trip
+        status: 'flying'
+    }).select();
+
+    if (insertError) {
+        console.error('❌ ATTACK INSERT ERROR:', insertError);
+        alert("Błąd wysyłania ataku.");
+        // SAFE REVERT: Restore ships locally instead of refreshProfile
+        setGameState(prev => {
+            const revertedShips = { ...prev.ships };
+            Object.entries(ships).forEach(([id, count]) => {
+                revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
+            });
+            return {
+                ...prev,
+                ships: revertedShips,
+                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+            };
+        });
+        return;
+    }
+
+    if (insertError) {
+        console.error('❌ ATTACK INSERT ERROR:', insertError);
+    } else {
+        console.log('✅ ATTACK INSERTED:', insertedData);
 
         // Update Profile (Deduct Ships)
         const currentShips = { ...gameState.ships };
         Object.entries(ships).forEach(([id, count]) => {
             currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
         });
-
         await supabase.from('profiles').update({
             ships: currentShips,
             points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
         }).eq('id', session.user.id);
+    }
+};
+
+const sendSpyProbe = async (amount: number, coords: { galaxy: number, system: number, position: number }) => {
+    if ((gameState.ships[ShipId.ESPIONAGE_PROBE] || 0) < amount) return false;
+
+    const now = Date.now();
+    const duration = 30 * 1000; // 30 seconds for spy probe
+
+    const missionId = crypto.randomUUID();
+    const targetUserId = await findTargetUser(coords);
+
+    // Optimistic update
+    const mission: FleetMission = {
+        id: missionId,
+        ownerId: session?.user.id,
+        type: MissionType.SPY,
+        ships: { [ShipId.ESPIONAGE_PROBE]: amount } as any,
+        targetCoords: coords,
+        targetUserId: targetUserId,
+        originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        startTime: now,
+        arrivalTime: now + (duration / 2),
+        returnTime: now + duration,
+        eventProcessed: false,
+        status: 'flying'
     };
 
-    const sendAttack = async (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => {
-        // Distance-based duration calculation - MINIMUM 5 minutes for attacks
-        const origin = gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 };
-        let duration: number;
-        const MIN_ATTACK_TIME = 5 * 60 * 1000; // 5 minutes minimum
+    setGameState(prev => ({
+        ...prev,
+        ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount },
+        activeMissions: [...prev.activeMissions, mission]
+    }));
 
-        if (origin.galaxy !== coords.galaxy) {
-            // Different galaxy = 1 hour
-            duration = 60 * 60 * 1000;
-        } else if (origin.system !== coords.system) {
-            // Different system = 5 min + system difference * 30 seconds (max 15 min)
-            const systemDiff = Math.abs(origin.system - coords.system);
-            duration = Math.min(15 * 60 * 1000, MIN_ATTACK_TIME + systemDiff * 30 * 1000);
-        } else {
-            // Same system = 5 min + position difference * 10 seconds
-            const posDiff = Math.abs(origin.position - coords.position);
-            duration = MIN_ATTACK_TIME + posDiff * 10 * 1000;
-        }
+    // DB Insert
+    const { error: insertError } = await supabase.from('missions').insert({
+        id: missionId,
+        owner_id: session.user.id,
+        target_user_id: targetUserId,
+        mission_type: MissionType.SPY,
+        ships: { [ShipId.ESPIONAGE_PROBE]: amount },
+        target_coords: coords,
+        origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        start_time: now,
+        arrival_time: now + (duration / 2),
+        return_time: now + duration,
+        status: 'flying'
+    });
 
-        const now = Date.now();
-        const missionId = crypto.randomUUID();
-        const targetUserId = await findTargetUser(coords);
-        console.log('🎯 ATTACK: Target at coords', coords, 'resolved to userId:', targetUserId);
-
-        if (targetUserId) {
-            // Newbie Protection Check
-            const { data: targetProfile, error: targetError } = await supabase
-                .from('profiles')
-                .select('points')
-                .eq('id', targetUserId)
-                .single();
-
-            if (!targetError && targetProfile) {
-                // Determine level based on points (Level = Cube Root of Points)
-                // Assuming standard OGame-like formula: Points = Level^3 approx (or use your specific formula)
-                // User requirement: "Protection for small level e.g. 7"
-                // Let's use the inverse of whatever points formula we have or just raw points threshold.
-                // If we assume Level 1 = 0 pts, Level 7 is roughly ?
-                // Let's rely on the requested "Level 7" logic.
-                // Since we don't store 'active' level in DB, we calculate it or just use points.
-                // Level = Math.floor(Math.pow(targetProfile.points || 0, 1/3)) is a common approximation if not stored.
-                // However, based on our previous Ranking.tsx: const computedLevel = Math.floor(Math.pow(profile.points || 0, 1/3));
-                const targetLevel = Math.floor(Math.pow(targetProfile.points || 0, 1 / 3));
-
-                if (targetLevel < 7) {
-                    alert(`Ten gracz znajduje się pod ochroną początkujących(Poziom ${targetLevel} < 7).Atak niemożliwy.`);
-                    return;
-                }
-            }
-        }
-
-        // Optimistic
-        const mission: FleetMission = {
-            id: missionId,
-            ownerId: session?.user.id,
-            type: MissionType.ATTACK,
-            ships: ships,
-            targetCoords: coords,
-            targetUserId: targetUserId,
-            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            startTime: now,
-            arrivalTime: now + duration, // Duration is ONE WAY flight time
-            returnTime: now + (duration * 2), // Round trip = 2x one-way
-            eventProcessed: false,
-            status: 'flying'
-        };
-
-        setGameState(prev => {
-            const newShips = { ...prev.ships };
-            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
-            return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
-        });
-
-        // DB Insert
-        const { data: insertedData, error: insertError } = await supabase.from('missions').insert({
-            id: missionId,
-            owner_id: session.user.id,
-            target_user_id: targetUserId,
-            mission_type: MissionType.ATTACK,
-            ships: ships,
-            target_coords: coords,
-            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            start_time: now,
-            arrival_time: now + duration, // ONE WAY
-            return_time: now + (duration * 2), // Round trip
-            status: 'flying'
-        }).select();
-
-        if (insertError) {
-            console.error('❌ ATTACK INSERT ERROR:', insertError);
-            alert("Błąd wysyłania ataku.");
-            // SAFE REVERT: Restore ships locally instead of refreshProfile
-            setGameState(prev => {
-                const revertedShips = { ...prev.ships };
-                Object.entries(ships).forEach(([id, count]) => {
-                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
-                });
-                return {
-                    ...prev,
-                    ships: revertedShips,
-                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-                };
-            });
-            return;
-        }
-
-        if (insertError) {
-            console.error('❌ ATTACK INSERT ERROR:', insertError);
-        } else {
-            console.log('✅ ATTACK INSERTED:', insertedData);
-
-            // Update Profile (Deduct Ships)
-            const currentShips = { ...gameState.ships };
-            Object.entries(ships).forEach(([id, count]) => {
-                currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
-            });
-            await supabase.from('profiles').update({
-                ships: currentShips,
-                points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
-            }).eq('id', session.user.id);
-        }
-    };
-
-    const sendSpyProbe = async (amount: number, coords: { galaxy: number, system: number, position: number }) => {
-        if ((gameState.ships[ShipId.ESPIONAGE_PROBE] || 0) < amount) return false;
-
-        const now = Date.now();
-        const duration = 30 * 1000; // 30 seconds for spy probe
-
-        const missionId = crypto.randomUUID();
-        const targetUserId = await findTargetUser(coords);
-
-        // Optimistic update
-        const mission: FleetMission = {
-            id: missionId,
-            ownerId: session?.user.id,
-            type: MissionType.SPY,
-            ships: { [ShipId.ESPIONAGE_PROBE]: amount } as any,
-            targetCoords: coords,
-            targetUserId: targetUserId,
-            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            startTime: now,
-            arrivalTime: now + (duration / 2),
-            returnTime: now + duration,
-            eventProcessed: false,
-            status: 'flying'
-        };
-
+    if (insertError) {
+        console.error("Failed to send spy probe:", insertError);
+        alert("Błąd wysyłania sondy.");
+        // SAFE REVERT: Restore probes locally
         setGameState(prev => ({
             ...prev,
-            ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount },
-            activeMissions: [...prev.activeMissions, mission]
+            ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: (prev.ships[ShipId.ESPIONAGE_PROBE] || 0) + amount },
+            activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
         }));
+        return false;
+    }
 
-        // DB Insert
-        const { error: insertError } = await supabase.from('missions').insert({
-            id: missionId,
-            owner_id: session.user.id,
-            target_user_id: targetUserId,
-            mission_type: MissionType.SPY,
-            ships: { [ShipId.ESPIONAGE_PROBE]: amount },
-            target_coords: coords,
-            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            start_time: now,
-            arrival_time: now + (duration / 2),
-            return_time: now + duration,
-            status: 'flying'
-        });
+    // Update Profile (Deduct Probes)
+    const currentShips = { ...gameState.ships };
+    currentShips[ShipId.ESPIONAGE_PROBE] = (currentShips[ShipId.ESPIONAGE_PROBE] || 0) - amount;
+    await supabase.from('profiles').update({
+        ships: currentShips,
+        points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
+    }).eq('id', session.user.id);
 
-        if (insertError) {
-            console.error("Failed to send spy probe:", insertError);
-            alert("Błąd wysyłania sondy.");
-            // SAFE REVERT: Restore probes locally
-            setGameState(prev => ({
-                ...prev,
-                ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: (prev.ships[ShipId.ESPIONAGE_PROBE] || 0) + amount },
-                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-            }));
-            return false;
-        }
+    return true;
+};
 
-        // Update Profile (Deduct Probes)
-        const currentShips = { ...gameState.ships };
-        currentShips[ShipId.ESPIONAGE_PROBE] = (currentShips[ShipId.ESPIONAGE_PROBE] || 0) - amount;
-        await supabase.from('profiles').update({
-            ships: currentShips,
-            points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
-        }).eq('id', session.user.id);
+const sendTransport = async (ships: Record<ShipId, number>, resources: MissionRewards, coords: { galaxy: number, system: number, position: number }) => {
+    const duration = 5 * 60 * 1000; // 5 minutes fixed
+    const now = Date.now();
+    const missionId = crypto.randomUUID();
+    const targetUserId = await findTargetUser(coords);
 
-        return true;
+    // Optimistic update
+    const mission: FleetMission = {
+        id: missionId,
+        ownerId: session?.user.id,
+        type: MissionType.TRANSPORT,
+        ships: ships,
+        resources: resources,
+        targetCoords: coords,
+        targetUserId: targetUserId,
+        originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        startTime: now,
+        arrivalTime: now + (duration / 2),
+        returnTime: now + duration,
+        eventProcessed: false,
+        status: 'flying'
     };
 
-    const sendTransport = async (ships: Record<ShipId, number>, resources: MissionRewards, coords: { galaxy: number, system: number, position: number }) => {
-        const duration = 5 * 60 * 1000; // 5 minutes fixed
-        const now = Date.now();
-        const missionId = crypto.randomUUID();
-        const targetUserId = await findTargetUser(coords);
-
-        // Optimistic update
-        const mission: FleetMission = {
-            id: missionId,
-            ownerId: session?.user.id,
-            type: MissionType.TRANSPORT,
-            ships: ships,
-            resources: resources,
-            targetCoords: coords,
-            targetUserId: targetUserId,
-            originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            startTime: now,
-            arrivalTime: now + (duration / 2),
-            returnTime: now + duration,
-            eventProcessed: false,
-            status: 'flying'
+    setGameState(prev => {
+        const newShips = { ...prev.ships };
+        Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] = (newShips[id as ShipId] || 0) - count; });
+        return {
+            ...prev,
+            ships: newShips,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal - (resources.metal || 0),
+                crystal: prev.resources.crystal - (resources.crystal || 0),
+                deuterium: prev.resources.deuterium - (resources.deuterium || 0)
+            },
+            activeMissions: [...prev.activeMissions, mission]
         };
+    });
 
+    // DB Insert
+    const { error } = await supabase.from('missions').insert({
+        id: missionId,
+        owner_id: session.user.id,
+        target_user_id: targetUserId,
+        mission_type: MissionType.TRANSPORT,
+        ships: ships,
+        resources: resources,
+        target_coords: coords,
+        origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
+        start_time: now,
+        arrival_time: now + (duration / 2),
+        return_time: now + duration,
+        status: 'flying'
+    });
+
+    if (error) {
+        console.error("Error sending transport:", error);
+        alert("Błąd wysyłania transportu.");
+        // SAFE REVERT: Restore ships and resources locally
         setGameState(prev => {
-            const newShips = { ...prev.ships };
-            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] = (newShips[id as ShipId] || 0) - count; });
+            const revertedShips = { ...prev.ships };
+            Object.entries(ships).forEach(([id, count]) => {
+                revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
+            });
             return {
                 ...prev,
-                ships: newShips,
+                ships: revertedShips,
                 resources: {
                     ...prev.resources,
-                    metal: prev.resources.metal - (resources.metal || 0),
-                    crystal: prev.resources.crystal - (resources.crystal || 0),
-                    deuterium: prev.resources.deuterium - (resources.deuterium || 0)
+                    metal: prev.resources.metal + (resources.metal || 0),
+                    crystal: prev.resources.crystal + (resources.crystal || 0),
+                    deuterium: prev.resources.deuterium + (resources.deuterium || 0)
                 },
-                activeMissions: [...prev.activeMissions, mission]
+                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
             };
         });
+        return;
+    }
 
-        // DB Insert
-        const { error } = await supabase.from('missions').insert({
-            id: missionId,
-            owner_id: session.user.id,
-            target_user_id: targetUserId,
-            mission_type: MissionType.TRANSPORT,
-            ships: ships,
-            resources: resources,
-            target_coords: coords,
-            origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
-            start_time: now,
-            arrival_time: now + (duration / 2),
-            return_time: now + duration,
-            status: 'flying'
+    if (error) console.error("Error sending transport:", error);
+    else {
+        // Update Profile (Deduct Ships & Resources)
+        const currentShips = { ...gameState.ships };
+        Object.entries(ships).forEach(([id, count]) => {
+            currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
         });
+        const currentRes = { ...gameState.resources };
+        currentRes.metal -= (resources.metal || 0);
+        currentRes.crystal -= (resources.crystal || 0);
+        currentRes.deuterium -= (resources.deuterium || 0);
 
-        if (error) {
-            console.error("Error sending transport:", error);
-            alert("Błąd wysyłania transportu.");
-            // SAFE REVERT: Restore ships and resources locally
-            setGameState(prev => {
-                const revertedShips = { ...prev.ships };
-                Object.entries(ships).forEach(([id, count]) => {
-                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
-                });
-                return {
-                    ...prev,
-                    ships: revertedShips,
-                    resources: {
-                        ...prev.resources,
-                        metal: prev.resources.metal + (resources.metal || 0),
-                        crystal: prev.resources.crystal + (resources.crystal || 0),
-                        deuterium: prev.resources.deuterium + (resources.deuterium || 0)
-                    },
-                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-                };
-            });
-            return;
+        await supabase.from('profiles').update({
+            ships: currentShips,
+            resources: currentRes,
+            points: calculatePoints(currentRes, gameState.buildings, currentShips)
+        }).eq('id', session.user.id);
+    }
+};
+
+const cancelMission = async (missionId: string) => {
+    const mission = gameState.activeMissions.find(m => m.id === missionId);
+    if (!mission || mission.status !== 'flying') return;
+
+    const now = Date.now();
+    const timeTraveled = now - mission.startTime;
+    const newReturnTime = now + timeTraveled;
+
+    // Optimistic update
+    setGameState(prev => ({
+        ...prev,
+        activeMissions: prev.activeMissions.map(m =>
+            m.id === missionId
+                ? { ...m, status: 'returning', returnTime: newReturnTime, arrivalTime: now }
+                : m
+        )
+    }));
+
+    // DB Update
+    const { error } = await supabase.from('missions').update({
+        status: 'returning',
+        return_time: newReturnTime,
+        arrival_time: now
+    }).eq('id', missionId);
+
+    // Notify Target about cancellation (if Attack)
+    if (mission.type === 'attack' && mission.targetUserId) {
+        const { data: targetProfile } = await supabase.from('profiles').select('mission_logs').eq('id', mission.targetUserId).single();
+        if (targetProfile) {
+            const newLog = {
+                id: Date.now().toString(),
+                timestamp: Date.now(),
+                title: 'Atak Anulowany',
+                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zawrócił flotę tuż przed atakiem.\nSkład floty: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.`,
+                outcome: 'info' as 'info'
+            };
+            const updatedLogs = [newLog, ...(targetProfile.mission_logs || [])].slice(0, 50);
+            await supabase.from('profiles').update({ mission_logs: updatedLogs }).eq('id', mission.targetUserId);
         }
+    }
 
-        if (error) console.error("Error sending transport:", error);
-        else {
-            // Update Profile (Deduct Ships & Resources)
-            const currentShips = { ...gameState.ships };
-            Object.entries(ships).forEach(([id, count]) => {
-                currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
-            });
-            const currentRes = { ...gameState.resources };
-            currentRes.metal -= (resources.metal || 0);
-            currentRes.crystal -= (resources.crystal || 0);
-            currentRes.deuterium -= (resources.deuterium || 0);
-
-            await supabase.from('profiles').update({
-                ships: currentShips,
-                resources: currentRes,
-                points: calculatePoints(currentRes, gameState.buildings, currentShips)
-            }).eq('id', session.user.id);
-        }
-    };
-
-    const cancelMission = async (missionId: string) => {
-        const mission = gameState.activeMissions.find(m => m.id === missionId);
-        if (!mission || mission.status !== 'flying') return;
-
-        const now = Date.now();
-        const timeTraveled = now - mission.startTime;
-        const newReturnTime = now + timeTraveled;
-
-        // Optimistic update
+    if (error) {
+        console.error("Failed to cancel mission:", error);
+        alert("Błąd anulowania misji.");
+        // SAFE REVERT: Restore original mission status locally
         setGameState(prev => ({
             ...prev,
             activeMissions: prev.activeMissions.map(m =>
                 m.id === missionId
-                    ? { ...m, status: 'returning', returnTime: newReturnTime, arrivalTime: now }
+                    ? { ...m, status: 'flying', returnTime: mission.returnTime, arrivalTime: mission.arrivalTime }
                     : m
             )
         }));
+    }
+};
 
-        // DB Update
-        const { error } = await supabase.from('missions').update({
-            status: 'returning',
-            return_time: newReturnTime,
-            arrival_time: now
-        }).eq('id', missionId);
+// Upgrades
+const upgradeBuilding = async (buildingId: BuildingId) => {
+    const currentLevel = gameState.buildings[buildingId];
+    const cost = getCost('building', buildingId, currentLevel);
 
-        // Notify Target about cancellation (if Attack)
-        if (mission.type === 'attack' && mission.targetUserId) {
-            const { data: targetProfile } = await supabase.from('profiles').select('mission_logs').eq('id', mission.targetUserId).single();
-            if (targetProfile) {
-                const newLog = {
-                    id: Date.now().toString(),
-                    timestamp: Date.now(),
-                    title: 'Atak Anulowany',
-                    message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zawrócił flotę tuż przed atakiem.\nSkład floty: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.`,
-                    outcome: 'info' as 'info'
-                };
-                const updatedLogs = [newLog, ...(targetProfile.mission_logs || [])].slice(0, 50);
-                await supabase.from('profiles').update({ mission_logs: updatedLogs }).eq('id', mission.targetUserId);
-            }
-        }
+    // Resource check
+    if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) {
+        console.log("Not enough resources");
+        return;
+    }
 
-        if (error) {
-            console.error("Failed to cancel mission:", error);
-            alert("Błąd anulowania misji.");
-            // SAFE REVERT: Restore original mission status locally
-            setGameState(prev => ({
-                ...prev,
-                activeMissions: prev.activeMissions.map(m =>
-                    m.id === missionId
-                        ? { ...m, status: 'flying', returnTime: mission.returnTime, arrivalTime: mission.arrivalTime }
-                        : m
-                )
-            }));
-        }
+    // Check queue limit (Increased to 5)
+    const currentQueue = gameState.constructionQueue.filter(q => q.type === 'building');
+    if (currentQueue.length >= 5) {
+        console.log("Queue full");
+        return;
+    }
+
+    const totalResources = cost.metal + cost.crystal;
+    let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
+    buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
+    buildTimeMs = buildTimeMs / GAME_SPEED;
+    const buildTime = Math.max(1000, buildTimeMs);
+
+    // Determine start time (After the last item in queue finishes, or Now)
+    // Note: Using gameState directly. If user clicks fast, this might still be slightly stale, 
+    // but 'upgradeBuilding' closure usually updates on render.
+    // For perfect safety, we could look at 'latest' state if we had a ref, but this is usually fine for React click handlers.
+    const lastItem = currentQueue.sort((a, b) => b.endTime - a.endTime)[0];
+    const startTime = lastItem ? lastItem.endTime : Date.now();
+    const endTime = startTime + buildTime;
+
+    // Stable objects
+    const newItem: ConstructionItem = {
+        id: Date.now().toString(),
+        type: 'building',
+        itemId: buildingId,
+        targetLevel: currentLevel + 1,
+        startTime: startTime,
+        endTime: endTime
     };
 
-    // Upgrades
-    const upgradeBuilding = async (buildingId: BuildingId) => {
-        const currentLevel = gameState.buildings[buildingId];
-        const cost = getCost('building', buildingId, currentLevel);
-
-        // Resource check
-        if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) {
-            console.log("Not enough resources");
-            return;
-        }
-
-        // Check queue limit (Increased to 5)
-        const currentQueue = gameState.constructionQueue.filter(q => q.type === 'building');
-        if (currentQueue.length >= 5) {
-            console.log("Queue full");
-            return;
-        }
-
-        const totalResources = cost.metal + cost.crystal;
-        let buildTimeMs = (totalResources / 2500) * 3600 * 1000;
-        buildTimeMs = buildTimeMs / (gameState.buildings[BuildingId.ROBOT_FACTORY] + 1);
-        buildTimeMs = buildTimeMs / GAME_SPEED;
-        const buildTime = Math.max(1000, buildTimeMs);
-
-        // Determine start time (After the last item in queue finishes, or Now)
-        // Note: Using gameState directly. If user clicks fast, this might still be slightly stale, 
-        // but 'upgradeBuilding' closure usually updates on render.
-        // For perfect safety, we could look at 'latest' state if we had a ref, but this is usually fine for React click handlers.
-        const lastItem = currentQueue.sort((a, b) => b.endTime - a.endTime)[0];
-        const startTime = lastItem ? lastItem.endTime : Date.now();
-        const endTime = startTime + buildTime;
-
-        // Stable objects
-        const newItem: ConstructionItem = {
-            id: Date.now().toString(),
-            type: 'building',
-            itemId: buildingId,
-            targetLevel: currentLevel + 1,
-            startTime: startTime,
-            endTime: endTime
-        };
-
-        const newResources = {
-            metal: gameState.resources.metal - cost.metal,
-            crystal: gameState.resources.crystal - cost.crystal,
-            deuterium: gameState.resources.deuterium - cost.deuterium
-        };
-
-        const newQueue = [...gameState.constructionQueue, newItem];
-
-        // Update Local State with PRE-CALCULATED values
-        setGameState(prev => ({
-            ...prev,
-            resources: {
-                ...prev.resources,
-                ...newResources
-            },
-            constructionQueue: [...prev.constructionQueue, newItem] // We can append to prev to be safe against race with other updates
-        }));
-
-        // Sync with Supabase using the SAME calculated values
-        // Note: Supabase update might overwrite parallel updates if we are not careful.
-        // Ideally we should use RPC or careful checking, but for now sending the new full queue is better than mismatched IDs.
-        // We use 'newQueue' which is based on closure 'gameState'. 
-        // To be safer against 'prev' state changes, we strictly simply send what we think is the new state.
-
-        const { error } = await supabase.from('profiles').update({
-            resources: newResources,
-            construction_queue: newQueue
-        }).eq('id', session.user.id);
-
-        if (error) {
-            console.error("Building upgrade failed:", error);
-            // SAFE REVERT: Restore resources and remove queue item locally
-            setGameState(prev => {
-                const filteredQueue = prev.constructionQueue.filter(q => q.id !== newItem.id);
-                return {
-                    ...prev,
-                    resources: {
-                        ...prev.resources,
-                        metal: prev.resources.metal + cost.metal,
-                        crystal: prev.resources.crystal + cost.crystal,
-                        deuterium: prev.resources.deuterium + cost.deuterium
-                    },
-                    constructionQueue: filteredQueue
-                };
-            });
-        }
+    const newResources = {
+        metal: gameState.resources.metal - cost.metal,
+        crystal: gameState.resources.crystal - cost.crystal,
+        deuterium: gameState.resources.deuterium - cost.deuterium
     };
 
-    const cancelConstruction = async (constructionId: string) => {
-        // Use current state from closure (fresh enough) to calculate
-        const itemIndex = gameState.constructionQueue.findIndex(i => i.id === constructionId);
-        if (itemIndex === -1) return;
+    const newQueue = [...gameState.constructionQueue, newItem];
 
-        const item = gameState.constructionQueue[itemIndex];
+    // Update Local State with PRE-CALCULATED values
+    setGameState(prev => ({
+        ...prev,
+        resources: {
+            ...prev.resources,
+            ...newResources
+        },
+        constructionQueue: [...prev.constructionQueue, newItem] // We can append to prev to be safe against race with other updates
+    }));
 
-        // Safety checks
-        if (item.type !== 'building' && item.type !== 'research') {
-            console.error("Cannot cancel item of type:", item.type);
-            return;
-        }
+    // Sync with Supabase using the SAME calculated values
+    // Note: Supabase update might overwrite parallel updates if we are not careful.
+    // Ideally we should use RPC or careful checking, but for now sending the new full queue is better than mismatched IDs.
+    // We use 'newQueue' which is based on closure 'gameState'. 
+    // To be safer against 'prev' state changes, we strictly simply send what we think is the new state.
 
-        const costLevel = (item.targetLevel || 1) - 1;
-        const cost = getCost(item.type, item.itemId as any, costLevel);
+    const { error } = await supabase.from('profiles').update({
+        resources: newResources,
+        construction_queue: newQueue
+    }).eq('id', session.user.id);
 
-        // Refund resources safely
-        const refundMetal = Math.floor(cost.metal || 0);
-        const refundCrystal = Math.floor(cost.crystal || 0);
-        const refundDeuterium = Math.floor(cost.deuterium || 0);
-
-        const newResources = {
-            ...gameState.resources,
-            metal: (gameState.resources.metal || 0) + refundMetal,
-            crystal: (gameState.resources.crystal || 0) + refundCrystal,
-            deuterium: (gameState.resources.deuterium || 0) + refundDeuterium
-        };
-
-        const newQueue = [...gameState.constructionQueue];
-        newQueue.splice(itemIndex, 1);
-
-        // Recalculate times for subsequent items
-        for (let i = itemIndex; i < newQueue.length; i++) {
-            const prevItem = i > 0 ? newQueue[i - 1] : null;
-            const startTime = prevItem ? prevItem.endTime : Date.now();
-            const duration = newQueue[i].endTime - newQueue[i].startTime;
-            newQueue[i] = {
-                ...newQueue[i],
-                startTime: startTime,
-                endTime: startTime + duration
-            };
-        }
-
-        // Apply State Locally
-        setGameState(current => ({
-            ...current,
-            resources: newResources,
-            constructionQueue: newQueue
-        }));
-
-        // Sync with Supabase
-        try {
-            const { error } = await supabase.from('profiles').update({
-                resources: newResources,
-                construction_queue: newQueue
-            }).eq('id', session.user.id);
-
-            if (error) throw error;
-        } catch (error) {
-            console.error("Cancel constr sync failed:", error);
-            // SAFE REVERT: Restore original queue and resources locally
-            setGameState(prev => ({
-                ...prev,
-                resources: gameState.resources, // Restore original
-                constructionQueue: gameState.constructionQueue // Restore original
-            }));
-        }
-    };
-
-    const upgradeResearch = async (researchId: ResearchId) => {
-        const currentLevel = gameState.research[researchId];
-        const cost = getCost('research', researchId, currentLevel);
-        if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
-        // Check if research is already in progress
-        if (gameState.constructionQueue.some(q => q.type === 'research')) return;
-
-        const researchDef = RESEARCH[researchId];
-        if (researchDef.maxLevel && currentLevel >= researchDef.maxLevel) return; // Cap
-
-        const labLevel = gameState.buildings[BuildingId.RESEARCH_LAB];
-        if (labLevel === 0) return;
-
-        const totalResources = cost.metal + cost.crystal;
-        let buildTimeMs = (totalResources / 1000) * 3600 * 1000;
-        buildTimeMs = buildTimeMs / (labLevel + 1);
-        buildTimeMs = buildTimeMs / GAME_SPEED;
-        const buildTime = Math.max(1000, buildTimeMs);
-        const now = Date.now();
-
-        const newItem = {
-            id: now.toString(),
-            type: 'research' as const,
-            itemId: researchId,
-            targetLevel: currentLevel + 1,
-            startTime: now,
-            endTime: now + buildTime
-        };
-
-        setGameState(prev => ({
-            ...prev,
-            resources: {
-                ...prev.resources,
-                metal: prev.resources.metal - cost.metal,
-                crystal: prev.resources.crystal - cost.crystal,
-                deuterium: prev.resources.deuterium - cost.deuterium
-            },
-            constructionQueue: [...prev.constructionQueue, newItem]
-        }));
-
-        const { error } = await supabase.from('profiles').update({
-            resources: {
-                ...gameState.resources,
-                metal: gameState.resources.metal - cost.metal,
-                crystal: gameState.resources.crystal - cost.crystal,
-                deuterium: gameState.resources.deuterium - cost.deuterium
-            },
-            construction_queue: [...gameState.constructionQueue, newItem]
-        }).eq('id', session.user.id);
-
-        if (error) {
-            console.error('upgradeResearch DB save failed:', error);
-            // SAFE REVERT: Restore resources and remove research from queue
-            setGameState(prev => ({
+    if (error) {
+        console.error("Building upgrade failed:", error);
+        // SAFE REVERT: Restore resources and remove queue item locally
+        setGameState(prev => {
+            const filteredQueue = prev.constructionQueue.filter(q => q.id !== newItem.id);
+            return {
                 ...prev,
                 resources: {
                     ...prev.resources,
@@ -2063,784 +1968,964 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     crystal: prev.resources.crystal + cost.crystal,
                     deuterium: prev.resources.deuterium + cost.deuterium
                 },
-                constructionQueue: prev.constructionQueue.filter(q => q.id !== newItem.id)
-            }));
-        }
-    };
-
-    const buildShip = async (shipId: ShipId, amount: number) => {
-        const qty = Math.max(1, Math.floor(amount));
-        const ship = SHIPS[shipId];
-        const totalCost = { metal: ship.baseCost.metal * qty, crystal: ship.baseCost.crystal * qty, deuterium: ship.baseCost.deuterium * qty };
-
-        if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
-
-        const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
-        if (shipyardLevel === 0) return;
-
-        const singleBuildTime = (ship.buildTime * 1000) / (shipyardLevel + 1); // Real seconds, not sped up
-        const now = Date.now();
-        let startTime = now;
-        if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
-
-        const newItem: ConstructionItem = {
-            id: now.toString() + Math.random(),
-            type: 'ship',
-            itemId: shipId,
-            quantity: qty,
-            startTime: startTime,
-            endTime: startTime + (singleBuildTime * qty)
-        };
-
-        const newQueue = [...gameState.shipyardQueue, newItem];
-
-        setGameState(prev => ({
-            ...prev,
-            resources: {
-                ...prev.resources,
-                metal: prev.resources.metal - totalCost.metal,
-                crystal: prev.resources.crystal - totalCost.crystal,
-                deuterium: prev.resources.deuterium - totalCost.deuterium
-            },
-            shipyardQueue: newQueue
-        }));
-
-        const { error } = await supabase.from('profiles').update({
-            resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
-            shipyard_queue: newQueue
-        }).eq('id', session.user.id);
-
-        if (error) {
-            console.error('buildShip DB save failed:', error);
-            // SAFE REVERT: Restore resources and remove from queue
-            setGameState(prev => ({
-                ...prev,
-                resources: {
-                    ...prev.resources,
-                    metal: prev.resources.metal + totalCost.metal,
-                    crystal: prev.resources.crystal + totalCost.crystal,
-                    deuterium: prev.resources.deuterium + totalCost.deuterium
-                },
-                shipyardQueue: prev.shipyardQueue.filter(q => q.id !== newItem.id)
-            }));
-        }
-    };
-
-    const buildDefense = async (defenseId: DefenseId, amount: number) => {
-        const qty = Math.max(1, Math.floor(amount));
-        const defense = DEFENSES[defenseId as keyof typeof DEFENSES];
-        if (!defense) return;
-        const totalCost = { metal: defense.cost.metal * qty, crystal: defense.cost.crystal * qty, deuterium: defense.cost.deuterium * qty };
-
-        if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
-
-        const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
-        if (shipyardLevel === 0) return;
-
-        const singleBuildTime = (defense.buildTime * 1000) / (shipyardLevel + 1); // Real seconds, not sped up
-        const now = Date.now();
-        let startTime = now;
-        if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
-
-        const newItem: ConstructionItem = {
-            id: `def - ${now} -${Math.random()} `,
-            type: 'defense',
-            itemId: defenseId,
-            quantity: qty,
-            startTime: startTime,
-            endTime: startTime + (singleBuildTime * qty)
-        };
-
-        const newQueue = [...gameState.shipyardQueue, newItem];
-
-        setGameState(prev => ({
-            ...prev,
-            resources: {
-                ...prev.resources,
-                metal: prev.resources.metal - totalCost.metal,
-                crystal: prev.resources.crystal - totalCost.crystal,
-                deuterium: prev.resources.deuterium - totalCost.deuterium
-            },
-            shipyardQueue: newQueue
-        }));
-
-        const { error } = await supabase.from('profiles').update({
-            resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
-            shipyard_queue: newQueue
-        }).eq('id', session.user.id);
-
-        if (error) {
-            console.error('buildDefense DB save failed:', error);
-            // SAFE REVERT: Restore resources and remove from queue
-            setGameState(prev => ({
-                ...prev,
-                resources: {
-                    ...prev.resources,
-                    metal: prev.resources.metal + totalCost.metal,
-                    crystal: prev.resources.crystal + totalCost.crystal,
-                    deuterium: prev.resources.deuterium + totalCost.deuterium
-                },
-                shipyardQueue: prev.shipyardQueue.filter(q => q.id !== newItem.id)
-            }));
-        }
-    };
-
-    // ===== COLONIZATION SYSTEM =====
-    const fetchPlanets = async () => {
-        if (!session?.user?.id) return;
-        const { data, error } = await supabase
-            .from('planets')
-            .select('*')
-            .eq('owner_id', session.user.id);
-
-        if (data && !error) {
-            setPlanets(data);
-        }
-    };
-
-    const sendColonize = async (coords: { galaxy: number, system: number, position: number }, resources: { metal: number, crystal: number, deuterium: number }): Promise<boolean> => {
-        // Check if player has colony ship
-        if ((gameState.ships[ShipId.COLONY_SHIP] || 0) < 1) {
-            alert('Potrzebujesz Statku Kolonizacyjnego!');
-            return false;
-        }
-
-        // Check planet limit (max 8)
-        if (planets.length >= 8) {
-            alert('Osiągnąłeś limit 8 planet!');
-            return false;
-        }
-
-        // Check if position is empty
-        const { data: existingPlanets } = await supabase
-            .from('planets')
-            .select('id')
-            .contains('galaxy_coords', coords);
-
-        const { data: existingProfiles } = await supabase
-            .from('profiles')
-            .select('id')
-            .contains('galaxy_coords', coords);
-
-        if ((existingPlanets && existingPlanets.length > 0) || (existingProfiles && existingProfiles.length > 0)) {
-            alert('Ta pozycja jest już zajęta!');
-            return false;
-        }
-
-        // Check resources
-        if (gameState.resources.metal < resources.metal ||
-            gameState.resources.crystal < resources.crystal ||
-            gameState.resources.deuterium < resources.deuterium) {
-            alert('Brak wystarczających zasobów!');
-            return false;
-        }
-
-        // Deduct colony ship and resources
-        const newShips = { ...gameState.ships, [ShipId.COLONY_SHIP]: (gameState.ships[ShipId.COLONY_SHIP] || 0) - 1 };
-        const newResources = {
-            ...gameState.resources,
-            metal: gameState.resources.metal - resources.metal,
-            crystal: gameState.resources.crystal - resources.crystal,
-            deuterium: gameState.resources.deuterium - resources.deuterium
-        };
-
-        const now = Date.now();
-        const MIN_COLONIZE_TIME = 60 * 1000; // 60s minimum
-        const origin = gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 };
-        let duration = MIN_COLONIZE_TIME;
-
-        if (origin.galaxy !== coords.galaxy) {
-            duration = 60 * 60 * 1000; // 1h
-        } else if (origin.system !== coords.system) {
-            const diff = Math.abs(origin.system - coords.system);
-            duration = MIN_COLONIZE_TIME + diff * 30 * 1000;
-        } else {
-            const diff = Math.abs(origin.position - coords.position);
-            duration = MIN_COLONIZE_TIME + diff * 10 * 1000;
-        }
-
-        const missionId = crypto.randomUUID();
-        const mission: FleetMission = {
-            id: missionId,
-            ownerId: session?.user.id,
-            type: MissionType.COLONIZE,
-            ships: { [ShipId.COLONY_SHIP]: 1 } as any,
-            targetCoords: coords,
-            targetUserId: session.user.id,
-            originCoords: origin,
-            startTime: now,
-            arrivalTime: now + duration,
-            returnTime: now + (duration * 2), // Return if failed
-            eventProcessed: false,
-            status: 'flying',
-            resources: resources
-        };
-
-        // Optimistic Update
-        setGameState(prev => ({
-            ...prev,
-            ships: newShips,
-            resources: newResources,
-            activeMissions: [...prev.activeMissions, mission]
-        }));
-
-        // DB Updates
-        const { error: missionError } = await supabase.from('missions').insert({
-            id: missionId,
-            owner_id: session.user.id,
-            target_user_id: session.user.id,
-            mission_type: MissionType.COLONIZE,
-            ships: { [ShipId.COLONY_SHIP]: 1 },
-            target_coords: coords,
-            origin_coords: origin,
-            start_time: now,
-            arrival_time: now + duration,
-            return_time: now + (duration * 2),
-            status: 'flying',
-            resources: resources
+                constructionQueue: filteredQueue
+            };
         });
+    }
+};
 
-        if (missionError) {
-            console.error('❌ COLONIZE MISSION ERROR:', missionError);
-            alert('Błąd wysyłania misji kolonizacyjnej.');
-            // SAFE REVERT: Restore colony ship and resources locally
-            setGameState(prev => ({
-                ...prev,
-                ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
-                resources: {
-                    ...prev.resources,
-                    metal: prev.resources.metal + resources.metal,
-                    crystal: prev.resources.crystal + resources.crystal,
-                    deuterium: prev.resources.deuterium + resources.deuterium
-                },
-                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-            }));
-            return false;
-        }
+const cancelConstruction = async (constructionId: string) => {
+    // Use current state from closure (fresh enough) to calculate
+    const itemIndex = gameState.constructionQueue.findIndex(i => i.id === constructionId);
+    if (itemIndex === -1) return;
 
-        // Save deducted resources/ships
-        const { error: profileError } = await supabase.from('profiles').update({
+    const item = gameState.constructionQueue[itemIndex];
+
+    // Safety checks
+    if (item.type !== 'building' && item.type !== 'research') {
+        console.error("Cannot cancel item of type:", item.type);
+        return;
+    }
+
+    const costLevel = (item.targetLevel || 1) - 1;
+    const cost = getCost(item.type, item.itemId as any, costLevel);
+
+    // Refund resources safely
+    const refundMetal = Math.floor(cost.metal || 0);
+    const refundCrystal = Math.floor(cost.crystal || 0);
+    const refundDeuterium = Math.floor(cost.deuterium || 0);
+
+    const newResources = {
+        ...gameState.resources,
+        metal: (gameState.resources.metal || 0) + refundMetal,
+        crystal: (gameState.resources.crystal || 0) + refundCrystal,
+        deuterium: (gameState.resources.deuterium || 0) + refundDeuterium
+    };
+
+    const newQueue = [...gameState.constructionQueue];
+    newQueue.splice(itemIndex, 1);
+
+    // Recalculate times for subsequent items
+    for (let i = itemIndex; i < newQueue.length; i++) {
+        const prevItem = i > 0 ? newQueue[i - 1] : null;
+        const startTime = prevItem ? prevItem.endTime : Date.now();
+        const duration = newQueue[i].endTime - newQueue[i].startTime;
+        newQueue[i] = {
+            ...newQueue[i],
+            startTime: startTime,
+            endTime: startTime + duration
+        };
+    }
+
+    // Apply State Locally
+    setGameState(current => ({
+        ...current,
+        resources: newResources,
+        constructionQueue: newQueue
+    }));
+
+    // Sync with Supabase
+    try {
+        const { error } = await supabase.from('profiles').update({
             resources: newResources,
-            ships: newShips
+            construction_queue: newQueue
         }).eq('id', session.user.id);
 
-        if (profileError) {
-            console.error('❌ PROFILE UPDATE ERROR:', profileError);
-            // Mission was saved but profile wasn't updated - need to retry or warn user
-            // For safety, log warning but don't revert mission (it's already in DB)
-            console.warn('⚠️ Mission sent but profile not updated - will sync on next save');
-        } else {
-            console.log('✅ Colonization mission sent!', mission);
-            alert(`Misja kolonizacyjna rozpoczęta! Czas lotu: ${(duration / 1000).toFixed(0)}s`);
-        }
-
-        // Remove old planet creation logic by returning here
-        return true;
-    };
-
-    // Helper to save planet state
-    const saveStateToPlanet = async (planetId: string, buildings: any, ships: any, defenses: any, resources: any, cQueue: any[], sQueue: any[]): Promise<boolean> => {
-        const payload = {
-            buildings,
-            ships,
-            defenses,
-            resources,
-            construction_queue: cQueue,
-            shipyard_queue: sQueue
-        };
-
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`💾 [COLONY SAVE] Planet: ${planetId}`);
-        console.log('💾 [COLONY SAVE] Payload:');
-        console.log('  🏗️ Buildings:', JSON.stringify(buildings));
-        console.log('  🚀 Ships:', JSON.stringify(ships));
-        console.log('  🛡️ Defenses:', JSON.stringify(defenses));
-        console.log('  📦 Resources:', JSON.stringify(resources));
-        console.log('  🔨 Queue:', cQueue?.length || 0, 'items');
-        console.log('  🔧 Shipyard:', sQueue?.length || 0, 'items');
-
-        const { error, data } = await supabase.from('planets').update(payload).eq('id', planetId).select();
-
-        if (error) {
-            console.error('❌ [COLONY SAVE ERROR]:', error.message);
-            console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            return false;
-        }
-
-        console.log('✅ [COLONY SAVE SUCCESS] Rows affected:', data?.length || 0);
-        if (data && data[0]) {
-            console.log('  📥 DB Response Buildings:', JSON.stringify(data[0].buildings));
-        }
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        return true;
-    };
-
-    const switchPlanet = async (planetId: string) => {
-        console.log('🪐 Switching to planet:', planetId);
-        const current = gameStateRef.current; // Use REF for latest state
-
-        // Force Save Current State before switching
-        if (currentPlanetId && currentPlanetId !== 'main') {
-            console.log('💾 Saving current colony before switch:', currentPlanetId);
-            const success = await saveStateToPlanet(
-                currentPlanetId,
-                current.buildings,
-                current.ships,
-                current.defenses,
-                current.resources,
-                current.constructionQueue,
-                current.shipyardQueue
-            );
-
-            if (!success) {
-                alert("Błąd zapisu stanu kolonii! Przełączanie przerwane, aby zapobiec utracie danych.");
-                return; // CRITICAL: Stop switch to protect data
-            }
-
-            // Refresh planets data so we have the latest state when we switch back needed
-            fetchPlanets();
-        } else if (!currentPlanetId || currentPlanetId === 'main') {
-            console.log('💾 Saving main planet before switch');
-            await supabase.from('profiles').update({
-                buildings: current.buildings,
-                resources: current.resources,
-                ships: current.ships,
-                defenses: current.defenses,
-                construction_queue: current.constructionQueue,
-                shipyard_queue: current.shipyardQueue
-            }).eq('id', session.user.id);
-            // No need to fetchPlanets here, but maybe good practice
-        }
-
-        if (planetId === 'main') {
-            // Switch back to main planet - restore from cache if available
-            setCurrentPlanetId('main');
-
-            if (mainPlanetCache) {
-                // Restore from cache
-                setGameState(mainPlanetCache);
-                setMainPlanetCache(null);
-                console.log('🪐 Restored main planet from cache');
-            } else {
-                // Fallback: reload from DB
-                await refreshProfile();
-                console.log('🪐 Reloaded main planet from DB (no cache)');
-            }
-        } else {
-            // LOAD COLONY DATA FROM DB (Fetch fresh!)
-            console.log('🌍 Fetching colony data from DB:', planetId);
-            const { data: colony, error } = await supabase.from('planets').select('*').eq('id', planetId).single();
-
-            if (colony && !error) {
-                // Cache current main planet data if not already on colony
-                if (!currentPlanetId || currentPlanetId === 'main') {
-                    setMainPlanetCache(current); // Use REF state
-                    console.log('🪐 Cached main planet data');
-                }
-
-                setCurrentPlanetId(planetId);
-
-                // Merge colony resources with defaults to prevent NaN/null
-                const colonyResources = colony.resources || {};
-                const safeResources = {
-                    metal: colonyResources.metal ?? 500,
-                    crystal: colonyResources.crystal ?? 300,
-                    deuterium: colonyResources.deuterium ?? 100,
-                    darkMatter: colonyResources.darkMatter ?? 0,
-                    energy: 0,
-                    maxEnergy: 0,
-                    storage: {
-                        metal: colonyResources.storage?.metal ?? 10000,
-                        crystal: colonyResources.storage?.crystal ?? 10000,
-                        deuterium: colonyResources.storage?.deuterium ?? 10000
-                    }
-                };
-
-                // Colony buildings start at 0 (fresh colony)
-                const colonyBuildings = colony.buildings || {};
-                const safeBuildings: Record<string, number> = {};
-                Object.keys(initialState.buildings).forEach(key => {
-                    safeBuildings[key] = colonyBuildings[key] ?? 0;
-                });
-
-                // DEBUG: Log colony data
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('📥 [LOAD] Colony loaded from Supabase:', planetId);
-                console.log('  📦 Resources:', JSON.stringify(safeResources));
-                console.log('  🏗️ Buildings:', JSON.stringify(safeBuildings));
-                console.log('  🚀 Ships:', JSON.stringify(colony.ships));
-                console.log('  🛡️ Defenses:', JSON.stringify(colony.defenses));
-                console.log('  🔨 ConstructionQueue:', colony.construction_queue?.length || 0, 'items');
-                console.log('  🔧 ShipyardQueue:', colony.shipyard_queue?.length || 0, 'items');
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-                // Validate against last saved
-                validateState({
-                    buildings: safeBuildings,
-                    resources: safeResources,
-                    ships: colony.ships || {},
-                    defenses: colony.defenses || {},
-                    constructionQueue: colony.construction_queue || [],
-                    shipyardQueue: colony.shipyard_queue || []
-                }, `switchPlanet (Colony ${planetId})`);
-
-                // Load colony-specific data into gameState
-                setGameState(prev => ({
-                    ...prev,
-                    planetName: colony.planet_name || `Kolonia ${planets.indexOf(colony) + 1}`,
-                    planetType: colony.planet_type || 'terran',
-                    resources: safeResources,
-                    buildings: safeBuildings,
-                    ships: colony.ships || {},
-                    defenses: colony.defenses || {},
-                    constructionQueue: colony.construction_queue || [],
-                    shipyardQueue: colony.shipyard_queue || [],
-                    galaxyCoords: colony.galaxy_coords,
-                    // Keep research from main planet (shared)
-                    // research: prev.research
-                }));
-
-                console.log('🪐 Switched to colony (Fresh DB Load):', colony.planet_name);
-            } else {
-                console.error("Failed to load colony:", error);
-                alert("Błąd wczytywania kolonii.");
-            }
-        }
-    };
-    // ===== END COLONIZATION SYSTEM =====
-
-    const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
-
-    const renamePlanet = async (newName: string) => {
-        if (!newName.trim()) return;
-        const trimmedName = newName.trim();
-        setGameState(prev => ({ ...prev, planetName: trimmedName }));
-
-        const currentPlanet = currentPlanetRef.current;
-
-        if (currentPlanet && currentPlanet !== 'main') {
-            // Rename colony in planets table
-            const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', currentPlanet);
-            if (error) {
-                console.error('❌ Colony rename error:', error);
-            } else {
-                console.log('🪐 Colony renamed to:', trimmedName);
-                fetchPlanets(); // Refresh planets list to update sidebar
-            }
-        } else {
-            // Rename main planet in profiles table
-            const { error } = await supabase.from('profiles').update({ planet_name: trimmedName }).eq('id', session.user.id);
-            if (error) {
-                console.error('❌ Planet rename error:', error);
-            } else {
-                console.log('🪐 Main planet renamed to:', trimmedName);
-                setMainPlanetName(trimmedName);
-            }
-        }
-    };
-
-    const renameUser = async (newNickname: string) => {
-        if (!newNickname.trim()) return;
+        if (error) throw error;
+    } catch (error) {
+        console.error("Cancel constr sync failed:", error);
+        // SAFE REVERT: Restore original queue and resources locally
         setGameState(prev => ({
             ...prev,
-            nickname: newNickname.trim(),
-            productionSettings: { ...prev.productionSettings, nickname: newNickname.trim() }
+            resources: gameState.resources, // Restore original
+            constructionQueue: gameState.constructionQueue // Restore original
         }));
+    }
+};
+
+const upgradeResearch = async (researchId: ResearchId) => {
+    const currentLevel = gameState.research[researchId];
+    const cost = getCost('research', researchId, currentLevel);
+    if (gameState.resources.metal < cost.metal || gameState.resources.crystal < cost.crystal || gameState.resources.deuterium < cost.deuterium) return;
+    // Check if research is already in progress
+    if (gameState.constructionQueue.some(q => q.type === 'research')) return;
+
+    const researchDef = RESEARCH[researchId];
+    if (researchDef.maxLevel && currentLevel >= researchDef.maxLevel) return; // Cap
+
+    const labLevel = gameState.buildings[BuildingId.RESEARCH_LAB];
+    if (labLevel === 0) return;
+
+    const totalResources = cost.metal + cost.crystal;
+    let buildTimeMs = (totalResources / 1000) * 3600 * 1000;
+    buildTimeMs = buildTimeMs / (labLevel + 1);
+    buildTimeMs = buildTimeMs / GAME_SPEED;
+    const buildTime = Math.max(1000, buildTimeMs);
+    const now = Date.now();
+
+    const newItem = {
+        id: now.toString(),
+        type: 'research' as const,
+        itemId: researchId,
+        targetLevel: currentLevel + 1,
+        startTime: now,
+        endTime: now + buildTime
+    };
+
+    setGameState(prev => ({
+        ...prev,
+        resources: {
+            ...prev.resources,
+            metal: prev.resources.metal - cost.metal,
+            crystal: prev.resources.crystal - cost.crystal,
+            deuterium: prev.resources.deuterium - cost.deuterium
+        },
+        constructionQueue: [...prev.constructionQueue, newItem]
+    }));
+
+    const { error } = await supabase.from('profiles').update({
+        resources: {
+            ...gameState.resources,
+            metal: gameState.resources.metal - cost.metal,
+            crystal: gameState.resources.crystal - cost.crystal,
+            deuterium: gameState.resources.deuterium - cost.deuterium
+        },
+        construction_queue: [...gameState.constructionQueue, newItem]
+    }).eq('id', session.user.id);
+
+    if (error) {
+        console.error('upgradeResearch DB save failed:', error);
+        // SAFE REVERT: Restore resources and remove research from queue
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal + cost.metal,
+                crystal: prev.resources.crystal + cost.crystal,
+                deuterium: prev.resources.deuterium + cost.deuterium
+            },
+            constructionQueue: prev.constructionQueue.filter(q => q.id !== newItem.id)
+        }));
+    }
+};
+
+const buildShip = async (shipId: ShipId, amount: number) => {
+    const qty = Math.max(1, Math.floor(amount));
+    const ship = SHIPS[shipId];
+    const totalCost = { metal: ship.baseCost.metal * qty, crystal: ship.baseCost.crystal * qty, deuterium: ship.baseCost.deuterium * qty };
+
+    if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
+
+    const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
+    if (shipyardLevel === 0) return;
+
+    const singleBuildTime = (ship.buildTime * 1000) / (shipyardLevel + 1); // Real seconds, not sped up
+    const now = Date.now();
+    let startTime = now;
+    if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
+
+    const newItem: ConstructionItem = {
+        id: now.toString() + Math.random(),
+        type: 'ship',
+        itemId: shipId,
+        quantity: qty,
+        startTime: startTime,
+        endTime: startTime + (singleBuildTime * qty)
+    };
+
+    const newQueue = [...gameState.shipyardQueue, newItem];
+
+    setGameState(prev => ({
+        ...prev,
+        resources: {
+            ...prev.resources,
+            metal: prev.resources.metal - totalCost.metal,
+            crystal: prev.resources.crystal - totalCost.crystal,
+            deuterium: prev.resources.deuterium - totalCost.deuterium
+        },
+        shipyardQueue: newQueue
+    }));
+
+    const { error } = await supabase.from('profiles').update({
+        resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
+        shipyard_queue: newQueue
+    }).eq('id', session.user.id);
+
+    if (error) {
+        console.error('buildShip DB save failed:', error);
+        // SAFE REVERT: Restore resources and remove from queue
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal + totalCost.metal,
+                crystal: prev.resources.crystal + totalCost.crystal,
+                deuterium: prev.resources.deuterium + totalCost.deuterium
+            },
+            shipyardQueue: prev.shipyardQueue.filter(q => q.id !== newItem.id)
+        }));
+    }
+};
+
+const buildDefense = async (defenseId: DefenseId, amount: number) => {
+    const qty = Math.max(1, Math.floor(amount));
+    const defense = DEFENSES[defenseId as keyof typeof DEFENSES];
+    if (!defense) return;
+    const totalCost = { metal: defense.cost.metal * qty, crystal: defense.cost.crystal * qty, deuterium: defense.cost.deuterium * qty };
+
+    if (gameState.resources.metal < totalCost.metal || gameState.resources.crystal < totalCost.crystal || gameState.resources.deuterium < totalCost.deuterium) return;
+
+    const shipyardLevel = gameState.buildings[BuildingId.SHIPYARD];
+    if (shipyardLevel === 0) return;
+
+    const singleBuildTime = (defense.buildTime * 1000) / (shipyardLevel + 1); // Real seconds, not sped up
+    const now = Date.now();
+    let startTime = now;
+    if (gameState.shipyardQueue.length > 0) startTime = gameState.shipyardQueue[gameState.shipyardQueue.length - 1].endTime;
+
+    const newItem: ConstructionItem = {
+        id: `def - ${now} -${Math.random()} `,
+        type: 'defense',
+        itemId: defenseId,
+        quantity: qty,
+        startTime: startTime,
+        endTime: startTime + (singleBuildTime * qty)
+    };
+
+    const newQueue = [...gameState.shipyardQueue, newItem];
+
+    setGameState(prev => ({
+        ...prev,
+        resources: {
+            ...prev.resources,
+            metal: prev.resources.metal - totalCost.metal,
+            crystal: prev.resources.crystal - totalCost.crystal,
+            deuterium: prev.resources.deuterium - totalCost.deuterium
+        },
+        shipyardQueue: newQueue
+    }));
+
+    const { error } = await supabase.from('profiles').update({
+        resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
+        shipyard_queue: newQueue
+    }).eq('id', session.user.id);
+
+    if (error) {
+        console.error('buildDefense DB save failed:', error);
+        // SAFE REVERT: Restore resources and remove from queue
+        setGameState(prev => ({
+            ...prev,
+            resources: {
+                ...prev.resources,
+                metal: prev.resources.metal + totalCost.metal,
+                crystal: prev.resources.crystal + totalCost.crystal,
+                deuterium: prev.resources.deuterium + totalCost.deuterium
+            },
+            shipyardQueue: prev.shipyardQueue.filter(q => q.id !== newItem.id)
+        }));
+    }
+};
+
+// ===== COLONIZATION SYSTEM =====
+const fetchPlanets = async () => {
+    if (!session?.user?.id) return;
+    const { data, error } = await supabase
+        .from('planets')
+        .select('*')
+        .eq('owner_id', session.user.id);
+
+    if (data && !error) {
+        setPlanets(data);
+    }
+};
+
+const sendColonize = async (coords: { galaxy: number, system: number, position: number }, resources: { metal: number, crystal: number, deuterium: number }): Promise<boolean> => {
+    // Check if player has colony ship
+    if ((gameState.ships[ShipId.COLONY_SHIP] || 0) < 1) {
+        alert('Potrzebujesz Statku Kolonizacyjnego!');
+        return false;
+    }
+
+    // Check planet limit (max 8)
+    if (planets.length >= 8) {
+        alert('Osiągnąłeś limit 8 planet!');
+        return false;
+    }
+
+    // Check if position is empty
+    const { data: existingPlanets } = await supabase
+        .from('planets')
+        .select('id')
+        .contains('galaxy_coords', coords);
+
+    const { data: existingProfiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .contains('galaxy_coords', coords);
+
+    if ((existingPlanets && existingPlanets.length > 0) || (existingProfiles && existingProfiles.length > 0)) {
+        alert('Ta pozycja jest już zajęta!');
+        return false;
+    }
+
+    // Check resources
+    if (gameState.resources.metal < resources.metal ||
+        gameState.resources.crystal < resources.crystal ||
+        gameState.resources.deuterium < resources.deuterium) {
+        alert('Brak wystarczających zasobów!');
+        return false;
+    }
+
+    // Deduct colony ship and resources
+    const newShips = { ...gameState.ships, [ShipId.COLONY_SHIP]: (gameState.ships[ShipId.COLONY_SHIP] || 0) - 1 };
+    const newResources = {
+        ...gameState.resources,
+        metal: gameState.resources.metal - resources.metal,
+        crystal: gameState.resources.crystal - resources.crystal,
+        deuterium: gameState.resources.deuterium - resources.deuterium
+    };
+
+    const now = Date.now();
+    const MIN_COLONIZE_TIME = 60 * 1000; // 60s minimum
+    const origin = gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 };
+    let duration = MIN_COLONIZE_TIME;
+
+    if (origin.galaxy !== coords.galaxy) {
+        duration = 60 * 60 * 1000; // 1h
+    } else if (origin.system !== coords.system) {
+        const diff = Math.abs(origin.system - coords.system);
+        duration = MIN_COLONIZE_TIME + diff * 30 * 1000;
+    } else {
+        const diff = Math.abs(origin.position - coords.position);
+        duration = MIN_COLONIZE_TIME + diff * 10 * 1000;
+    }
+
+    const missionId = crypto.randomUUID();
+    const mission: FleetMission = {
+        id: missionId,
+        ownerId: session?.user.id,
+        type: MissionType.COLONIZE,
+        ships: { [ShipId.COLONY_SHIP]: 1 } as any,
+        targetCoords: coords,
+        targetUserId: session.user.id,
+        originCoords: origin,
+        startTime: now,
+        arrivalTime: now + duration,
+        returnTime: now + (duration * 2), // Return if failed
+        eventProcessed: false,
+        status: 'flying',
+        resources: resources
+    };
+
+    // Optimistic Update
+    setGameState(prev => ({
+        ...prev,
+        ships: newShips,
+        resources: newResources,
+        activeMissions: [...prev.activeMissions, mission]
+    }));
+
+    // DB Updates
+    const { error: missionError } = await supabase.from('missions').insert({
+        id: missionId,
+        owner_id: session.user.id,
+        target_user_id: session.user.id,
+        mission_type: MissionType.COLONIZE,
+        ships: { [ShipId.COLONY_SHIP]: 1 },
+        target_coords: coords,
+        origin_coords: origin,
+        start_time: now,
+        arrival_time: now + duration,
+        return_time: now + (duration * 2),
+        status: 'flying',
+        resources: resources
+    });
+
+    if (missionError) {
+        console.error('❌ COLONIZE MISSION ERROR:', missionError);
+        alert('Błąd wysyłania misji kolonizacyjnej.');
+        // SAFE REVERT: Restore colony ship and resources locally
+        setGameState(prev => ({
+            ...prev,
+            ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
+            resources: {
+                metal: prev.resources.metal + resources.metal,
+                crystal: prev.resources.crystal + resources.crystal,
+                deuterium: prev.resources.deuterium + resources.deuterium,
+                energy: prev.resources.energy,
+                maxEnergy: prev.resources.maxEnergy,
+                storage: prev.resources.storage,
+                darkMatter: prev.resources.darkMatter
+            },
+            activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+        }));
+        return false;
+    }
+
+    // CRITICAL FIX: Persist resource deduction to DB immediately to prevent free colonization exploit via reload
+    const { error: profileError } = await supabase.from('profiles').update({
+        ships: newShips,
+        resources: newResources
+    }).eq('id', session.user.id);
+
+    if (profileError) {
+        console.error('❌ COLONIZE PROFILE UPDATE ERROR:', profileError);
+        // We have a mission but no resource deduction?
+        // Ideally we should delete the mission to be fair, or let it slide as rare edge case?
+        // To be safe, we try to cancel the mission in DB
+        await supabase.from('missions').delete().eq('id', missionId);
+        alert('Błąd aktualizacji profilu. Misja anulowana.');
+        setGameState(prev => ({
+            ...prev,
+            ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
+            resources: {
+                metal: prev.resources.metal + resources.metal,
+                crystal: prev.resources.crystal + resources.crystal,
+                deuterium: prev.resources.deuterium + resources.deuterium,
+                energy: prev.resources.energy,
+                maxEnergy: prev.resources.maxEnergy,
+                storage: prev.resources.storage,
+                darkMatter: prev.resources.darkMatter
+            },
+            activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+        }));
+        return false;
+    }
+
+    // Update Reference to prevent Desync warning
+    lastSavedStateRef.current = {
+        ...lastSavedStateRef.current,
+        ships: newShips,
+        resources: newResources
+    };
+
+
+    // Save deducted resources/ships
+    const { error: profileError } = await supabase.from('profiles').update({
+        resources: newResources,
+        ships: newShips
+    }).eq('id', session.user.id);
+
+    if (profileError) {
+        console.error('❌ PROFILE UPDATE ERROR:', profileError);
+        // Mission was saved but profile wasn't updated - need to retry or warn user
+        // For safety, log warning but don't revert mission (it's already in DB)
+        console.warn('⚠️ Mission sent but profile not updated - will sync on next save');
+    } else {
+        console.log('✅ Colonization mission sent!', mission);
+        alert(`Misja kolonizacyjna rozpoczęta! Czas lotu: ${(duration / 1000).toFixed(0)}s`);
+    }
+
+    // Remove old planet creation logic by returning here
+    return true;
+};
+
+// Helper to save planet state
+const saveStateToPlanet = async (planetId: string, buildings: any, ships: any, defenses: any, resources: any, cQueue: any[], sQueue: any[]): Promise<boolean> => {
+    const payload = {
+        buildings,
+        ships,
+        defenses,
+        resources,
+        construction_queue: cQueue,
+        shipyard_queue: sQueue
+    };
+
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`💾 [COLONY SAVE] Planet: ${planetId}`);
+    console.log('💾 [COLONY SAVE] Payload:');
+    console.log('  🏗️ Buildings:', JSON.stringify(buildings));
+    console.log('  🚀 Ships:', JSON.stringify(ships));
+    console.log('  🛡️ Defenses:', JSON.stringify(defenses));
+    console.log('  📦 Resources:', JSON.stringify(resources));
+    console.log('  🔨 Queue:', cQueue?.length || 0, 'items');
+    console.log('  🔧 Shipyard:', sQueue?.length || 0, 'items');
+
+    const { error, data } = await supabase.from('planets').update(payload).eq('id', planetId).select();
+
+    if (error) {
+        console.error('❌ [COLONY SAVE ERROR]:', error.message);
+        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return false;
+    }
+
+    console.log('✅ [COLONY SAVE SUCCESS] Rows affected:', data?.length || 0);
+    if (data && data[0]) {
+        console.log('  📥 DB Response Buildings:', JSON.stringify(data[0].buildings));
+    }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    return true;
+};
+
+const switchPlanet = async (planetId: string) => {
+    console.log('🪐 Switching to planet:', planetId);
+    const current = gameStateRef.current; // Use REF for latest state
+
+    // Force Save Current State before switching
+    if (currentPlanetId && currentPlanetId !== 'main') {
+        console.log('💾 Saving current colony before switch:', currentPlanetId);
+        const success = await saveStateToPlanet(
+            currentPlanetId,
+            current.buildings,
+            current.ships,
+            current.defenses,
+            current.resources,
+            current.constructionQueue,
+            current.shipyardQueue
+        );
+
+        if (!success) {
+            alert("Błąd zapisu stanu kolonii! Przełączanie przerwane, aby zapobiec utracie danych.");
+            return; // CRITICAL: Stop switch to protect data
+        }
+
+        // Refresh planets data so we have the latest state when we switch back needed
+        fetchPlanets();
+    } else if (!currentPlanetId || currentPlanetId === 'main') {
+        console.log('💾 Saving main planet before switch');
         await supabase.from('profiles').update({
-            nickname: newNickname.trim(),
-            production_settings: { ...gameState.productionSettings, nickname: newNickname.trim() }
+            buildings: current.buildings,
+            resources: current.resources,
+            ships: current.ships,
+            defenses: current.defenses,
+            construction_queue: current.constructionQueue,
+            shipyard_queue: current.shipyardQueue
         }).eq('id', session.user.id);
-        console.log('👤 User renamed to:', newNickname);
-    };
-    const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
-    const clearLogs = async () => {
-        setGameState(prev => ({ ...prev, missionLogs: [] }));
-        await supabase.from('profiles').update({ mission_logs: [] }).eq('id', session.user.id);
-    };
-    const logout = async () => {
-        // Try to save before logout (best effort)
-        try {
-            await saveGame('Logout');
-        } catch (e) {
-            console.error('Logout save failed:', e);
+        // No need to fetchPlanets here, but maybe good practice
+    }
+
+    if (planetId === 'main') {
+        // Switch back to main planet - restore from cache if available
+        setCurrentPlanetId('main');
+
+        if (mainPlanetCache) {
+            // Restore from cache
+            setGameState(mainPlanetCache);
+            setMainPlanetCache(null);
+            console.log('🪐 Restored main planet from cache');
+        } else {
+            // Fallback: reload from DB
+            await refreshProfile();
+            console.log('🪐 Reloaded main planet from DB (no cache)');
         }
+    } else {
+        // LOAD COLONY DATA FROM DB (Fetch fresh!)
+        console.log('🌍 Fetching colony data from DB:', planetId);
+        const { data: colony, error } = await supabase.from('planets').select('*').eq('id', planetId).single();
 
-        localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
-        localStorage.removeItem(STORAGE_KEY + '_backup');
-        await supabase.auth.signOut();
-        window.location.reload();
-    };
+        if (colony && !error) {
+            // Cache current main planet data if not already on colony
+            if (!currentPlanetId || currentPlanetId === 'main') {
+                setMainPlanetCache(current); // Use REF state
+                console.log('🪐 Cached main planet data');
+            }
 
-    const deleteAccount = async () => {
-        if (!session?.user) return;
-        if (!confirm('Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć. Twoje imperium zostanie zniszczone.')) return;
+            setCurrentPlanetId(planetId);
 
-        try {
-            await supabase.from('missions').delete().eq('owner_id', session.user.id);
-            await supabase.from('profiles').delete().eq('id', session.user.id);
-            await logout();
-        } catch (e) {
-            console.error("Error deleting account:", e);
-            alert("Błąd podczas usuwania konta. Spróbuj ponownie.");
+            // Merge colony resources with defaults to prevent NaN/null
+            const colonyResources = colony.resources || {};
+            const safeResources = {
+                metal: colonyResources.metal ?? 500,
+                crystal: colonyResources.crystal ?? 300,
+                deuterium: colonyResources.deuterium ?? 100,
+                darkMatter: colonyResources.darkMatter ?? 0,
+                energy: 0,
+                maxEnergy: 0,
+                storage: {
+                    metal: colonyResources.storage?.metal ?? 10000,
+                    crystal: colonyResources.storage?.crystal ?? 10000,
+                    deuterium: colonyResources.storage?.deuterium ?? 10000
+                }
+            };
+
+            // Colony buildings start at 0 (fresh colony)
+            const colonyBuildings = colony.buildings || {};
+            const safeBuildings: Record<string, number> = {};
+            Object.keys(initialState.buildings).forEach(key => {
+                safeBuildings[key] = colonyBuildings[key] ?? 0;
+            });
+
+            // DEBUG: Log colony data
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📥 [LOAD] Colony loaded from Supabase:', planetId);
+            console.log('  📦 Resources:', JSON.stringify(safeResources));
+            console.log('  🏗️ Buildings:', JSON.stringify(safeBuildings));
+            console.log('  🚀 Ships:', JSON.stringify(colony.ships));
+            console.log('  🛡️ Defenses:', JSON.stringify(colony.defenses));
+            console.log('  🔨 ConstructionQueue:', colony.construction_queue?.length || 0, 'items');
+            console.log('  🔧 ShipyardQueue:', colony.shipyard_queue?.length || 0, 'items');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            // CRITICAL FIX: Update Reference State immediately to match loaded colony
+            // This prevents "Data desync" warnings when validation runs
+            lastSavedStateRef.current = {
+                resources: safeResources,
+                buildings: safeBuildings,
+                ships: colony.ships || {},
+                defenses: colony.defenses || {},
+                research: gameState.research, // Global
+                constructionQueue: colony.construction_queue || [],
+                shipyardQueue: colony.shipyard_queue || [],
+                missionLogs: gameState.missionLogs
+            };
+
+            // Load colony-specific data into gameState
+            setGameState(prev => ({
+                ...prev,
+                planetName: colony.planet_name || `Kolonia ${planets.indexOf(colony) + 1}`,
+                planetType: colony.planet_type || 'terran',
+                resources: safeResources,
+                buildings: safeBuildings,
+                ships: colony.ships || {},
+                defenses: colony.defenses || {},
+                constructionQueue: colony.construction_queue || [],
+                shipyardQueue: colony.shipyard_queue || [],
+                galaxyCoords: colony.galaxy_coords,
+                // Keep research from main planet (shared)
+                // research: prev.research
+            }));
+
+            console.log('🪐 Switched to colony (Fresh DB Load):', colony.planet_name);
+        } else {
+            console.error("Failed to load colony:", error);
+            alert("Błąd wczytywania kolonii.");
         }
-    };
+    }
+};
+// ===== END COLONIZATION SYSTEM =====
 
-    const updateAvatar = async (url: string) => {
-        setGameState(prev => ({ ...prev, avatarUrl: url }));
-        const currentSettings = gameState.productionSettings || {};
-        await supabase.from('profiles').update({ production_settings: { ...currentSettings, avatarUrl: url } }).eq('id', session.user.id);
-    };
+const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
 
-    const updatePlanetType = async (type: string) => {
-        setGameState(prev => ({ ...prev, planetType: type as "terran" | "desert" | "ice" }));
-        const currentSettings = gameState.productionSettings || {};
-        await supabase.from('profiles').update({ production_settings: { ...currentSettings, planetType: type } }).eq('id', session.user.id);
-    };
+const renamePlanet = async (newName: string) => {
+    if (!newName.trim()) return;
+    const trimmedName = newName.trim();
+    setGameState(prev => ({ ...prev, planetName: trimmedName }));
 
-    const getPlayersInSystem = async (galaxy: number, system: number) => {
-        try {
-            // 1. Fetch Main Planets (Profiles that are in this system)
-            const { data: mainPlanets, error: mainError } = await supabase
+    const currentPlanet = currentPlanetRef.current;
+
+    if (currentPlanet && currentPlanet !== 'main') {
+        // Rename colony in planets table
+        const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', currentPlanet);
+        if (error) {
+            console.error('❌ Colony rename error:', error);
+        } else {
+            console.log('🪐 Colony renamed to:', trimmedName);
+            fetchPlanets(); // Refresh planets list to update sidebar
+        }
+    } else {
+        // Rename main planet in profiles table
+        const { error } = await supabase.from('profiles').update({ planet_name: trimmedName }).eq('id', session.user.id);
+        if (error) {
+            console.error('❌ Planet rename error:', error);
+        } else {
+            console.log('🪐 Main planet renamed to:', trimmedName);
+            setMainPlanetName(trimmedName);
+        }
+    }
+};
+
+const renameUser = async (newNickname: string) => {
+    if (!newNickname.trim()) return;
+    setGameState(prev => ({
+        ...prev,
+        nickname: newNickname.trim(),
+        productionSettings: { ...prev.productionSettings, nickname: newNickname.trim() }
+    }));
+    await supabase.from('profiles').update({
+        nickname: newNickname.trim(),
+        production_settings: { ...gameState.productionSettings, nickname: newNickname.trim() }
+    }).eq('id', session.user.id);
+    console.log('👤 User renamed to:', newNickname);
+};
+const resetGame = () => { localStorage.removeItem(STORAGE_KEY); window.location.reload(); };
+const clearLogs = async () => {
+    setGameState(prev => ({ ...prev, missionLogs: [] }));
+    await supabase.from('profiles').update({ mission_logs: [] }).eq('id', session.user.id);
+};
+const logout = async () => {
+    // Try to save before logout (best effort)
+    try {
+        await saveGame('Logout');
+    } catch (e) {
+        console.error('Logout save failed:', e);
+    }
+
+    localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
+    localStorage.removeItem(STORAGE_KEY + '_backup');
+    await supabase.auth.signOut();
+    window.location.reload();
+};
+
+const deleteAccount = async () => {
+    if (!session?.user) return;
+    if (!confirm('Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć. Twoje imperium zostanie zniszczone.')) return;
+
+    try {
+        await supabase.from('missions').delete().eq('owner_id', session.user.id);
+        await supabase.from('profiles').delete().eq('id', session.user.id);
+        await logout();
+    } catch (e) {
+        console.error("Error deleting account:", e);
+        alert("Błąd podczas usuwania konta. Spróbuj ponownie.");
+    }
+};
+
+const updateAvatar = async (url: string) => {
+    setGameState(prev => ({ ...prev, avatarUrl: url }));
+    const currentSettings = gameState.productionSettings || {};
+    await supabase.from('profiles').update({ production_settings: { ...currentSettings, avatarUrl: url } }).eq('id', session.user.id);
+};
+
+const updatePlanetType = async (type: string) => {
+    setGameState(prev => ({ ...prev, planetType: type as "terran" | "desert" | "ice" }));
+    const currentSettings = gameState.productionSettings || {};
+    await supabase.from('profiles').update({ production_settings: { ...currentSettings, planetType: type } }).eq('id', session.user.id);
+};
+
+const getPlayersInSystem = async (galaxy: number, system: number) => {
+    try {
+        // 1. Fetch Main Planets (Profiles that are in this system)
+        const { data: mainPlanets, error: mainError } = await supabase
+            .from('profiles')
+            .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname')
+            .contains('galaxy_coords', { galaxy, system });
+
+        if (mainError) throw mainError;
+
+        // 2. Fetch Colonies (Planets that are in this system)
+        const { data: colonies, error: colonyError } = await supabase
+            .from('planets')
+            .select('id, owner_id, planet_name, planet_type, galaxy_coords, buildings, ships, defenses')
+            .contains('galaxy_coords', { galaxy, system });
+
+        if (colonyError) throw colonyError;
+
+        let finalUsers = mainPlanets || [];
+
+        // 3. If we have colonies, we need to attach owner info (nickname, points)
+        if (colonies && colonies.length > 0) {
+            const ownerIds = [...new Set(colonies.map(c => c.owner_id))];
+
+            // Fetch owner profiles
+            const { data: owners, error: ownerError } = await supabase
                 .from('profiles')
-                .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname')
-                .contains('galaxy_coords', { galaxy, system });
+                .select('id, nickname, points, production_settings')
+                .in('id', ownerIds);
 
-            if (mainError) throw mainError;
+            if (ownerError) console.error("Error fetching colony owners:", ownerError);
 
-            // 2. Fetch Colonies (Planets that are in this system)
-            const { data: colonies, error: colonyError } = await supabase
-                .from('planets')
-                .select('id, owner_id, planet_name, planet_type, galaxy_coords, buildings, ships, defenses')
-                .contains('galaxy_coords', { galaxy, system });
+            const ownerMap = new Map(owners?.map(o => [o.id, o]) || []);
 
-            if (colonyError) throw colonyError;
+            const mappedColonies = colonies.map(col => {
+                const owner = ownerMap.get(col.owner_id);
+                // If this colony belongs to a player who IS ALSO in the mainPlanets list (same system), 
+                // we still want to show it as a separate planet (colony)
+                return {
+                    id: col.owner_id, // Use owner_id for interaction links
+                    colony_id: col.id, // Keep distinct planet ID
+                    planet_name: col.planet_name,
+                    galaxy_coords: col.galaxy_coords,
+                    points: owner?.points || 0,
+                    production_settings: {
+                        ...(owner?.production_settings || {}),
+                        planetType: col.planet_type // Use colony planet type
+                    },
+                    buildings: col.buildings,
+                    nickname: (owner?.nickname || 'Unknown') + ' (Kolonia)',
+                    isColony: true
+                };
+            });
 
-            let finalUsers = mainPlanets || [];
-
-            // 3. If we have colonies, we need to attach owner info (nickname, points)
-            if (colonies && colonies.length > 0) {
-                const ownerIds = [...new Set(colonies.map(c => c.owner_id))];
-
-                // Fetch owner profiles
-                const { data: owners, error: ownerError } = await supabase
-                    .from('profiles')
-                    .select('id, nickname, points, production_settings')
-                    .in('id', ownerIds);
-
-                if (ownerError) console.error("Error fetching colony owners:", ownerError);
-
-                const ownerMap = new Map(owners?.map(o => [o.id, o]) || []);
-
-                const mappedColonies = colonies.map(col => {
-                    const owner = ownerMap.get(col.owner_id);
-                    // If this colony belongs to a player who IS ALSO in the mainPlanets list (same system), 
-                    // we still want to show it as a separate planet (colony)
-                    return {
-                        id: col.owner_id, // Use owner_id for interaction links
-                        colony_id: col.id, // Keep distinct planet ID
-                        planet_name: col.planet_name,
-                        galaxy_coords: col.galaxy_coords,
-                        points: owner?.points || 0,
-                        production_settings: {
-                            ...(owner?.production_settings || {}),
-                            planetType: col.planet_type // Use colony planet type
-                        },
-                        buildings: col.buildings,
-                        nickname: (owner?.nickname || 'Unknown') + ' (Kolonia)',
-                        isColony: true
-                    };
-                });
-
-                finalUsers = [...finalUsers, ...mappedColonies];
-            }
-
-            return finalUsers;
-        } catch (error) {
-            console.error("Error fetching system users:", error);
-            return [];
+            finalUsers = [...finalUsers, ...mappedColonies];
         }
-    };
 
-    // Main Loop
-    useEffect(() => {
-        if (!loaded) return;
+        return finalUsers;
+    } catch (error) {
+        console.error("Error fetching system users:", error);
+        return [];
+    }
+};
 
-        const tick = () => {
-            const now = Date.now();
-            const prev = gameStateRef.current; // Use Ref for current state to avoid side-effects in setter
+// Main Loop
+useEffect(() => {
+    if (!loaded) return;
 
-            const production = calculateProduction(prev);
-            const secondsPassed = (now - prev.lastTick) / 1000;
-            if (secondsPassed <= 0) return;
+    const tick = () => {
+        const now = Date.now();
+        const prev = gameStateRef.current; // Use Ref for current state to avoid side-effects in setter
 
-            const newResources = { ...prev.resources };
-            newResources.metal = Math.min(production.storage.metal, newResources.metal + (production.metal * secondsPassed));
-            newResources.crystal = Math.min(production.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
-            newResources.deuterium = Math.min(production.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
-            newResources.energy = production.energy;
-            newResources.maxEnergy = production.maxEnergy;
-            newResources.storage = production.storage;
+        const production = calculateProduction(prev);
+        const secondsPassed = (now - prev.lastTick) / 1000;
+        if (secondsPassed <= 0) return;
 
-            let newBuildings = { ...prev.buildings };
-            let newResearch = { ...prev.research };
-            let newQueue = [...prev.constructionQueue];
+        const newResources = { ...prev.resources };
+        newResources.metal = Math.min(production.storage.metal, newResources.metal + (production.metal * secondsPassed));
+        newResources.crystal = Math.min(production.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
+        newResources.deuterium = Math.min(production.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
+        newResources.energy = production.energy;
+        newResources.maxEnergy = production.maxEnergy;
+        newResources.storage = production.storage;
 
-            // Process ALL finished items (Parallel Queues)
-            const finished = newQueue.filter(q => now >= q.endTime);
-            const active = newQueue.filter(q => now < q.endTime);
+        let newBuildings = { ...prev.buildings };
+        let newResearch = { ...prev.research };
+        let newQueue = [...prev.constructionQueue];
 
-            if (finished.length > 0) {
-                finished.forEach(item => {
-                    if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
-                    else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
-                });
-                newQueue = active;
-            }
+        // Process ALL finished items (Parallel Queues)
+        const finished = newQueue.filter(q => now >= q.endTime);
+        const active = newQueue.filter(q => now < q.endTime);
 
-            let newShips = { ...prev.ships };
-            let newDefenses = { ...prev.defenses };
-            let newShipQueue = [...prev.shipyardQueue];
-            while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
-                const completed = newShipQueue.shift();
-                if (completed) {
-                    if (completed.type === 'defense') {
-                        newDefenses[completed.itemId as DefenseId] = (newDefenses[completed.itemId as DefenseId] || 0) + (completed.quantity || 0);
-                    } else {
-                        newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
-                    }
-                }
-            }
+        if (finished.length > 0) {
+            finished.forEach(item => {
+                if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
+                else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
+            });
+            newQueue = active;
+        }
 
-            // Level 16 Lock Logic
-            const currentPoints = calculatePoints(newResources, newBuildings, newShips);
-            const currentLevel = Math.floor(currentPoints / 1000) + 1;
-            let updatedSettings = { ...prev.productionSettings };
-            let settingsChanged = false;
-
-            if (currentLevel >= 16 && !updatedSettings.reachedLevel16) {
-                updatedSettings.reachedLevel16 = true;
-                settingsChanged = true;
-            }
-
-            // Persist completed items or settings to Supabase
-            if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length) || settingsChanged || now - prev.lastTick > 30000) {
-                const currentPlanet = currentPlanetRef.current;
-                const reason = finished.length > 0 ? 'Queue Completed' : (now - prev.lastTick > 30000 ? 'Tick 30s' : 'Settings Changed');
-                console.log(`💾 [TICK SAVE] Reason: ${reason}, Target: ${currentPlanet || 'main'}`);
-
-                if (!currentPlanet || currentPlanet === 'main') {
-                    // Save to Profile (Main Planet)
-                    const payload = {
-                        buildings: newBuildings,
-                        research: newResearch,
-                        ships: newShips,
-                        defenses: newDefenses,
-                        resources: newResources,
-                        shipyard_queue: newShipQueue,
-                        construction_queue: newQueue,
-                        production_settings: updatedSettings,
-                        last_updated: Date.now()
-                    };
-                    console.log('💾 [TICK SAVE] Payload:', JSON.stringify(payload).substring(0, 200) + '...');
-
-                    supabase.from('profiles').update(payload).eq('id', session.user.id).then(({ error }) => {
-                        if (error) console.error("❌ [TICK SAVE ERROR] Main:", error);
-                        else console.log("✅ [TICK SAVE] Main Success");
-                    });
-
+        let newShips = { ...prev.ships };
+        let newDefenses = { ...prev.defenses };
+        let newShipQueue = [...prev.shipyardQueue];
+        while (newShipQueue.length > 0 && now >= newShipQueue[0].endTime) {
+            const completed = newShipQueue.shift();
+            if (completed) {
+                if (completed.type === 'defense') {
+                    newDefenses[completed.itemId as DefenseId] = (newDefenses[completed.itemId as DefenseId] || 0) + (completed.quantity || 0);
                 } else {
-                    // Save to Planet (Colony)
-                    console.log(`💾 [TICK SAVE] Colony ${currentPlanet} - Buildings:`, JSON.stringify(newBuildings));
-                    saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, newResources, newQueue, newShipQueue);
-
-                    // ALWAYS sync global settings to Profile when on Colony (Level16, Research, Points)
-                    // This ensures Level16 flag is never lost
-                    supabase.from('profiles').update({
-                        production_settings: updatedSettings,
-                        research: newResearch,
-                        points: calculatePoints(newResources, newBuildings, newShips),
-                        last_updated: Date.now()
-                    }).eq('id', session.user.id).then(res => {
-                        if (res.error) console.error("Colony profile sync error:", res.error);
-                    });
+                    newShips[completed.itemId as ShipId] = (newShips[completed.itemId as ShipId] || 0) + (completed.quantity || 0);
                 }
+            }
+        }
 
-                // Update lastSavedStateRef for validation
-                lastSavedStateRef.current = {
-                    ...prev,
+        // Level 16 Lock Logic
+        const currentPoints = calculatePoints(newResources, newBuildings, newShips);
+        const currentLevel = Math.floor(currentPoints / 1000) + 1;
+        let updatedSettings = { ...prev.productionSettings };
+        let settingsChanged = false;
+
+        if (currentLevel >= 16 && !updatedSettings.reachedLevel16) {
+            updatedSettings.reachedLevel16 = true;
+            settingsChanged = true;
+        }
+
+        // Persist completed items or settings to Supabase
+        if (finished.length > 0 || (prev.shipyardQueue.length !== newShipQueue.length) || settingsChanged || now - prev.lastTick > 30000) {
+            const currentPlanet = currentPlanetRef.current;
+            const reason = finished.length > 0 ? 'Queue Completed' : (now - prev.lastTick > 30000 ? 'Tick 30s' : 'Settings Changed');
+            console.log(`💾 [TICK SAVE] Reason: ${reason}, Target: ${currentPlanet || 'main'}`);
+
+            if (!currentPlanet || currentPlanet === 'main') {
+                // Save to Profile (Main Planet)
+                const payload = {
                     buildings: newBuildings,
                     research: newResearch,
                     ships: newShips,
                     defenses: newDefenses,
                     resources: newResources,
-                    constructionQueue: newQueue,
-                    shipyardQueue: newShipQueue
+                    shipyard_queue: newShipQueue,
+                    construction_queue: newQueue,
+                    production_settings: updatedSettings,
+                    last_updated: Date.now()
                 };
+                console.log('💾 [TICK SAVE] Payload:', JSON.stringify(payload).substring(0, 200) + '...');
+
+                supabase.from('profiles').update(payload).eq('id', session.user.id).then(({ error }) => {
+                    if (error) console.error("❌ [TICK SAVE ERROR] Main:", error);
+                    else console.log("✅ [TICK SAVE] Main Success");
+                });
+
+            } else {
+                // Save to Planet (Colony)
+                console.log(`💾 [TICK SAVE] Colony ${currentPlanet} - Buildings:`, JSON.stringify(newBuildings));
+                saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, newResources, newQueue, newShipQueue);
+
+                // ALWAYS sync global settings to Profile when on Colony (Level16, Research, Points)
+                // This ensures Level16 flag is never lost
+                supabase.from('profiles').update({
+                    production_settings: updatedSettings,
+                    research: newResearch,
+                    points: calculatePoints(newResources, newBuildings, newShips),
+                    last_updated: Date.now()
+                }).eq('id', session.user.id).then(res => {
+                    if (res.error) console.error("Colony profile sync error:", res.error);
+                });
             }
 
-            setGameState(current => ({
-                ...current,
-                productionSettings: settingsChanged ? updatedSettings : current.productionSettings,
-                resources: {
-                    ...newResources,
-                    storage: production.storage
-                },
+            // Update lastSavedStateRef for validation
+            lastSavedStateRef.current = {
+                ...prev,
                 buildings: newBuildings,
                 research: newResearch,
                 ships: newShips,
                 defenses: newDefenses,
+                resources: newResources,
                 constructionQueue: newQueue,
-                shipyardQueue: newShipQueue,
-                productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
-                lastTick: now
-            }));
-        };
+                shipyardQueue: newShipQueue
+            };
+        }
 
-        const interval = setInterval(tick, TICK_RATE);
-        return () => clearInterval(interval);
-    }, [loaded]);
-
-    const contextValue: GameContextType = {
-        ...gameState,
-        upgradeBuilding,
-        upgradeResearch,
-        buildShip,
-        buildDefense,
-        sendExpedition,
-        sendAttack,
-        sendSpyProbe,
-        sendTransport,
-        cancelMission,
-        cancelConstruction,
-        buyPremium,
-        getCost,
-        checkRequirements,
-        renamePlanet,
-        updateProductionSetting,
-        resetGame,
-        clearLogs,
-        logout,
-        deleteAccount,
-        updateAvatar,
-        updatePlanetType,
-        getPlayersInSystem,
-        renameUser,
-        getLevel,
-        session,
-        // Colonization
-        planets,
-        currentPlanetId,
-        mainPlanetName,
-        sendColonize,
-        switchPlanet,
-        fetchPlanets
+        setGameState(current => ({
+            ...current,
+            productionSettings: settingsChanged ? updatedSettings : current.productionSettings,
+            resources: {
+                ...newResources,
+                storage: production.storage
+            },
+            buildings: newBuildings,
+            research: newResearch,
+            ships: newShips,
+            defenses: newDefenses,
+            constructionQueue: newQueue,
+            shipyardQueue: newShipQueue,
+            productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
+            lastTick: now
+        }));
     };
 
-    return (
-        <GameContext.Provider value={contextValue}>
-            {children}
-        </GameContext.Provider>
-    );
+    const interval = setInterval(tick, TICK_RATE);
+    return () => clearInterval(interval);
+}, [loaded]);
+
+const contextValue: GameContextType = {
+    ...gameState,
+    upgradeBuilding,
+    upgradeResearch,
+    buildShip,
+    buildDefense,
+    sendExpedition,
+    sendAttack,
+    sendSpyProbe,
+    sendTransport,
+    cancelMission,
+    cancelConstruction,
+    buyPremium,
+    getCost,
+    checkRequirements,
+    renamePlanet,
+    updateProductionSetting,
+    resetGame,
+    clearLogs,
+    logout,
+    deleteAccount,
+    updateAvatar,
+    updatePlanetType,
+    getPlayersInSystem,
+    renameUser,
+    getLevel,
+    session,
+    // Colonization
+    planets,
+    currentPlanetId,
+    mainPlanetName,
+    sendColonize,
+    switchPlanet,
+    fetchPlanets
+};
+
+return (
+    <GameContext.Provider value={contextValue}>
+        {children}
+    </GameContext.Provider>
+);
 };
 
 export const useGame = () => {
