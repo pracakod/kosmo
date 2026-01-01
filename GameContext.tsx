@@ -357,16 +357,30 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             console.log('💾 [SAVE] Colony Payload:', JSON.stringify(payload));
 
+            // Save Colony Stats
             const { error } = await supabase.from('planets').update(payload).eq('id', targetPlanet);
-
             if (error) {
                 console.error('❌ [SAVE ERROR] Colony:', error.message);
             } else {
-                console.log('✅ [SAVE SUCCESS] Colony saved');
                 success = true;
             }
 
-            // Also sync global data to Profile
+            // CRITICAL: Sync Global Data (Dark Matter, Missions, Research) to Profile
+            // 1. Fetch current profile to get Main Planet resources (to avoid overwrite)
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('resources')
+                .eq('id', session.user.id)
+                .single();
+
+            const dbResources = profileData?.resources || {};
+
+            // 2. Merge Resources: DB Metal/Crystal + Local Dark Matter
+            const safeResources = {
+                ...dbResources,
+                darkMatter: gameState.resources.darkMatter
+            };
+
             const globalPayload = {
                 research: current.research,
                 production_settings: {
@@ -375,11 +389,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     planetType: current.planetType,
                     nickname: current.nickname
                 },
-                nickname: current.nickname, // Save to root level too
-                points: calculatePoints(current.resources, current.buildings, current.ships),
+                nickname: current.nickname,
+                // points: calculatePoints(...), // Skipping points to avoid fluctuation
+                active_missions: current.activeMissions, // Sync Global Missions
+                resources: safeResources, // Write SAFE resources (Dark Matter only updated)
                 last_updated: Date.now()
             };
-            console.log('💾 [SAVE] Profile Sync Payload:', JSON.stringify(globalPayload));
+            console.log('💾 [SAVE] Profile Sync Payload (Safe):', JSON.stringify(globalPayload));
 
             const { error: profileError } = await supabase.from('profiles').update(globalPayload).eq('id', session.user.id);
             if (profileError) {
@@ -2596,34 +2612,32 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (!newName.trim()) return;
         const trimmedName = newName.trim();
         const targetId = specificPlanetId || currentPlanetRef.current;
+        const isMain = targetId === 'main';
 
-        // 1. Update active state if we are renaming the current planet
+        console.log(`🪐 Renaming ${targetId} to ${trimmedName}`);
+
+        // 1. Optimistic Status Update
         if (targetId === currentPlanetRef.current) {
             setGameState(prev => ({ ...prev, planetName: trimmedName }));
-            if (targetId === 'main') setMainPlanetName(trimmedName);
-        } else if (targetId === 'main') {
-            // Renaming main while on colony
+            if (isMain) setMainPlanetName(trimmedName);
+        } else if (isMain) {
             setMainPlanetName(trimmedName);
         }
 
-        // 2. Update DB
-        if (targetId && targetId !== 'main') {
-            // Rename colony in planets table
-            const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', targetId);
-            if (error) {
-                console.error('❌ Colony rename error:', error);
-            } else {
-                console.log('🪐 Colony renamed to:', trimmedName);
-                fetchPlanets(); // Refresh planets list
+        // 2. DB Update and List Refresh
+        if (isMain) {
+            const { error } = await supabase.from('profiles').update({ planet_name: trimmedName }).eq('id', session.user.id);
+            if (error) console.error('❌ Main rename error:', error);
+            else {
+                console.log('✅ Main renamed');
+                await fetchPlanets();
             }
         } else {
-            // Rename main planet in profiles table
-            const { error } = await supabase.from('profiles').update({ planet_name: trimmedName }).eq('id', session.user.id);
-            if (error) {
-                console.error('❌ Planet rename error:', error);
-            } else {
-                console.log('🪐 Main planet renamed to:', trimmedName);
-                if (targetId === 'main') setMainPlanetName(trimmedName);
+            const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', targetId);
+            if (error) console.error('❌ Colony rename error:', error);
+            else {
+                console.log('✅ Colony renamed');
+                await fetchPlanets();
             }
         }
     };

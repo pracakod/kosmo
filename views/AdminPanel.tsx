@@ -163,7 +163,7 @@ ON DELETE CASCADE;
         } else {
             alert(`✅ Dodano ${giftAmount}x ${giftShipId} graczowi ${targetUser.nickname || 'ID:' + targetUser.id}`);
             setGiftAmount(1);
-            fetchUsers();
+            await fetchUsers();
         }
     };
 
