@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import ResourceHeader from './ResourceHeader';
 import { useGame } from '../GameContext';
 import { formatTime, SHIPS, ShipId } from '../constants';
+import ErrorConsole, { DebugButton } from './ErrorConsole';
+import { initGlobalErrorHandlers } from '../lib/errorLogger';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -14,6 +16,12 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isAlertCollapsed, setIsAlertCollapsed] = useState(false); // Collapsible alert state
+    const [showDebugConsole, setShowDebugConsole] = useState(false);
+
+    // Initialize global error handlers once
+    useEffect(() => {
+        initGlobalErrorHandlers();
+    }, []);
 
     const game = useGame();
     const logout = game?.logout || (() => window.location.reload());
@@ -193,6 +201,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                     </button>
                 </div>
             </nav>
+
+            {/* Debug Console */}
+            <DebugButton onClick={() => setShowDebugConsole(true)} />
+            <ErrorConsole visible={showDebugConsole} onClose={() => setShowDebugConsole(false)} />
         </div>
     );
 };
