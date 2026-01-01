@@ -267,12 +267,57 @@ const initialState: GameState = {
     level: 1,
 };
 
-const calculatePoints = (resources: any, buildings: any, ships: any) => {
+const calculatePoints = (resources: any, buildings: any, ships: any, research: any, defenses: any) => {
+    // 1. Resources Points (1 pkt per 1000 resources)
     const r = resources || {};
-    const resPoints = Math.floor(((Number(r.metal) || 0) + (Number(r.crystal) || 0) + (Number(r.deuterium) || 0)) / 1000);
-    const buildPoints = Object.values(buildings || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 100, 0);
-    const shipPoints = Object.values(ships || {}).reduce((acc: number, val: any) => acc + (Number(val) || 0) * 50, 0);
-    return Math.floor(Number(resPoints) + Number(buildPoints) + Number(shipPoints));
+    const resPoints = ((Number(r.metal) || 0) + (Number(r.crystal) || 0) + (Number(r.deuterium) || 0));
+
+    // 2. Building Points (Cumulative Cost)
+    let buildPoints = 0;
+    Object.entries(buildings || {}).forEach(([id, level]) => {
+        const def = BUILDINGS[id as BuildingId];
+        if (!def) return;
+        let cost = 0;
+        for (let l = 1; l <= (level as number); l++) {
+            const factor = Math.pow(1.5, l - 1);
+            cost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor) + Math.floor(def.baseCost.deuterium * factor);
+        }
+        buildPoints += cost;
+    });
+
+    // 3. Research Points (Cumulative Cost)
+    let researchPoints = 0;
+    Object.entries(research || {}).forEach(([id, level]) => {
+        const def = RESEARCH[id as ResearchId];
+        if (!def) return;
+        let cost = 0;
+        for (let l = 1; l <= (level as number); l++) {
+            const factor = Math.pow(1.5, l - 1);
+            cost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor) + Math.floor(def.baseCost.deuterium * factor);
+        }
+        researchPoints += cost;
+    });
+
+    // 4. Fleet Points (Unit Cost * Count)
+    let fleetPoints = 0;
+    Object.entries(ships || {}).forEach(([id, count]) => {
+        const def = SHIPS[id as ShipId];
+        if (!def) return;
+        const unitCost = def.baseCost.metal + def.baseCost.crystal + def.baseCost.deuterium;
+        fleetPoints += unitCost * (count as number);
+    });
+
+    // 5. Defense Points (Unit Cost * Count)
+    let defensePoints = 0;
+    Object.entries(defenses || {}).forEach(([id, count]) => {
+        const def = DEFENSES[id as DefenseId];
+        if (!def) return;
+        const unitCost = def.cost.metal + def.cost.crystal + def.cost.deuterium;
+        defensePoints += unitCost * (count as number);
+    });
+
+    const totalValue = resPoints + buildPoints + researchPoints + fleetPoints + defensePoints;
+    return Math.floor(totalValue / 1000);
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -422,7 +467,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
-                points: calculatePoints(current.resources, current.buildings, current.ships),
+                points: calculatePoints(current.resources, current.buildings, current.ships, current.research, current.defenses),
                 last_updated: Date.now(),
                 level: current.level,
                 xp: current.xp
@@ -1231,7 +1276,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 ships: newShips,
                 resources: newRes,
                 mission_logs: newLogs,
-                points: calculatePoints(newRes, gameState.buildings, newShips)
+                points: calculatePoints(newRes, gameState.buildings, newShips, gameState.research, gameState.defenses)
             }).eq('id', session.user.id);
 
             // Update Reference State for Validation to know this is "saved"
@@ -1568,7 +1613,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         await supabase.from('profiles').update({
             ships: currentShips,
-            points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
+            points: calculatePoints(gameState.resources, gameState.buildings, currentShips, gameState.research, gameState.defenses)
         }).eq('id', session.user.id);
     };
 
@@ -1690,7 +1735,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             });
             await supabase.from('profiles').update({
                 ships: currentShips,
-                points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
+                points: calculatePoints(gameState.resources, gameState.buildings, currentShips, gameState.research, gameState.defenses)
             }).eq('id', session.user.id);
         }
     };
@@ -1758,7 +1803,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         currentShips[ShipId.ESPIONAGE_PROBE] = (currentShips[ShipId.ESPIONAGE_PROBE] || 0) - amount;
         await supabase.from('profiles').update({
             ships: currentShips,
-            points: calculatePoints(gameState.resources, gameState.buildings, currentShips)
+            points: calculatePoints(gameState.resources, gameState.buildings, currentShips, gameState.research, gameState.defenses)
         }).eq('id', session.user.id);
 
         return true;
@@ -1858,7 +1903,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             await supabase.from('profiles').update({
                 ships: currentShips,
                 resources: currentRes,
-                points: calculatePoints(currentRes, gameState.buildings, currentShips)
+                points: calculatePoints(currentRes, gameState.buildings, currentShips, gameState.research, gameState.defenses)
             }).eq('id', session.user.id);
         }
     };
@@ -2893,7 +2938,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
 
             // Level 16 Lock Logic
-            const currentPoints = calculatePoints(prev.resources, newBuildings, newShips);
+            const currentPoints = calculatePoints(prev.resources, newBuildings, newShips, newResearch, newDefenses);
             const pointsLevel = Math.floor(currentPoints / 1000) + 1;
             let updatedSettings = { ...prev.productionSettings };
             let settingsChanged = false;
@@ -2956,7 +3001,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     supabase.from('profiles').update({
                         production_settings: updatedSettings,
                         research: newResearch,
-                        points: calculatePoints(colonyResources, newBuildings, newShips),
+                        points: calculatePoints(colonyResources, newBuildings, newShips, newResearch, newDefenses),
                         xp: refXP,
                         level: refLevel,
                         last_updated: Date.now()
