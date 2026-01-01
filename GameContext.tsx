@@ -2338,7 +2338,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         // Force Save Current State before switching
         if (currentPlanetId && currentPlanetId !== 'main') {
             console.log('💾 Saving current colony before switch:', currentPlanetId);
-            await saveStateToPlanet(
+            const success = await saveStateToPlanet(
                 currentPlanetId,
                 current.buildings,
                 current.ships,
@@ -2347,6 +2347,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 current.constructionQueue,
                 current.shipyardQueue
             );
+
+            if (!success) {
+                alert("Błąd zapisu stanu kolonii! Przełączanie przerwane, aby zapobiec utracie danych.");
+                return; // CRITICAL: Stop switch to protect data
+            }
+
             // Refresh planets data so we have the latest state when we switch back needed
             fetchPlanets();
         } else if (!currentPlanetId || currentPlanetId === 'main') {
@@ -2508,7 +2514,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         await supabase.from('profiles').update({ mission_logs: [] }).eq('id', session.user.id);
     };
     const logout = async () => {
+        // Try to save before logout (best effort)
+        try {
+            await saveGame('Logout');
+        } catch (e) {
+            console.error('Logout save failed:', e);
+        }
+
         localStorage.removeItem(STORAGE_KEY); // Clear local data on logout
+        localStorage.removeItem(STORAGE_KEY + '_backup');
         await supabase.auth.signOut();
         window.location.reload();
     };
