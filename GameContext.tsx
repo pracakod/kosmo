@@ -1167,8 +1167,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
             const outcome = (mission.result?.outcome as 'success' | 'failure' | 'neutral' | 'danger') || 'success';
 
+            // IDEMPOTENCY CHECK: Use deterministic ID to prevent double-payouts
+            const logId = `${mission.id}-return`;
+            const alreadyProcessed = myProfile.mission_logs?.some((l: any) => l.id === logId);
+
+            if (alreadyProcessed) {
+                console.warn("⚠️ Mission return already processed (log found). Skipping payout.");
+                // Just mark as complete in DB to stop it from reappearing
+                await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
+                fetchMissions();
+                return;
+            }
+
             const newLogs = [
-                { id: Date.now().toString(), timestamp: Date.now(), title, message, outcome, rewards: mission.resources },
+                { id: logId, timestamp: Date.now(), title, message, outcome, rewards: mission.resources },
                 ...(myProfile.mission_logs || [])
             ].slice(0, 50);
 
