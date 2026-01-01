@@ -79,7 +79,7 @@ const Auth: React.FC = () => {
                             onError={(e) => { e.currentTarget.src = '/kosmo/avatars/avatar_default.png'; }}
                         />
                     </div>
-                    <h1 className="text-4xl font-bold text-white tracking-tight uppercase font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary animate-in slide-in-from-top-4 duration-700 delay-150">Kosmo</h1>
+                    <h1 className="text-4xl font-bold text-white tracking-tight uppercase font-display text-transparent bg-clip-text bg-gradient-to-r from-white to-primary animate-in slide-in-from-top-4 duration-700 delay-150">Kosmo 2.0</h1>
                     <p className="text-gray-500 mt-2 animate-in slide-in-from-top-2 duration-700 delay-200">v1.2.5 (PvP & Commander Update)</p>
                     <p className="text-[#929bc9] text-sm md:text-base text-center mt-2 animate-in slide-in-from-top-2 duration-700 delay-300">Zaloguj się do terminala dowódcy</p>
                 </div>
