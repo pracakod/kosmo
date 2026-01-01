@@ -9,8 +9,7 @@ const Settings: React.FC = () => {
         planetType, updatePlanetType,
         nickname, renameUser,
         resetGame, logout, deleteAccount, abandonColony,
-        session, currentPlanetId, planets, mainPlanetName, mainPlanetCoords,
-        level, xp
+        session, currentPlanetId, planets, mainPlanetName, mainPlanetCoords
     } = useGame();
 
     const [newNickname, setNewNickname] = useState(nickname || "");
@@ -58,13 +57,12 @@ const Settings: React.FC = () => {
                     </button>
                 </div>
             </div>
-        </div>
-            </div >
 
 
 
-    {/* Planet Type Selection */ }
-    < div className = "bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg" >
+
+            {/* Planet Type Selection */}
+            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="material-symbols-outlined text-blue-400">public</span>
                     Wygląd Planety
@@ -91,11 +89,11 @@ const Settings: React.FC = () => {
                         </div>
                     ))}
                 </div>
-            </div >
+            </div>
 
 
-    {/* Avatar Selection */ }
-    < div className = "bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg" >
+            {/* Avatar Selection */}
+            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="material-symbols-outlined text-purple-400">face</span>
                     Personalizacja Dowódcy
@@ -123,10 +121,10 @@ const Settings: React.FC = () => {
                         </div>
                     ))}
                 </div>
-            </div >
+            </div>
 
-    {/* Empire Management - Planets Table */ }
-    < div className = "bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg overflow-hidden" >
+            {/* Empire Management - Planets Table */}
+            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg overflow-hidden">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="material-symbols-outlined text-indigo-400">language</span>
                     Zarządzanie Imperium
@@ -221,10 +219,10 @@ const Settings: React.FC = () => {
                 <p className="text-xs text-[#555a7a] mt-4 text-center">
                     Główna planeta nie może zostać usunięta. Kolonie można porzucić, co jest procesem nieodwracalnym.
                 </p>
-            </div >
+            </div>
 
-    {/* Danger Zone */ }
-    < div className = "bg-[#1c2136] rounded-xl border border-red-500/20 p-6 shadow-lg" >
+            {/* Danger Zone */}
+            <div className="bg-[#1c2136] rounded-xl border border-red-500/20 p-6 shadow-lg">
                 <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined">warning</span>
                     Strefa Niebezpieczna
@@ -252,8 +250,8 @@ const Settings: React.FC = () => {
                         Uwaga: Usunięcie konta trwale wykasuje Twój profil i misje z bazy danych. Tej akcji nie da się cofnąć!
                     </p>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 };
 
