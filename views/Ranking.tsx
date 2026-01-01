@@ -12,6 +12,8 @@ interface RankedPlayer {
     nickname?: string;
     galaxy_coords?: { galaxy: number; system: number; position: number };
     last_updated?: number;
+    level?: number;
+    xp?: number;
 }
 
 const Ranking: React.FC = () => {
@@ -23,7 +25,7 @@ const Ranking: React.FC = () => {
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('id, points, production_settings, planet_name, galaxy_coords, nickname, last_updated')
+                    .select('id, points, production_settings, planet_name, galaxy_coords, nickname, last_updated, level, xp')
                     .order('points', { ascending: false })
                     .limit(50);
 
@@ -36,7 +38,9 @@ const Ranking: React.FC = () => {
                         planet_name: p.planet_name || 'Nieznana Planeta',
                         nickname: p.nickname || p.production_settings?.nickname || `Dowódca ${p.id.substring(0, 6)}`,
                         galaxy_coords: p.galaxy_coords,
-                        last_updated: p.last_updated
+                        last_updated: p.last_updated,
+                        level: p.level || 1,
+                        xp: p.xp || 0
                     }));
                     setPlayers(mapped);
                 } else if (error) {
@@ -93,8 +97,7 @@ const Ranking: React.FC = () => {
                             {players.map((player, index) => {
                                 const isTop3 = index < 3;
                                 const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-[#929bc9]';
-                                const rawLevel = Math.floor(player.points / 1000) + 1;
-                                const level = (player.production_settings?.reachedLevel16) ? Math.max(16, rawLevel) : rawLevel;
+                                const level = player.level || 1;
 
                                 // Online status check (5 minutes threshold)
                                 const now = Date.now();
@@ -131,7 +134,9 @@ const Ranking: React.FC = () => {
                                             </div>
                                         </td>
                                         <td className="p-4 text-center font-mono text-green-400 font-bold">
-                                            {level}
+                                            <span title={`XP: ${(player.xp || 0).toLocaleString()}`} className="cursor-help border-b border-dashed border-white/20">
+                                                {level}
+                                            </span>
                                         </td>
                                         <td className="p-4 text-[#929bc9] font-mono text-sm hidden md:table-cell">
                                             {player.planet_name}
