@@ -1181,7 +1181,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             // Mark completed
             await supabase.from('missions').update({ status: 'completed' }).eq('id', mission.id);
-            await refreshProfile(); // Refresh resources & ships
+            // REMOVED: refreshProfile() - DO NOT call here! It may load cached/stale data and overwrite the just-saved state
+            // Local state was already updated above in setGameState, and DB was already updated in supabase.from('profiles').update
             fetchMissions();
 
         } catch (err: any) {
