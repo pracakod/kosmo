@@ -148,14 +148,26 @@ export const initGlobalErrorHandlers = () => {
     // Capture unhandled promise rejections
     window.onunhandledrejection = (event) => {
         const message = event.reason?.message || String(event.reason);
-        logError(`Unhandled Promise: ${message}`, 'Promise', event.reason);
+        logError(message, 'UnhandledPromiseRejection', event.reason instanceof Error ? event.reason : undefined);
     };
 
-    // Load existing logs
-    loadLogs();
-
-    console.log('🐛 Error Logger initialized');
+    // Capture resource loading errors (img, script, link)
+    window.addEventListener('error', (event: ErrorEvent) => {
+        // Resource errors don't bubble, but capture works.
+        // They differ from runtime errors as event.target will be an element.
+        if (event.target && (event.target instanceof HTMLElement)) {
+            const element = event.target as HTMLElement;
+            const src = (element as any).src || (element as any).href || 'unknown';
+            const tagName = element.tagName.toLowerCase();
+            logError(`Failed to load resource: <${tagName} src="${src}">`, 'ResourceLoader');
+        }
+    }, true); // true = capture phase
 };
+
+// Load existing logs
+loadLogs();
+
+console.log('🐛 Error Logger initialized');
 
 // Copy logs to clipboard (for sharing)
 export const copyLogsToClipboard = async (): Promise<boolean> => {

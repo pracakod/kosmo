@@ -2592,21 +2592,29 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     const updateProductionSetting = (buildingId: BuildingId, percent: number) => { setGameState(prev => ({ ...prev, productionSettings: { ...prev.productionSettings, [buildingId]: percent } })); };
 
-    const renamePlanet = async (newName: string) => {
+    const renamePlanet = async (newName: string, specificPlanetId?: string) => {
         if (!newName.trim()) return;
         const trimmedName = newName.trim();
-        setGameState(prev => ({ ...prev, planetName: trimmedName }));
+        const targetId = specificPlanetId || currentPlanetRef.current;
 
-        const currentPlanet = currentPlanetRef.current;
+        // 1. Update active state if we are renaming the current planet
+        if (targetId === currentPlanetRef.current) {
+            setGameState(prev => ({ ...prev, planetName: trimmedName }));
+            if (targetId === 'main') setMainPlanetName(trimmedName);
+        } else if (targetId === 'main') {
+            // Renaming main while on colony
+            setMainPlanetName(trimmedName);
+        }
 
-        if (currentPlanet && currentPlanet !== 'main') {
+        // 2. Update DB
+        if (targetId && targetId !== 'main') {
             // Rename colony in planets table
-            const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', currentPlanet);
+            const { error } = await supabase.from('planets').update({ planet_name: trimmedName }).eq('id', targetId);
             if (error) {
                 console.error('❌ Colony rename error:', error);
             } else {
                 console.log('🪐 Colony renamed to:', trimmedName);
-                fetchPlanets(); // Refresh planets list to update sidebar
+                fetchPlanets(); // Refresh planets list
             }
         } else {
             // Rename main planet in profiles table
@@ -2615,7 +2623,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 console.error('❌ Planet rename error:', error);
             } else {
                 console.log('🪐 Main planet renamed to:', trimmedName);
-                setMainPlanetName(trimmedName);
+                if (targetId === 'main') setMainPlanetName(trimmedName);
             }
         }
     };

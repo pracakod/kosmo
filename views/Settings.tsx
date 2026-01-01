@@ -12,14 +12,13 @@ const Settings: React.FC = () => {
         session, currentPlanetId, planets, mainPlanetName, mainPlanetCoords
     } = useGame();
 
-    const [newName, setNewName] = useState(planetName);
     const [newNickname, setNewNickname] = useState(nickname || "");
     const [avatarInput, setAvatarInput] = useState(avatarUrl || "");
 
-    const handleSaveName = () => {
-        if (newName.trim()) {
-            renamePlanet(newName.trim());
-            alert('Nazwa planety została zmieniona.');
+    const handleRename = (currentName: string, planetId?: string) => {
+        const name = prompt("Podaj nową nazwę planety:", currentName);
+        if (name && name.trim()) {
+            renamePlanet(name.trim(), planetId);
         }
     };
 
@@ -56,32 +55,7 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
-            {/* General Settings */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">edit</span>
-                    Konfiguracja
-                </h3>
 
-                <div className="flex flex-col gap-2 mb-4">
-                    <label className="text-sm text-[#929bc9] font-bold uppercase">Nazwa Planety</label>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            maxLength={20}
-                            className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
-                        />
-                        <button
-                            onClick={handleSaveName}
-                            className="bg-primary hover:bg-blue-600 text-white px-6 rounded-lg font-bold transition-colors"
-                        >
-                            Zapisz
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             {/* Planet Type Selection */}
             <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
@@ -102,7 +76,7 @@ const Settings: React.FC = () => {
                                 className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${planetType === p.type ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
                             >
                                 <img
-                                    src={(PLANET_IMAGES[p.type] || IMAGES.planet).replace('/kosmo', '')}
+                                    src={PLANET_IMAGES[p.type] || IMAGES.planet}
                                     alt={p.name}
                                     className="w-full h-full object-cover"
                                 />
@@ -113,6 +87,7 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
+
             {/* Avatar Selection */}
             <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -122,10 +97,10 @@ const Settings: React.FC = () => {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { name: "Pomocnik", url: "/avatars/avatar_default.png" },
-                        { name: "Major (M)", url: "/avatars/avatar_major.png" },
-                        { name: "Major (K)", url: "/avatars/avatar_female.png" },
-                        { name: "Cyborg", url: "/avatars/avatar_cyber.png" }
+                        { name: "Pomocnik", url: "/kosmo/avatars/avatar_default.png" },
+                        { name: "Major (M)", url: "/kosmo/avatars/avatar_major.png" },
+                        { name: "Major (K)", url: "/kosmo/avatars/avatar_female.png" },
+                        { name: "Cyborg", url: "/kosmo/avatars/avatar_cyber.png" }
                     ].map((av) => (
                         <div key={av.name} className="flex flex-col gap-2">
                             <button
@@ -133,7 +108,7 @@ const Settings: React.FC = () => {
                                 className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
                             >
                                 <img
-                                    src={av.url.replace('/kosmo', '')}
+                                    src={av.url}
                                     alt={av.name}
                                     className="w-full h-full object-cover"
                                 />
@@ -173,7 +148,16 @@ const Settings: React.FC = () => {
                                 </td>
                                 <td className="p-3 text-[#929bc9]">Główna</td>
                                 <td className="p-3 text-right">
-                                    <span className="text-white/20 italic text-xs">Nieusuwalna</span>
+                                    <div className="flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={() => handleRename(mainPlanetName || "Główna Planeta", 'main')}
+                                            className="text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/30 border border-blue-500/20 px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors flex items-center gap-1"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">edit</span>
+                                            Zmień nazwę
+                                        </button>
+                                        <span className="text-white/20 italic text-xs px-2">Nieusuwalna</span>
+                                    </div>
                                 </td>
                             </tr>
 
@@ -189,22 +173,31 @@ const Settings: React.FC = () => {
                                     </td>
                                     <td className="p-3 text-[#929bc9] capitalize">Kolonia</td>
                                     <td className="p-3 text-right">
-                                        <button
-                                            onClick={async () => {
-                                                if (!confirm(`⚠️ Czy na pewno chcesz porzucić kolonię: ${colony.planet_name || "Bez nazwy"} [${colony.galaxy}:${colony.system}:${colony.position}]?`)) return;
-                                                if (!confirm("⚠️⚠️ Wszystkie budynki, flota i surowce na tej planecie zostaną UTRACONE. Czy na pewno kontynuować?")) return;
-                                                const confirmation = prompt("⚠️⚠️⚠️ Aby potwierdzić usunięcie kolonii, wpisz słowo: DELETE");
-                                                if (confirmation === 'DELETE') {
-                                                    await abandonColony(colony.id, confirmation);
-                                                } else if (confirmation) {
-                                                    alert("Błędne hasło potwierdzające. Anulowano.");
-                                                }
-                                            }}
-                                            className="text-red-400 hover:text-red-200 bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors flex items-center gap-1 ml-auto"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">delete</span>
-                                            Usuń
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => handleRename(colony.planet_name || "Kolonia", colony.id)}
+                                                className="text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/30 border border-blue-500/20 px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">edit</span>
+                                                Zmień nazwę
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm(`⚠️ Czy na pewno chcesz porzucić kolonię: ${colony.planet_name || "Bez nazwy"} [${colony.galaxy}:${colony.system}:${colony.position}]?`)) return;
+                                                    if (!confirm("⚠️⚠️ Wszystkie budynki, flota i surowce na tej planecie zostaną UTRACONE. Czy na pewno kontynuować?")) return;
+                                                    const confirmation = prompt("⚠️⚠️⚠️ Aby potwierdzić usunięcie kolonii, wpisz słowo: DELETE");
+                                                    if (confirmation === 'DELETE') {
+                                                        await abandonColony(colony.id, confirmation);
+                                                    } else if (confirmation) {
+                                                        alert("Błędne hasło potwierdzające. Anulowano.");
+                                                    }
+                                                }}
+                                                className="text-red-400 hover:text-red-200 bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                                Usuń
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

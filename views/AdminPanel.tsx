@@ -9,17 +9,38 @@ export const AdminPanel: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState('');
     const [showErrors, setShowErrors] = useState(false);
+    const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+
+    const toggleExpand = (userId: string) => {
+        const newSet = new Set(expandedUsers);
+        if (newSet.has(userId)) newSet.delete(userId);
+        else newSet.add(userId);
+        setExpandedUsers(newSet);
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
-        const { data, error } = await supabase
+        // Fetch Profiles
+        const { data: profiles, error: pError } = await supabase
             .from('profiles')
-            .select('id, nickname, planet_name, galaxy_coords, last_updated, resources, points, buildings, ships, defenses, research');
-        if (error) {
-            console.error("Admin fetch error", error);
-            setMsg(`Błąd pobierania: ${error.message}`);
+            .select('*')
+            .order('last_updated', { ascending: false });
+
+        // Fetch Planets
+        const { data: planets, error: plError } = await supabase
+            .from('planets')
+            .select('*');
+
+        if (pError) {
+            console.error("Admin fetch error", pError);
+            setMsg(`Błąd pobierania: ${pError.message}`);
         } else {
-            setUsers(data || []);
+            const allPlanets = planets || [];
+            const joined = profiles?.map((p: any) => ({
+                ...p,
+                colonies: allPlanets.filter((pl: any) => pl.owner_id === p.id)
+            })) || [];
+            setUsers(joined);
         }
         setLoading(false);
     };
@@ -105,33 +126,23 @@ ON DELETE CASCADE;
     const [inspectUser, setInspectUser] = useState<any | null>(null);
 
     // Ship Gift Feature
-    const [giftNickname, setGiftNickname] = useState('');
+    // Ship Gift Feature
+    const [giftUserId, setGiftUserId] = useState('');
     const [giftShipId, setGiftShipId] = useState('colonyShip');
     const [giftAmount, setGiftAmount] = useState(1);
 
     const giveShip = async () => {
-        if (!giftNickname.trim()) {
-            alert('Podaj nick gracza!');
+        if (!giftUserId) {
+            alert('Wybierz gracza z listy!');
             return;
         }
 
-        console.log('🎁 Szukam gracza:', giftNickname.trim());
+        const targetUser = users.find(u => u.id === giftUserId);
+        if (!targetUser) return;
 
-        // Find user by nickname
-        const { data: targetUser, error: findError } = await supabase
-            .from('profiles')
-            .select('id, nickname, ships')
-            .eq('nickname', giftNickname.trim())
-            .single();
+        console.log('🎁 Nadawanie statku dla:', targetUser.nickname || targetUser.id);
 
-        console.log('🎁 Wynik szukania:', { targetUser, findError });
-
-        if (findError || !targetUser) {
-            alert(`Nie znaleziono gracza o nicku: ${giftNickname}\n\nBłąd: ${findError?.message || 'Brak danych'}`);
-            return;
-        }
-
-        // Update ships
+        // Update ships on MAIN PLANET (UserProfile)
         const currentShips = targetUser.ships || {};
         const newShips = { ...currentShips, [giftShipId]: (currentShips[giftShipId] || 0) + giftAmount };
 
@@ -150,8 +161,7 @@ ON DELETE CASCADE;
         } else if (!updateResult || updateResult.length === 0) {
             alert(`⚠️ Update nie zmienił żadnych rekordów!\n\nPrawdopodobnie RLS blokuje edycję innych graczy.\n\nDodaj w Supabase SQL:\nCREATE POLICY "admin_all_access" ON profiles FOR ALL USING (auth.jwt() ->> 'email' IN ('admin@kosmo.pl', 'dareg@kosmo.pl'));`);
         } else {
-            alert(`✅ Dodano ${giftAmount}x ${giftShipId} graczowi ${giftNickname}`);
-            setGiftNickname('');
+            alert(`✅ Dodano ${giftAmount}x ${giftShipId} graczowi ${targetUser.nickname || 'ID:' + targetUser.id}`);
             setGiftAmount(1);
             fetchUsers();
         }
@@ -179,15 +189,20 @@ ON DELETE CASCADE;
             <div className="mb-6 p-4 bg-gray-800 border border-gray-700 rounded-lg">
                 <h3 className="text-lg font-bold text-yellow-500 mb-4">🎁 Dodaj Statek Graczowi</h3>
                 <div className="flex flex-wrap gap-3 items-end">
-                    <div className="flex flex-col">
-                        <label className="text-xs text-gray-400 mb-1">Nick Gracza</label>
-                        <input
-                            type="text"
-                            value={giftNickname}
-                            onChange={(e) => setGiftNickname(e.target.value)}
-                            placeholder="Wpisz nick..."
-                            className="px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-yellow-500 focus:outline-none"
-                        />
+                    <div className="flex flex-col flex-1 min-w-[200px]">
+                        <label className="text-xs text-gray-400 mb-1">Gracz</label>
+                        <select
+                            value={giftUserId}
+                            onChange={(e) => setGiftUserId(e.target.value)}
+                            className="px-3 py-2 bg-gray-900 border border-gray-600 rounded text-white focus:border-yellow-500 focus:outline-none w-full"
+                        >
+                            <option value="">-- Wybierz Gracza --</option>
+                            {users.map(u => (
+                                <option key={u.id} value={u.id}>
+                                    {u.nickname} {u.galaxy_coords ? `[${u.galaxy_coords.galaxy}:${u.galaxy_coords.system}:${u.galaxy_coords.position}]` : '[-]'} (ID: {u.id.slice(0, 4)}...)
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="flex flex-col">
                         <label className="text-xs text-gray-400 mb-1">Typ Statku</label>
@@ -296,37 +311,84 @@ ON DELETE CASCADE;
                     </thead>
                     <tbody>
                         {users.map(u => (
-                            <tr key={u.id} className="hover:bg-gray-800/50 transition-colors border-b border-gray-800">
-                                <td className="p-4">
-                                    <div className="font-bold text-blue-300">{u.nickname || 'Nieznany'}</div>
-                                    <div className="text-xs text-gray-500">{u.planet_name}</div>
-                                    <div className="text-[10px] text-gray-600 font-mono">{u.id}</div>
-                                </td>
-                                <td className="p-4 font-mono text-yellow-400">
-                                    {(u.points || 0).toLocaleString()}
-                                </td>
-                                <td className="p-4 font-mono text-gray-300">
-                                    {u.galaxy_coords ? `[${u.galaxy_coords.galaxy}:${u.galaxy_coords.system}:${u.galaxy_coords.position}]` : 'BRAK'}
-                                </td>
-                                <td className="p-4 text-sm text-gray-500">
-                                    {u.last_updated ? new Date(u.last_updated).toLocaleString() : '-'}
-                                </td>
-                                <td className="p-4 text-right space-x-2">
-                                    <button
-                                        onClick={() => setInspectUser(u)}
-                                        className="bg-blue-600/20 hover:bg-blue-600 text-blue-500 hover:text-white px-3 py-1 rounded transition-colors font-bold text-xs"
-                                    >
-                                        INFO
-                                    </button>
-                                    <button
-                                        onClick={() => deleteUser(u.id, u.nickname)}
-                                        className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white px-3 py-1 rounded transition-colors font-bold text-xs"
-                                        title="Usuń Gracza i Planetę"
-                                    >
-                                        USUŃ
-                                    </button>
-                                </td>
-                            </tr>
+                            <React.Fragment key={u.id}>
+                                <tr className={`hover:bg-gray-800/50 transition-colors border-b border-gray-800 ${expandedUsers.has(u.id) ? 'bg-gray-800/30' : ''}`}>
+                                    <td className="p-4">
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => toggleExpand(u.id)}
+                                                className={`text-gray-400 hover:text-white transition-colors w-6 h-6 flex items-center justify-center rounded border border-gray-700 ${expandedUsers.has(u.id) ? 'bg-blue-600 border-blue-500 text-white' : ''}`}
+                                            >
+                                                {expandedUsers.has(u.id) ? '▼' : '▶'}
+                                            </button>
+                                            <div>
+                                                <div className="font-bold text-blue-300">{u.nickname || 'Nieznany'}</div>
+                                                <div className="text-xs text-gray-500">{u.planet_name}</div>
+                                                <div className="text-[10px] text-gray-600 font-mono">{u.id}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="p-4 font-mono text-yellow-400">
+                                        {(u.points || 0).toLocaleString()}
+                                    </td>
+                                    <td className="p-4 font-mono text-gray-300">
+                                        {u.galaxy_coords ? `[${u.galaxy_coords.galaxy}:${u.galaxy_coords.system}:${u.galaxy_coords.position}]` : 'BRAK'}
+                                    </td>
+                                    <td className="p-4 text-sm text-gray-500">
+                                        {u.last_updated ? new Date(u.last_updated).toLocaleString() : '-'}
+                                        <div className="text-xs text-gray-600 mt-1">Kolonie: {u.colonies?.length || 0}</div>
+                                    </td>
+                                    <td className="p-4 text-right space-x-2">
+                                        <button
+                                            onClick={() => setInspectUser(u)}
+                                            className="bg-blue-600/20 hover:bg-blue-600 text-blue-500 hover:text-white px-3 py-1 rounded transition-colors font-bold text-xs"
+                                        >
+                                            INFO
+                                        </button>
+                                        <button
+                                            onClick={() => deleteUser(u.id, u.nickname)}
+                                            className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white px-3 py-1 rounded transition-colors font-bold text-xs"
+                                            title="Usuń Gracza i Planetę"
+                                        >
+                                            USUŃ
+                                        </button>
+                                    </td>
+                                </tr>
+                                {expandedUsers.has(u.id) && (
+                                    <tr className="bg-black/20 animate-in fade-in zoom-in-95 duration-200">
+                                        <td colSpan={5} className="p-0">
+                                            <div className="p-4 pl-14 bg-black/40 border-b border-gray-800 shadow-inner">
+                                                <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-sm">public</span>
+                                                    Kolonie gracza ({u.colonies?.length || 0})
+                                                </h4>
+                                                {(!u.colonies || u.colonies.length === 0) ? (
+                                                    <div className="text-gray-600 text-sm italic">Brak kolonii</div>
+                                                ) : (
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        {u.colonies.map((col: any) => (
+                                                            <div key={col.id} className="bg-[#111422] p-3 rounded border border-white/5 hover:border-blue-500/30 transition-colors">
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <span className="font-bold text-white text-sm">{col.planet_name || "Bez nazwy"}</span>
+                                                                    <span className="font-mono text-xs text-blue-400 bg-blue-900/20 px-1.5 py-0.5 rounded">
+                                                                        [{col.galaxy}:{col.system}:{col.position}]
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-500 font-mono mb-2">{col.id}</div>
+                                                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                                                    <div><span className="text-yellow-600">M:</span> {Math.floor(col.resources?.metal || 0)}</div>
+                                                                    <div><span className="text-blue-600">K:</span> {Math.floor(col.resources?.crystal || 0)}</div>
+                                                                    <div><span className="text-green-600">D:</span> {Math.floor(col.resources?.deuterium || 0)}</div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))}
                         {users.length === 0 && !loading && (
                             <tr><td colSpan={5} className="p-8 text-center text-gray-500">Brak użytkowników</td></tr>
