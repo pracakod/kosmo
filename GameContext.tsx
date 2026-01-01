@@ -1396,8 +1396,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (insertError) {
             console.error("Failed to start expedition:", insertError);
             alert("Błąd wysyłania ekspedycji. Spróbuj ponownie.");
-            fetchMissions(); // Revert optimistic update
-            refreshProfile(); // Revert ships
+            // SAFE REVERT: Restore ships and remove mission locally instead of refreshProfile
+            setGameState(prev => {
+                const revertedShips = { ...prev.ships };
+                Object.entries(ships).forEach(([id, count]) => {
+                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
+                });
+                return {
+                    ...prev,
+                    ships: revertedShips,
+                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+                };
+            });
             return;
         }
 
@@ -1504,8 +1514,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (insertError) {
             console.error('❌ ATTACK INSERT ERROR:', insertError);
             alert("Błąd wysyłania ataku.");
-            fetchMissions();
-            refreshProfile();
+            // SAFE REVERT: Restore ships locally instead of refreshProfile
+            setGameState(prev => {
+                const revertedShips = { ...prev.ships };
+                Object.entries(ships).forEach(([id, count]) => {
+                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
+                });
+                return {
+                    ...prev,
+                    ships: revertedShips,
+                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+                };
+            });
             return;
         }
 
@@ -1575,8 +1595,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (insertError) {
             console.error("Failed to send spy probe:", insertError);
             alert("Błąd wysyłania sondy.");
-            fetchMissions();
-            refreshProfile();
+            // SAFE REVERT: Restore probes locally
+            setGameState(prev => ({
+                ...prev,
+                ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: (prev.ships[ShipId.ESPIONAGE_PROBE] || 0) + amount },
+                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+            }));
             return false;
         }
 
@@ -1649,8 +1673,24 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (error) {
             console.error("Error sending transport:", error);
             alert("Błąd wysyłania transportu.");
-            fetchMissions();
-            refreshProfile();
+            // SAFE REVERT: Restore ships and resources locally
+            setGameState(prev => {
+                const revertedShips = { ...prev.ships };
+                Object.entries(ships).forEach(([id, count]) => {
+                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
+                });
+                return {
+                    ...prev,
+                    ships: revertedShips,
+                    resources: {
+                        ...prev.resources,
+                        metal: prev.resources.metal + (resources.metal || 0),
+                        crystal: prev.resources.crystal + (resources.crystal || 0),
+                        deuterium: prev.resources.deuterium + (resources.deuterium || 0)
+                    },
+                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+                };
+            });
             return;
         }
 
@@ -1795,7 +1835,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         if (error) {
             console.error("Building upgrade failed:", error);
-            refreshProfile(); // Revert
+            // SAFE REVERT: Restore resources and remove queue item locally
+            setGameState(prev => {
+                const filteredQueue = prev.constructionQueue.filter(q => q.id !== newItem.id);
+                return {
+                    ...prev,
+                    resources: {
+                        ...prev.resources,
+                        metal: prev.resources.metal + cost.metal,
+                        crystal: prev.resources.crystal + cost.crystal,
+                        deuterium: prev.resources.deuterium + cost.deuterium
+                    },
+                    constructionQueue: filteredQueue
+                };
+            });
         }
     };
 
@@ -1859,7 +1912,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             if (error) throw error;
         } catch (error) {
             console.error("Cancel constr sync failed:", error);
-            refreshProfile(); // Revert on failure
+            // SAFE REVERT: Restore original queue and resources locally
+            setGameState(prev => ({
+                ...prev,
+                resources: gameState.resources, // Restore original
+                constructionQueue: gameState.constructionQueue // Restore original
+            }));
         }
     };
 
@@ -2124,8 +2182,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (missionError) {
             console.error('❌ COLONIZE MISSION ERROR:', missionError);
             alert('Błąd wysyłania misji kolonizacyjnej.');
-            fetchMissions();
-            refreshProfile();
+            // SAFE REVERT: Restore colony ship and resources locally
+            setGameState(prev => ({
+                ...prev,
+                ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
+                resources: {
+                    ...prev.resources,
+                    metal: prev.resources.metal + resources.metal,
+                    crystal: prev.resources.crystal + resources.crystal,
+                    deuterium: prev.resources.deuterium + resources.deuterium
+                },
+                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
+            }));
             return false;
         }
 
