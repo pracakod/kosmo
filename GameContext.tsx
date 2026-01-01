@@ -387,7 +387,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 // points: calculatePoints(...), // Skipping points to avoid fluctuation
                 active_missions: current.activeMissions, // Sync Global Missions
                 resources: safeResources, // Write SAFE resources (Dark Matter only updated)
-                last_updated: Date.now()
+                last_updated: Date.now(),
+                level: current.level,
+                xp: current.xp
             };
             console.log('💾 [SAVE] Profile Sync Payload (Safe):', JSON.stringify(globalPayload));
 
@@ -421,7 +423,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
                 points: calculatePoints(current.resources, current.buildings, current.ships),
-                last_updated: Date.now()
+                last_updated: Date.now(),
+                level: current.level,
+                xp: current.xp
             };
             console.log('💾 [SAVE] Profile Payload:', JSON.stringify(payload));
 

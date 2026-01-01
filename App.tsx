@@ -23,7 +23,13 @@ const App: React.FC = () => {
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [hasGalaxyCoords, setHasGalaxyCoords] = useState<boolean | null>(null);
-    const [currentView, setCurrentView] = useState<ViewType>('overview');
+    const [currentView, setCurrentView] = useState<ViewType>(() => {
+        return (localStorage.getItem('currentView') as ViewType) || 'overview';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('currentView', currentView);
+    }, [currentView]);
 
     useEffect(() => {
         if (!isSupabaseConfigured) {
