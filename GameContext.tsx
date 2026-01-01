@@ -767,7 +767,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     }
                 });
             }
-        }, 10000); // 10 seconds
+        }, 60000); // 60 seconds (Realtime handles immediate events, this is just a backup)
 
         return () => clearInterval(interval);
     }, [session]);
@@ -1217,19 +1217,51 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
 
 
-    // Subscribe to DB changes
+    // Subscribe to DB changes (Realtime)
     useEffect(() => {
         if (!session?.user) return;
         fetchMissions();
 
-        const channel = supabase
+        // 1. Listen for new/updated missions (Attacks, Returns, Expeditions)
+        const missionsChannel = supabase
             .channel('missions-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, () => {
                 fetchMissions();
             })
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') console.log('📡 Connected to Missions stream');
+            });
 
-        return () => { supabase.removeChannel(channel); };
+        // 2. Listen for Profile updates (Logs, Messages - primarily)
+        // Filter by OUR user ID to avoid receiving events for other players (saves bandwidth)
+        const profileChannel = supabase
+            .channel('profile-changes')
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'profiles',
+                filter: `id=eq.${session.user.id}`
+            }, (payload: any) => {
+                const newData = payload.new;
+                if (newData) {
+                    console.log('📡 Profile update received via Realtime');
+                    // SAFE UPDATE: Only update logs and nickname.
+                    // DO NOT update resources/buildings from here to avoid overwriting local opportunistic state.
+                    setGameState(prev => ({
+                        ...prev,
+                        missionLogs: newData.mission_logs || prev.missionLogs,
+                        nickname: newData.nickname || prev.nickname
+                    }));
+                }
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') console.log('📡 Connected to Profile stream');
+            });
+
+        return () => {
+            supabase.removeChannel(missionsChannel);
+            supabase.removeChannel(profileChannel);
+        };
     }, [session]);
 
 
@@ -2566,16 +2598,67 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     const getPlayersInSystem = async (galaxy: number, system: number) => {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname')
-            .contains('galaxy_coords', { galaxy, system });
+        try {
+            // 1. Fetch Main Planets (Profiles that are in this system)
+            const { data: mainPlanets, error: mainError } = await supabase
+                .from('profiles')
+                .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname')
+                .contains('galaxy_coords', { galaxy, system });
 
-        if (error) {
+            if (mainError) throw mainError;
+
+            // 2. Fetch Colonies (Planets that are in this system)
+            const { data: colonies, error: colonyError } = await supabase
+                .from('planets')
+                .select('id, owner_id, planet_name, planet_type, galaxy_coords, buildings, ships, defenses')
+                .contains('galaxy_coords', { galaxy, system });
+
+            if (colonyError) throw colonyError;
+
+            let finalUsers = mainPlanets || [];
+
+            // 3. If we have colonies, we need to attach owner info (nickname, points)
+            if (colonies && colonies.length > 0) {
+                const ownerIds = [...new Set(colonies.map(c => c.owner_id))];
+
+                // Fetch owner profiles
+                const { data: owners, error: ownerError } = await supabase
+                    .from('profiles')
+                    .select('id, nickname, points, production_settings')
+                    .in('id', ownerIds);
+
+                if (ownerError) console.error("Error fetching colony owners:", ownerError);
+
+                const ownerMap = new Map(owners?.map(o => [o.id, o]) || []);
+
+                const mappedColonies = colonies.map(col => {
+                    const owner = ownerMap.get(col.owner_id);
+                    // If this colony belongs to a player who IS ALSO in the mainPlanets list (same system), 
+                    // we still want to show it as a separate planet (colony)
+                    return {
+                        id: col.owner_id, // Use owner_id for interaction links
+                        colony_id: col.id, // Keep distinct planet ID
+                        planet_name: col.planet_name,
+                        galaxy_coords: col.galaxy_coords,
+                        points: owner?.points || 0,
+                        production_settings: {
+                            ...(owner?.production_settings || {}),
+                            planetType: col.planet_type // Use colony planet type
+                        },
+                        buildings: col.buildings,
+                        nickname: (owner?.nickname || 'Unknown') + ' (Kolonia)',
+                        isColony: true
+                    };
+                });
+
+                finalUsers = [...finalUsers, ...mappedColonies];
+            }
+
+            return finalUsers;
+        } catch (error) {
             console.error("Error fetching system users:", error);
             return [];
         }
-        return data || [];
     };
 
     // Main Loop
