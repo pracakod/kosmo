@@ -33,78 +33,38 @@ const Settings: React.FC = () => {
             </div>
 
 
-            {/* Commander Level & Nickname */}
+            {/* Nickname Settings */}
             <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-30" />
 
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                    {/* Level Badge */}
-                    <div className="flex-shrink-0 relative">
-                        <div className="w-24 h-24 rounded-full border-4 border-[#2a314a] bg-[#111422] flex items-center justify-center relative z-10">
-                            <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600">
-                                {level || 1}
-                            </span>
-                        </div>
-                        <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 animate-pulse" />
-                        <div className="absolute -bottom-2 w-full text-center">
-                            <span className="bg-[#2a314a] text-[10px] font-bold px-2 py-0.5 rounded-full text-white border border-white/10">
-                                LEVEL
-                            </span>
-                        </div>
-                    </div>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">badge</span>
+                    Nazwa Dowódcy
+                </h3>
 
-                    {/* Progress Info */}
-                    <div className="flex-1 w-full">
-                        <div className="flex justify-between items-end mb-2">
-                            <div>
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    {nickname || "Dowódca"}
-                                </h3>
-                                <p className="text-sm text-[#929bc9]">
-                                    XP: <span className="text-white font-mono">{Math.floor(xp || 0).toLocaleString()}</span>
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-xs text-[#929bc9] uppercase font-bold tracking-wider">Następny Poziom</span>
-                                <p className="text-sm text-white font-mono">
-                                    {Math.floor(500 * Math.pow((level || 1), 2)).toLocaleString()} XP
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* XP Bar */}
-                        <div className="w-full h-4 bg-[#111422] rounded-full border border-white/10 overflow-hidden relative">
-                            <div
-                                className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 relative transition-all duration-1000 ease-out"
-                                style={{ width: `${Math.min(100, Math.max(0, (((xp || 0) - (500 * Math.pow(((level || 1) - 1), 2))) / ((500 * Math.pow((level || 1), 2)) - (500 * Math.pow(((level || 1) - 1), 2)))) * 100))}%` }}
-                            >
-                                <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
-                            </div>
-                        </div>
-
-                        <div className="mt-4 flex gap-2">
-                            <input
-                                type="text"
-                                className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none text-sm"
-                                placeholder="Zmień nazwę dowódcy"
-                                value={newNickname}
-                                onChange={(e) => setNewNickname(e.target.value)}
-                            />
-                            <button
-                                onClick={() => renameUser(newNickname)}
-                                className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition-colors text-sm"
-                            >
-                                Zmień
-                            </button>
-                        </div>
-                    </div>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none"
+                        placeholder="Zmień nazwę dowódcy"
+                        value={newNickname}
+                        onChange={(e) => setNewNickname(e.target.value)}
+                    />
+                    <button
+                        onClick={() => renameUser(newNickname)}
+                        className="bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+                    >
+                        Zmień
+                    </button>
                 </div>
             </div>
+        </div>
+            </div >
 
 
 
-            {/* Planet Type Selection */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
+    {/* Planet Type Selection */ }
+    < div className = "bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg" >
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="material-symbols-outlined text-blue-400">public</span>
                     Wygląd Planety
@@ -131,11 +91,11 @@ const Settings: React.FC = () => {
                         </div>
                     ))}
                 </div>
-            </div>
+            </div >
 
 
-            {/* Avatar Selection */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
+    {/* Avatar Selection */ }
+    < div className = "bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg" >
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="material-symbols-outlined text-purple-400">face</span>
                     Personalizacja Dowódcy
@@ -163,10 +123,10 @@ const Settings: React.FC = () => {
                         </div>
                     ))}
                 </div>
-            </div>
+            </div >
 
-            {/* Empire Management - Planets Table */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg overflow-hidden">
+    {/* Empire Management - Planets Table */ }
+    < div className = "bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg overflow-hidden" >
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <span className="material-symbols-outlined text-indigo-400">language</span>
                     Zarządzanie Imperium
@@ -261,10 +221,10 @@ const Settings: React.FC = () => {
                 <p className="text-xs text-[#555a7a] mt-4 text-center">
                     Główna planeta nie może zostać usunięta. Kolonie można porzucić, co jest procesem nieodwracalnym.
                 </p>
-            </div>
+            </div >
 
-            {/* Danger Zone */}
-            <div className="bg-[#1c2136] rounded-xl border border-red-500/20 p-6 shadow-lg">
+    {/* Danger Zone */ }
+    < div className = "bg-[#1c2136] rounded-xl border border-red-500/20 p-6 shadow-lg" >
                 <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined">warning</span>
                     Strefa Niebezpieczna
@@ -292,7 +252,7 @@ const Settings: React.FC = () => {
                         Uwaga: Usunięcie konta trwale wykasuje Twój profil i misje z bazy danych. Tej akcji nie da się cofnąć!
                     </p>
                 </div>
-            </div>
+            </div >
         </div >
     );
 };
