@@ -3050,66 +3050,70 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     };
 
     // Retroactive XP Calculation
+    // Retroactive XP Catch-Up (Corrects missing XP for existing players)
     useEffect(() => {
         if (!loaded) return;
-        // Only run if XP is 0 and we have some progress
-        if ((gameState.xp || 0) <= 0 && Object.values(gameState.buildings).some(v => v > 0)) {
-            console.log('⭐ Calculating Initial XP...');
-            let totalXP = 0;
 
-            // 1. Main Planet Buildings (Current State - assuming we load on Main Planet or it's the primary one)
-            // Note: If we are on a colony, gameState.buildings is that colony. But usually this runs on login (Main Planet).
-            // For robustness, we sum Current Planet + All Known Colonies.
-            // (If we double count the current one if it's in `planets` list, we should be careful.
-            //  But `planets` usually stores *colonies*, and Main is separate in `profiles`. So simple sum is correct).
+        // Calculate expected XP based on current assets
+        let calculatedTotal = 0;
 
-            const calculateBuildingXP = (b: Record<string, number>) => {
-                let xp = 0;
-                Object.entries(b).forEach(([id, level]) => {
-                    const def = BUILDINGS[id as BuildingId];
-                    if (!def) return;
-                    let buildingCost = 0;
-                    for (let l = 1; l <= (level as number); l++) {
-                        const factor = Math.pow(1.5, l - 1);
-                        buildingCost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor);
-                    }
-                    xp += Math.floor(buildingCost / 1000);
-                });
-                return xp;
-            };
-
-            totalXP += calculateBuildingXP(gameState.buildings);
-
-            // 2. Colony Buildings (from planets state)
-            planets.forEach(planet => {
-                if (planet.buildings) {
-                    totalXP += calculateBuildingXP(planet.buildings);
-                }
-            });
-
-            // 2. Research (Level^2 * 10)
-            Object.entries(gameState.research).forEach(([id, level]) => {
-                let researchXP = 0;
+        // 1. Building XP Helper (Cost / 1000)
+        const calculateBuildingXP = (b: Record<string, number>) => {
+            let val = 0;
+            Object.entries(b).forEach(([id, level]) => {
+                const def = BUILDINGS[id as BuildingId];
+                if (!def) return;
+                let cost = 0;
                 for (let l = 1; l <= (level as number); l++) {
-                    researchXP += (Math.pow(l, 2) * 10);
+                    const factor = Math.pow(1.5, l - 1);
+                    cost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor);
                 }
-                totalXP += researchXP;
+                val += Math.floor(cost / 1000);
             });
+            return val;
+        };
 
-            // 3. Ships (1 XP per 2000 cost) - Only rough estimate based on current fleet
-            Object.entries(gameState.ships).forEach(([id, count]) => {
+        // 2. Ship XP Helper (Cost / 2000)
+        const calculateShipXP = (s: Record<string, number>) => {
+            let val = 0;
+            Object.entries(s).forEach(([id, count]) => {
                 const def = SHIPS[id as ShipId];
                 if (!def) return;
                 const unitCost = def.baseCost.metal + def.baseCost.crystal;
-                totalXP += Math.floor((unitCost * (count as number)) / 2000);
+                val += Math.floor((unitCost * (count as number)) / 2000); // 50% XP for fleet compared to buildings
             });
+            return val;
+        };
 
-            if (totalXP > 0) {
-                console.log(`⭐ Retroactive XP applied: ${totalXP}`);
-                addXP(totalXP, 'Initial Calc');
+        // Sum Main Planet
+        calculatedTotal += calculateBuildingXP(gameState.buildings);
+        calculatedTotal += calculateShipXP(gameState.ships);
+
+        // Sum Colonies
+        planets.forEach(p => {
+            if (p.buildings) calculatedTotal += calculateBuildingXP(p.buildings);
+            if (p.ships) calculatedTotal += calculateShipXP(p.ships);
+        });
+
+        // Sum Research (Level^2 * 10)
+        Object.entries(gameState.research).forEach(([id, level]) => {
+            let researchXP = 0;
+            for (let l = 1; l <= (level as number); l++) {
+                researchXP += (Math.pow(l, 2) * 10);
             }
+            calculatedTotal += researchXP;
+        });
+
+        const currentXP = gameState.xp || 0;
+
+        // Apply Catch-Up if current XP is less than asset value
+        // We use a small buffer (e.g. 10) to avoid negligible updates loop
+        if (calculatedTotal > currentXP + 10) {
+            const diff = calculatedTotal - currentXP;
+            console.log(`⭐ Retroactive XP Fix: Player has ${currentXP}, Assets worth ${calculatedTotal}. Adding ${diff}.`);
+            addXP(diff, 'Retroactive Catch-Up');
         }
-    }, [loaded]);
+    }, [loaded, planets.length]);
 
     const contextValue: GameContextType = {
         ...gameState,
