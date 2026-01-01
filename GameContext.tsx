@@ -148,13 +148,14 @@ interface GameContextType extends GameState {
     buyPremium: (cost: number, reward: { metal?: number, crystal?: number, deuterium?: number }) => Promise<TransactionStatus>;
     getCost: (type: 'building' | 'research', id: string, currentLevel: number) => { metal: number, crystal: number, deuterium: number };
     checkRequirements: (reqs?: Requirement[]) => boolean;
-    renamePlanet: (newName: string) => void;
+    renamePlanet: (newName: string, specificPlanetId?: string) => void;
     updateProductionSetting: (buildingId: BuildingId, percent: number) => void;
     resetGame: () => void;
     clearLogs: () => void;
     logout: () => void;
     deleteAccount: () => Promise<void>;
     abandonColony: (planetId: string, confirmation: string) => Promise<boolean>;
+    addXP: (amount: number, reason?: string) => void;
 
     updateAvatar: (url: string) => void;
     updatePlanetType: (type: string) => void;
@@ -262,6 +263,8 @@ const initialState: GameState = {
     incomingMissions: [],
     missionLogs: [],
     lastTick: Date.now(),
+    xp: 0,
+    level: 1,
 };
 
 const calculatePoints = (resources: any, buildings: any, ships: any) => {
@@ -344,16 +347,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             // CRITICAL FIX: Update Reference State immediately to match loaded colony
             // This prevents "Data desync" warnings when validation runs
-            lastSavedStateRef.current = {
-                resources: current.resources,
-                buildings: current.buildings,
-                ships: current.ships,
-                defenses: current.defenses,
-                research: gameState.research, // Research is global, not per-planet
-                constructionQueue: current.constructionQueue,
-                shipyardQueue: current.shipyardQueue,
-                missionLogs: gameState.missionLogs // Mission logs are global
-            };
+            lastSavedStateRef.current = { ...current };
 
             console.log('💾 [SAVE] Colony Payload:', JSON.stringify(payload));
 
@@ -1968,6 +1962,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             constructionQueue: [...prev.constructionQueue, newItem] // We can append to prev to be safe against race with other updates
         }));
 
+        addXP(Math.floor(totalResources / 1000), 'Building Construction');
+
         // Sync with Supabase using the SAME calculated values
         // Note: Supabase update might overwrite parallel updates if we are not careful.
         // Ideally we should use RPC or careful checking, but for now sending the new full queue is better than mismatched IDs.
@@ -2047,6 +2043,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             resources: newResources,
             constructionQueue: newQueue
         }));
+
+        if (item.type === 'building') {
+            const totalRefund = refundMetal + refundCrystal;
+            addXP(-Math.floor(totalRefund / 1000), 'Construction Cancelled');
+        }
 
         // Sync with Supabase
         try {
@@ -2170,6 +2171,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             shipyardQueue: newQueue
         }));
 
+        addXP(Math.floor((totalCost.metal + totalCost.crystal) / 2000), 'Fleet Production');
+
         const { error } = await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
             shipyard_queue: newQueue
@@ -2228,6 +2231,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             },
             shipyardQueue: newQueue
         }));
+
+        addXP(Math.floor((totalCost.metal + totalCost.crystal) / 2000), 'Defense Production');
 
         const { error } = await supabase.from('profiles').update({
             resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
@@ -2391,6 +2396,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             ships: newShips,
             resources: newResources
         }).eq('id', session.user.id);
+
+        addXP(500, 'New Colony');
 
         if (profileError) {
             console.error('❌ COLONIZE PROFILE UPDATE ERROR:', profileError);
@@ -2571,14 +2578,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 // CRITICAL FIX: Update Reference State immediately to match loaded colony
                 // This prevents "Data desync" warnings when validation runs
                 lastSavedStateRef.current = {
+                    ...gameState, // Preserve global state properties
                     resources: safeResources,
                     buildings: safeBuildings,
                     ships: colony.ships || {},
                     defenses: colony.defenses || {},
-                    research: gameState.research, // Global
                     constructionQueue: colony.construction_queue || [],
-                    shipyardQueue: colony.shipyard_queue || [],
-                    missionLogs: gameState.missionLogs
+                    shipyardQueue: colony.shipyard_queue || []
                 };
 
                 // Load colony-specific data into gameState
@@ -2813,17 +2819,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             const secondsPassed = (now - prev.lastTick) / 1000;
             if (secondsPassed <= 0) return;
 
-            const newResources = { ...prev.resources };
-            newResources.metal = Math.min(production.storage.metal, newResources.metal + (production.metal * secondsPassed));
-            newResources.crystal = Math.min(production.storage.crystal, newResources.crystal + (production.crystal * secondsPassed));
-            newResources.deuterium = Math.min(production.storage.deuterium, newResources.deuterium + (production.deuterium * secondsPassed));
-            newResources.energy = production.energy;
-            newResources.maxEnergy = production.maxEnergy;
-            newResources.storage = production.storage;
+            // 1. Calculate Production Deltas (Wait to apply)
+            const metalGain = production.metal * secondsPassed;
+            const crystalGain = production.crystal * secondsPassed;
+            const deuteriumGain = production.deuterium * secondsPassed;
 
             let newBuildings = { ...prev.buildings };
             let newResearch = { ...prev.research };
             let newQueue = [...prev.constructionQueue];
+
+            let xpGained = 0; // Accumulate XP from finished research
 
             // Process ALL finished items (Parallel Queues)
             const finished = newQueue.filter(q => now >= q.endTime);
@@ -2831,8 +2836,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             if (finished.length > 0) {
                 finished.forEach(item => {
-                    if (item.type === 'building') newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
-                    else if (item.type === 'research') newResearch[item.itemId as ResearchId] = (item.targetLevel || 1);
+                    if (item.type === 'building') {
+                        newBuildings[item.itemId as BuildingId] = (item.targetLevel || 1);
+                    }
+                    else if (item.type === 'research') {
+                        const level = item.targetLevel || 1;
+                        newResearch[item.itemId as ResearchId] = level;
+                        // XP Reward for Research: (Level^2) * 10
+                        xpGained += Math.pow(level, 2) * 10;
+                    }
                 });
                 newQueue = active;
             }
@@ -2851,13 +2863,25 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 }
             }
 
+            // Calculate derived values for Payload (Best effort based on Ref)
+            // Note: Actual State update will use Delta to be safe against race conditions
+            const refXP = (prev.xp || 0) + xpGained;
+            const refLevel = Math.floor(Math.sqrt(refXP / 500)) + 1;
+            const prevLevel = prev.level || 1;
+            let refDMReward = 0;
+            if (refLevel > prevLevel) {
+                for (let l = prevLevel + 1; l <= refLevel; l++) {
+                    refDMReward += 10 + (l * 2);
+                }
+            }
+
             // Level 16 Lock Logic
-            const currentPoints = calculatePoints(newResources, newBuildings, newShips);
-            const currentLevel = Math.floor(currentPoints / 1000) + 1;
+            const currentPoints = calculatePoints(prev.resources, newBuildings, newShips);
+            const pointsLevel = Math.floor(currentPoints / 1000) + 1;
             let updatedSettings = { ...prev.productionSettings };
             let settingsChanged = false;
 
-            if (currentLevel >= 16 && !updatedSettings.reachedLevel16) {
+            if (pointsLevel >= 16 && !updatedSettings.reachedLevel16) {
                 updatedSettings.reachedLevel16 = true;
                 settingsChanged = true;
             }
@@ -2875,7 +2899,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         research: newResearch,
                         ships: newShips,
                         defenses: newDefenses,
-                        resources: newResources,
+                        resources: {
+                            ...prev.resources,
+                            // Apply production gain to Ref state for DB snapshot
+                            metal: Math.min(production.storage.metal, (prev.resources.metal || 0) + metalGain),
+                            crystal: Math.min(production.storage.crystal, (prev.resources.crystal || 0) + crystalGain),
+                            deuterium: Math.min(production.storage.deuterium, (prev.resources.deuterium || 0) + deuteriumGain),
+                            darkMatter: (prev.resources.darkMatter || 0) + refDMReward
+                        },
+                        xp: refXP,
+                        level: refLevel,
                         shipyard_queue: newShipQueue,
                         construction_queue: newQueue,
                         production_settings: updatedSettings,
@@ -2891,14 +2924,24 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 } else {
                     // Save to Planet (Colony)
                     console.log(`💾 [TICK SAVE] Colony ${currentPlanet} - Buildings:`, JSON.stringify(newBuildings));
-                    saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, newResources, newQueue, newShipQueue);
+                    // Note: saveStateToPlanet uses absolute values. Since we are on colony, 'prev' IS colony state.
+                    // We must pass resources with production applied.
+                    const colonyResources = {
+                        ...prev.resources,
+                        metal: Math.min(production.storage.metal, (prev.resources.metal || 0) + metalGain),
+                        crystal: Math.min(production.storage.crystal, (prev.resources.crystal || 0) + crystalGain),
+                        deuterium: Math.min(production.storage.deuterium, (prev.resources.deuterium || 0) + deuteriumGain),
+                    };
 
-                    // ALWAYS sync global settings to Profile when on Colony (Level16, Research, Points)
-                    // This ensures Level16 flag is never lost
+                    saveStateToPlanet(currentPlanet, newBuildings, newShips, newDefenses, colonyResources, newQueue, newShipQueue);
+
+                    // ALWAYS sync global settings to Profile when on Colony (Level16, Research, Points, XP)
                     supabase.from('profiles').update({
                         production_settings: updatedSettings,
                         research: newResearch,
-                        points: calculatePoints(newResources, newBuildings, newShips),
+                        points: calculatePoints(colonyResources, newBuildings, newShips),
+                        xp: refXP,
+                        level: refLevel,
                         last_updated: Date.now()
                     }).eq('id', session.user.id).then(res => {
                         if (res.error) console.error("Colony profile sync error:", res.error);
@@ -2908,40 +2951,151 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 // Update lastSavedStateRef for validation
                 lastSavedStateRef.current = {
                     ...prev,
-                    buildings: newBuildings,
+                    buildings: newBuildings, // Updated
                     research: newResearch,
                     ships: newShips,
                     defenses: newDefenses,
-                    resources: newResources,
+                    resources: { // Updated with Production
+                        ...prev.resources,
+                        metal: Math.min(production.storage.metal, (prev.resources.metal || 0) + metalGain),
+                        crystal: Math.min(production.storage.crystal, (prev.resources.crystal || 0) + crystalGain),
+                        deuterium: Math.min(production.storage.deuterium, (prev.resources.deuterium || 0) + deuteriumGain),
+                        darkMatter: (prev.resources.darkMatter || 0) + refDMReward
+                    },
                     constructionQueue: newQueue,
                     shipyardQueue: newShipQueue
                 };
             }
 
-            setGameState(current => ({
-                ...current,
-                productionSettings: settingsChanged ? updatedSettings : current.productionSettings,
-                resources: {
-                    ...newResources,
-                    storage: production.storage
-                },
-                buildings: newBuildings,
-                research: newResearch,
-                ships: newShips,
-                defenses: newDefenses,
-                constructionQueue: newQueue,
-                shipyardQueue: newShipQueue,
-                productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
-                lastTick: now
-            }));
+            setGameState(current => {
+                // Re-calculate XP/Level against latest state
+                const finalXP = (current.xp || 0) + xpGained;
+                const finalLevel = Math.floor(Math.sqrt(finalXP / 500)) + 1;
+                const curPrevLevel = current.level || 1;
+                let curDMReward = 0;
+                if (finalLevel > curPrevLevel) {
+                    for (let l = curPrevLevel + 1; l <= finalLevel; l++) {
+                        curDMReward += 10 + (l * 2);
+                    }
+                    if (curDMReward > 0) console.log(`🎉 Level Up! ${curPrevLevel} -> ${finalLevel}. Reward: ${curDMReward} DM`);
+                }
+
+                return {
+                    ...current,
+                    productionSettings: settingsChanged ? updatedSettings : current.productionSettings,
+                    resources: {
+                        ...current.resources, // BASE State
+                        // Apply DELTA (Production & Rewards)
+                        metal: Math.min(production.storage.metal, (current.resources.metal || 0) + metalGain),
+                        crystal: Math.min(production.storage.crystal, (current.resources.crystal || 0) + crystalGain),
+                        deuterium: Math.min(production.storage.deuterium, (current.resources.deuterium || 0) + deuteriumGain),
+                        energy: production.energy,
+                        maxEnergy: production.maxEnergy,
+                        storage: production.storage,
+                        darkMatter: (current.resources.darkMatter || 0) + curDMReward // Safe DM Update
+                    },
+                    buildings: newBuildings,
+                    research: newResearch,
+                    ships: newShips,
+                    defenses: newDefenses,
+                    constructionQueue: newQueue,
+                    shipyardQueue: newShipQueue,
+                    productionRates: { metal: production.metal, crystal: production.crystal, deuterium: production.deuterium },
+                    xp: finalXP,
+                    level: finalLevel,
+                    lastTick: now
+                };
+            });
         };
 
         const interval = setInterval(tick, TICK_RATE);
         return () => clearInterval(interval);
     }, [loaded]);
 
+    // Level System Logic
+    const addXP = (amount: number, reason?: string) => {
+        if (amount <= 0) return;
+
+        setGameState(prev => {
+            const currentXP = prev.xp || 0;
+            const currentLevel = prev.level || 1;
+            const newXP = currentXP + amount;
+
+            // Level Formula: Level = Math.sqrt(XP / 500) + 1
+            const calcLevel = Math.floor(Math.sqrt(newXP / 500)) + 1;
+
+            if (calcLevel > currentLevel) {
+                const totalDM = 10 + (calcLevel * 2);
+                // Only alert if it's a small jump (live gameplay)
+                const levelsGained = calcLevel - currentLevel;
+                if (levelsGained === 1) {
+                    alert(`⭐ AWANS! Poziom ${calcLevel}!\nOtrzymujesz ${totalDM} Antymaterii.`);
+                }
+
+                return {
+                    ...prev,
+                    xp: newXP,
+                    level: calcLevel,
+                    resources: {
+                        ...prev.resources,
+                        darkMatter: (prev.resources.darkMatter || 0) + totalDM
+                    }
+                };
+            }
+
+            return { ...prev, xp: newXP, level: calcLevel };
+        });
+
+        if (reason) console.log(`⭐ [XP] +${amount} (${reason})`);
+    };
+
+    // Retroactive XP Calculation
+    useEffect(() => {
+        if (!loaded) return;
+        // Only run if XP is 0 and we have some progress
+        if ((gameState.xp || 0) <= 0 && Object.values(gameState.buildings).some(v => v > 0)) {
+            console.log('⭐ Calculating Initial XP...');
+            let totalXP = 0;
+
+            // 1. Buildings (1 XP per 1000 cost)
+            Object.entries(gameState.buildings).forEach(([id, level]) => {
+                const def = BUILDINGS[id as BuildingId];
+                if (!def) return;
+                let buildingCost = 0;
+                for (let l = 1; l <= (level as number); l++) {
+                    const factor = Math.pow(1.5, l - 1);
+                    buildingCost += Math.floor(def.baseCost.metal * factor) + Math.floor(def.baseCost.crystal * factor);
+                }
+                totalXP += Math.floor(buildingCost / 1000);
+            });
+
+            // 2. Research (Level^2 * 10)
+            Object.entries(gameState.research).forEach(([id, level]) => {
+                let researchXP = 0;
+                for (let l = 1; l <= (level as number); l++) {
+                    researchXP += (Math.pow(l, 2) * 10);
+                }
+                totalXP += researchXP;
+            });
+
+            // 3. Ships (1 XP per 2000 cost) - Only rough estimate based on current fleet
+            Object.entries(gameState.ships).forEach(([id, count]) => {
+                const def = SHIPS[id as ShipId];
+                if (!def) return;
+                const unitCost = def.baseCost.metal + def.baseCost.crystal;
+                totalXP += Math.floor((unitCost * (count as number)) / 2000);
+            });
+
+            if (totalXP > 0) {
+                console.log(`⭐ Retroactive XP applied: ${totalXP}`);
+                addXP(totalXP, 'Initial Calc');
+            }
+        }
+    }, [loaded]);
+
     const contextValue: GameContextType = {
         ...gameState,
+        addXP,
         upgradeBuilding,
         upgradeResearch,
         buildShip,

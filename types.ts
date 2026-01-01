@@ -212,4 +212,6 @@ export interface GameState {
   missionLogs: MissionLog[];
   galaxyCoords?: { galaxy: number; system: number; position: number };
   lastTick: number;
+  xp: number;
+  level: number;
 }

@@ -9,7 +9,8 @@ const Settings: React.FC = () => {
         planetType, updatePlanetType,
         nickname, renameUser,
         resetGame, logout, deleteAccount, abandonColony,
-        session, currentPlanetId, planets, mainPlanetName, mainPlanetCoords
+        session, currentPlanetId, planets, mainPlanetName, mainPlanetCoords,
+        level, xp
     } = useGame();
 
     const [newNickname, setNewNickname] = useState(nickname || "");
@@ -32,26 +33,71 @@ const Settings: React.FC = () => {
             </div>
 
 
-            {/* Nickname */}
-            <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5">
-                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">badge</span>
-                    Nazwa Dowódcy
-                </h3>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
-                        placeholder="Wpisz nową nazwę"
-                        value={newNickname}
-                        onChange={(e) => setNewNickname(e.target.value)}
-                    />
-                    <button
-                        onClick={() => renameUser(newNickname)}
-                        className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition-colors"
-                    >
-                        Zmień
-                    </button>
+            {/* Commander Level & Nickname */}
+            <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-30" />
+
+                <div className="flex flex-col md:flex-row gap-6 items-center">
+                    {/* Level Badge */}
+                    <div className="flex-shrink-0 relative">
+                        <div className="w-24 h-24 rounded-full border-4 border-[#2a314a] bg-[#111422] flex items-center justify-center relative z-10">
+                            <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600">
+                                {level || 1}
+                            </span>
+                        </div>
+                        <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 animate-pulse" />
+                        <div className="absolute -bottom-2 w-full text-center">
+                            <span className="bg-[#2a314a] text-[10px] font-bold px-2 py-0.5 rounded-full text-white border border-white/10">
+                                LEVEL
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Progress Info */}
+                    <div className="flex-1 w-full">
+                        <div className="flex justify-between items-end mb-2">
+                            <div>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    {nickname || "Dowódca"}
+                                </h3>
+                                <p className="text-sm text-[#929bc9]">
+                                    XP: <span className="text-white font-mono">{Math.floor(xp || 0).toLocaleString()}</span>
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs text-[#929bc9] uppercase font-bold tracking-wider">Następny Poziom</span>
+                                <p className="text-sm text-white font-mono">
+                                    {Math.floor(500 * Math.pow((level || 1), 2)).toLocaleString()} XP
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* XP Bar */}
+                        <div className="w-full h-4 bg-[#111422] rounded-full border border-white/10 overflow-hidden relative">
+                            <div
+                                className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 relative transition-all duration-1000 ease-out"
+                                style={{ width: `${Math.min(100, Math.max(0, (((xp || 0) - (500 * Math.pow(((level || 1) - 1), 2))) / ((500 * Math.pow((level || 1), 2)) - (500 * Math.pow(((level || 1) - 1), 2)))) * 100))}%` }}
+                            >
+                                <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-2">
+                            <input
+                                type="text"
+                                className="flex-1 bg-[#111422] border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none text-sm"
+                                placeholder="Zmień nazwę dowódcy"
+                                value={newNickname}
+                                onChange={(e) => setNewNickname(e.target.value)}
+                            />
+                            <button
+                                onClick={() => renameUser(newNickname)}
+                                className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition-colors text-sm"
+                            >
+                                Zmień
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -169,7 +215,7 @@ const Settings: React.FC = () => {
                                         {colony.planet_name || "Kolonia"}
                                     </td>
                                     <td className="p-3 text-[#929bc9] font-mono">
-                                        [{colony.galaxy}:{colony.system}:{colony.position}]
+                                        [{colony.galaxy_coords?.galaxy || '?'}:{colony.galaxy_coords?.system || '?'}:{colony.galaxy_coords?.position || '?'}]
                                     </td>
                                     <td className="p-3 text-[#929bc9] capitalize">Kolonia</td>
                                     <td className="p-3 text-right">

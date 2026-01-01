@@ -408,6 +408,7 @@ const Galaxy: React.FC = () => {
                                             type="number"
                                             className="flex-1 bg-transparent text-center text-white font-bold text-lg focus:outline-none"
                                             value={probeCount}
+                                            onFocus={(e) => e.target.select()}
                                             onChange={(e) => setProbeCount(Math.min(availableProbes, Math.max(1, parseInt(e.target.value) || 1)))}
                                             max={availableProbes}
                                         />
@@ -465,7 +466,7 @@ const Galaxy: React.FC = () => {
                                             const current = selectedShips[id] || 0;
                                             return (
                                                 <div key={id} className="flex items-center justify-between bg-[#111422] p-3 rounded-lg border border-white/5">
-                                                    <span className="text-sm text-[#929bc9] font-bold capitalize">{id.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                                    <span className="text-sm text-[#929bc9] font-bold capitalize">{SHIPS[id as ShipId]?.name}</span>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs text-[#555a7a] mr-2">Dostępne: {count}</span>
                                                         <input
@@ -473,6 +474,7 @@ const Galaxy: React.FC = () => {
                                                             max={count}
                                                             min={0}
                                                             value={current}
+                                                            onFocus={(e) => e.target.select()}
                                                             onChange={(e) => {
                                                                 const val = Math.min(count, Math.max(0, parseInt(e.target.value) || 0));
                                                                 setSelectedShips(prev => ({ ...prev, [id]: val }));
@@ -544,7 +546,7 @@ const Galaxy: React.FC = () => {
                                                 const current = selectedShips[id] || 0;
                                                 return (
                                                     <div key={id} className="flex items-center justify-between p-2 rounded hover:bg-white/5">
-                                                        <span className="text-xs text-[#929bc9] font-bold capitalize">{id.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                                        <span className="text-xs text-[#929bc9] font-bold capitalize">{SHIPS[id as ShipId]?.name}</span>
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[10px] text-[#555a7a] mr-1">Max: {count}</span>
                                                             <input
@@ -552,6 +554,7 @@ const Galaxy: React.FC = () => {
                                                                 max={count}
                                                                 min={0}
                                                                 value={current}
+                                                                onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => {
                                                                     const val = Math.min(count, Math.max(0, parseInt(e.target.value) || 0));
                                                                     setSelectedShips(prev => ({ ...prev, [id]: val }));
@@ -596,6 +599,7 @@ const Galaxy: React.FC = () => {
                                                             <input
                                                                 type="number"
                                                                 value={selectedResources[resKey] || 0}
+                                                                onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => {
                                                                     const val = Math.max(0, parseInt(e.target.value) || 0);
                                                                     setSelectedResources(prev => ({ ...prev, [resKey]: val }));
@@ -732,6 +736,7 @@ const Galaxy: React.FC = () => {
                                             min="0"
                                             max={resources.metal}
                                             value={colonizeResources.metal}
+                                            onFocus={(e) => e.target.select()}
                                             onChange={e => setColonizeResources(p => ({ ...p, metal: Math.max(0, parseInt(e.target.value) || 0) }))}
                                             className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
                                         />
@@ -744,6 +749,7 @@ const Galaxy: React.FC = () => {
                                             min="0"
                                             max={resources.crystal}
                                             value={colonizeResources.crystal}
+                                            onFocus={(e) => e.target.select()}
                                             onChange={e => setColonizeResources(p => ({ ...p, crystal: Math.max(0, parseInt(e.target.value) || 0) }))}
                                             className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
                                         />
@@ -756,6 +762,7 @@ const Galaxy: React.FC = () => {
                                             min="0"
                                             max={resources.deuterium}
                                             value={colonizeResources.deuterium}
+                                            onFocus={(e) => e.target.select()}
                                             onChange={e => setColonizeResources(p => ({ ...p, deuterium: Math.max(0, parseInt(e.target.value) || 0) }))}
                                             className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
                                         />
