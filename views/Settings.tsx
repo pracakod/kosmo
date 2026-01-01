@@ -8,8 +8,8 @@ const Settings: React.FC = () => {
         avatarUrl, updateAvatar,
         planetType, updatePlanetType,
         nickname, renameUser,
-        resetGame, logout, deleteAccount,
-        session
+        resetGame, logout, deleteAccount, abandonColony,
+        session, currentPlanetId, planets, mainPlanetName, mainPlanetCoords
     } = useGame();
 
     const [newName, setNewName] = useState(planetName);
@@ -31,6 +31,7 @@ const Settings: React.FC = () => {
                     Opcje Gry
                 </h2>
             </div>
+
 
             {/* Nickname */}
             <div className="bg-[#1c2136] p-6 rounded-xl border border-white/5">
@@ -116,7 +117,7 @@ const Settings: React.FC = () => {
                         <div key={p.type} className="flex flex-col gap-2">
                             <button
                                 onClick={() => updatePlanetType(p.type)}
-                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${planetType === p.type ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'}`}
+                                className={`relative w - full aspect - square rounded - xl overflow - hidden border - 4 transition - all ${planetType === p.type ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
                             >
                                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${PLANET_IMAGES[p.type] || IMAGES.planet}")` }}></div>
                             </button>
@@ -143,7 +144,7 @@ const Settings: React.FC = () => {
                         <div key={av.name} className="flex flex-col gap-2">
                             <button
                                 onClick={() => updateAvatar(av.url)}
-                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'}`}
+                                className={`relative w - full aspect - square rounded - xl overflow - hidden border - 4 transition - all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
                             >
                                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${av.url}")` }}></div>
                             </button>
@@ -166,6 +167,86 @@ const Settings: React.FC = () => {
                 <div className="text-xs text-[#555a7a] font-mono">
                     Wersja: v1.2.5 (Ranking & Security)
                 </div>
+            </div>
+
+            {/* Empire Management - Planets Table */}
+            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg overflow-hidden">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-indigo-400">language</span>
+                    Zarządzanie Imperium
+                </h3>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/10 text-[#929bc9] text-xs uppercase tracking-wider">
+                                <th className="p-3">Nazwa</th>
+                                <th className="p-3">Współrzędne</th>
+                                <th className="p-3">Typ</th>
+                                <th className="p-3 text-right">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            {/* Main Planet Row */}
+                            <tr className="border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors">
+                                <td className="p-3 font-bold text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-yellow-400 text-sm">star</span>
+                                    {mainPlanetName || "Główna Planeta"}
+                                </td>
+                                <td className="p-3 text-[#929bc9] font-mono">
+                                    [{mainPlanetCoords?.galaxy || 1}:{mainPlanetCoords?.system || 1}:{mainPlanetCoords?.position || 1}]
+                                </td>
+                                <td className="p-3 text-[#929bc9]">Główna</td>
+                                <td className="p-3 text-right">
+                                    <span className="text-white/20 italic text-xs">Nieusuwalna</span>
+                                </td>
+                            </tr>
+
+                            {/* Colonies Rows */}
+                            {planets.map((colony) => (
+                                <tr key={colony.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                                    <td className="p-3 text-white font-medium pl-8 relative">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                        {colony.planet_name || "Kolonia"}
+                                    </td>
+                                    <td className="p-3 text-[#929bc9] font-mono">
+                                        [{colony.galaxy}:{colony.system}:{colony.position}]
+                                    </td>
+                                    <td className="p-3 text-[#929bc9] capitalize">Kolonia</td>
+                                    <td className="p-3 text-right">
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm(`⚠️ Czy na pewno chcesz porzucić kolonię: ${colony.planet_name || "Bez nazwy"} [${colony.galaxy}:${colony.system}:${colony.position}]?`)) return;
+                                                if (!confirm("⚠️⚠️ Wszystkie budynki, flota i surowce na tej planecie zostaną UTRACONE. Czy na pewno kontynuować?")) return;
+                                                const confirmation = prompt("⚠️⚠️⚠️ Aby potwierdzić usunięcie kolonii, wpisz słowo: DELETE");
+                                                if (confirmation === 'DELETE') {
+                                                    await abandonColony(colony.id, confirmation);
+                                                } else if (confirmation) {
+                                                    alert("Błędne hasło potwierdzające. Anulowano.");
+                                                }
+                                            }}
+                                            className="text-red-400 hover:text-red-200 bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors flex items-center gap-1 ml-auto"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                            Usuń
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+
+                            {planets.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-8 text-center text-[#555a7a] italic">
+                                        Nie posiadasz jeszcze żadnych kolonii.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <p className="text-xs text-[#555a7a] mt-4 text-center">
+                    Główna planeta nie może zostać usunięta. Kolonie można porzucić, co jest procesem nieodwracalnym.
+                </p>
             </div>
 
             {/* Danger Zone */}

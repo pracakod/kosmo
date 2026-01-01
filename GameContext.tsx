@@ -154,6 +154,7 @@ interface GameContextType extends GameState {
     clearLogs: () => void;
     logout: () => void;
     deleteAccount: () => Promise<void>;
+    abandonColony: (planetId: string, confirmation: string) => Promise<boolean>;
 
     updateAvatar: (url: string) => void;
     updatePlanetType: (type: string) => void;
@@ -2651,6 +2652,43 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         window.location.reload();
     };
 
+    const abandonColony = async (planetId: string, confirmation: string) => {
+        if (!planetId || planetId === 'main') {
+            alert("Nie możesz porzucić Głównej Planety!");
+            return false;
+        }
+
+        if (confirmation !== 'DELETE') {
+            return false;
+        }
+
+        console.log('🔥 Abandoning colony:', planetId);
+
+        // Delete from DB
+        const { error } = await supabase.from('planets').delete().eq('id', planetId);
+
+        if (error) {
+            console.error('Failed to abandon colony:', error);
+            alert(`Błąd: ${error.message}`);
+            return false;
+        }
+
+        // If we deleted the current planet, switch back to main
+        if (currentPlanetId === planetId) {
+            setCurrentPlanetId('main');
+            if (mainPlanetCache) {
+                setGameState(mainPlanetCache);
+                setMainPlanetCache(null);
+            }
+        }
+
+        // Refresh planets list
+        fetchPlanets();
+
+        alert("Kolonia została porzucona.");
+        return true;
+    };
+
     const deleteAccount = async () => {
         if (!session?.user) return;
         if (!confirm('Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć. Twoje imperium zostanie zniszczone.')) return;
@@ -2901,6 +2939,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         clearLogs,
         logout,
         deleteAccount,
+        abandonColony,
         updateAvatar,
         updatePlanetType,
         getPlayersInSystem,
