@@ -2810,7 +2810,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // 1. Fetch Main Planets (Profiles that are in this system)
             const { data: mainPlanets, error: mainError } = await supabase
                 .from('profiles')
-                .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname')
+                .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname, level')
                 .contains('galaxy_coords', { galaxy, system });
 
             if (mainError) throw mainError;
@@ -2832,7 +2832,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 // Fetch owner profiles
                 const { data: owners, error: ownerError } = await supabase
                     .from('profiles')
-                    .select('id, nickname, points, production_settings')
+                    .select('id, nickname, points, production_settings, level')
                     .in('id', ownerIds);
 
                 if (ownerError) console.error("Error fetching colony owners:", ownerError);
@@ -2849,6 +2849,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         planet_name: col.planet_name,
                         galaxy_coords: col.galaxy_coords,
                         points: owner?.points || 0,
+                        level: owner?.level || 1,
                         production_settings: {
                             ...(owner?.production_settings || {}),
                             planetType: col.planet_type // Use colony planet type

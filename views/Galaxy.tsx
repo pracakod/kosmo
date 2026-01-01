@@ -14,7 +14,7 @@ interface SpyReport {
 }
 
 const Galaxy: React.FC = () => {
-    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, mainPlanetCoords, planetType, getPlayersInSystem, userId, buildings, currentPlanetId, mainPlanetName } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, mainPlanetCoords, planetType, getPlayersInSystem, userId, buildings, currentPlanetId, mainPlanetName, level } = useGame();
 
     // Start at current planet's coords, or 1:1 if not available
     const [coords, setCoords] = useState({
@@ -49,12 +49,8 @@ const Galaxy: React.FC = () => {
 
             const pType = planetType === 'ice' ? "Lodowa" : (planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
 
-            // Calculate MY level
-            const resPoints = Math.floor(((resources.metal || 0) + (resources.crystal || 0) + (resources.deuterium || 0)) / 1000);
-            const buildPoints = Object.values(buildings).reduce((a, b) => a + (b || 0) * 100, 0);
-            const shipPoints = Object.values(ships).reduce((a, b) => a + (b || 0) * 50, 0);
-            const totalPoints = resPoints + buildPoints + shipPoints;
-            const myLevel = Math.floor(totalPoints / 1000) + 1;
+            // Use Commander Level from context
+            const myLevel = level || 1;
 
             // Determine name to show:
             // If we are currently ON the main planet (currentPlanetId is null), use current 'planetName'.
@@ -100,9 +96,8 @@ const Galaxy: React.FC = () => {
             const pType = otherPlayer.production_settings?.planetType === 'ice' ? "Lodowa" : (otherPlayer.production_settings?.planetType === 'desert' ? "Pustynna" : "Ziemiopodobna");
             const avatar = otherPlayer.production_settings?.avatarUrl || "/kosmo/avatars/avatar_default.png";
 
-            // Standardize level calculation
-            const points = otherPlayer.points || 0;
-            const playerLevel = Math.floor(points / 1000) + 1;
+            // Use Commander Level from database
+            const playerLevel = otherPlayer.level || 1;
 
             return {
                 name: otherPlayer.planet_name || "Nieznana Kolonia",
