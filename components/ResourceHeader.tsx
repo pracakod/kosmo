@@ -50,7 +50,7 @@ const ResourceHeader: React.FC = () => {
     const [showPlanetMenu, setShowPlanetMenu] = React.useState(false);
 
     return (
-        <header className="bg-[#111422]/90 backdrop-blur-md border-b border-white/5 p-3 flex-shrink-0 z-20">
+        <header className="bg-[#111422]/90 backdrop-blur-md border-b border-white/5 p-3 flex-shrink-0 relative z-50">
             <div className="flex flex-wrap gap-3 justify-between items-center w-full">
                 {/* Planet Switcher - visible on all devices */}
                 {/* Planet Switcher - visible on all devices */}

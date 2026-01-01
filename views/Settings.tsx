@@ -54,24 +54,7 @@ const Settings: React.FC = () => {
                         Zmień
                     </button>
                 </div>
-
-                <div className="flex gap-4 mt-8 pt-6 border-t border-white/10">
-                    <button
-                        onClick={logout}
-                        className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white px-6 py-3 rounded-lg font-bold transition-colors flex-1"
-                    >
-                        Wyloguj
-                    </button>
-
-                    <button
-                        onClick={deleteAccount}
-                        className="bg-transparent border border-red-900/50 hover:border-red-600 text-red-900 hover:text-red-500 px-6 py-3 rounded-lg font-bold transition-colors"
-                    >
-                        Usuń Konto
-                    </button>
-                </div>
             </div>
-
 
             {/* General Settings */}
             <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
@@ -100,7 +83,6 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
-
             {/* Planet Type Selection */}
             <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -117,9 +99,13 @@ const Settings: React.FC = () => {
                         <div key={p.type} className="flex flex-col gap-2">
                             <button
                                 onClick={() => updatePlanetType(p.type)}
-                                className={`relative w - full aspect - square rounded - xl overflow - hidden border - 4 transition - all ${planetType === p.type ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
+                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${planetType === p.type ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
                             >
-                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${PLANET_IMAGES[p.type] || IMAGES.planet}")` }}></div>
+                                <img
+                                    src={(PLANET_IMAGES[p.type] || IMAGES.planet).replace('/kosmo', '')}
+                                    alt={p.name}
+                                    className="w-full h-full object-cover"
+                                />
                             </button>
                             <span className="text-xs text-center text-[#929bc9] font-medium">{p.name}</span>
                         </div>
@@ -136,36 +122,25 @@ const Settings: React.FC = () => {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { name: "Pomocnik", url: "/kosmo/avatars/avatar_default.png" },
-                        { name: "Major (M)", url: "/kosmo/avatars/avatar_major.png" },
-                        { name: "Major (K)", url: "/kosmo/avatars/avatar_female.png" },
-                        { name: "Cyborg", url: "/kosmo/avatars/avatar_cyber.png" }
+                        { name: "Pomocnik", url: "/avatars/avatar_default.png" },
+                        { name: "Major (M)", url: "/avatars/avatar_major.png" },
+                        { name: "Major (K)", url: "/avatars/avatar_female.png" },
+                        { name: "Cyborg", url: "/avatars/avatar_cyber.png" }
                     ].map((av) => (
                         <div key={av.name} className="flex flex-col gap-2">
                             <button
                                 onClick={() => updateAvatar(av.url)}
-                                className={`relative w - full aspect - square rounded - xl overflow - hidden border - 4 transition - all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
+                                className={`relative w-full aspect-square rounded-xl overflow-hidden border-4 transition-all ${avatarUrl === av.url ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-95' : 'border-transparent hover:border-white/20 hover:scale-105'} `}
                             >
-                                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${av.url}")` }}></div>
+                                <img
+                                    src={av.url.replace('/kosmo', '')}
+                                    alt={av.name}
+                                    className="w-full h-full object-cover"
+                                />
                             </button>
                             <span className="text-xs text-center text-[#929bc9] font-medium">{av.name}</span>
                         </div>
                     ))}
-                </div>
-            </div>
-
-            {/* About */}
-            <div className="bg-[#1c2136] rounded-xl border border-white/10 p-6 shadow-lg">
-                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-green-400">info</span>
-                    O Grze
-                </h3>
-                <p className="text-[#929bc9] text-sm mb-4 leading-relaxed">
-                    Zostań architektem międzygwiezdnego imperium w <strong>Cosmos Conquest</strong>. Obejmij dowodzenie nad nową kolonią, zarządzaj wydobyciem rzadkich surowców i rozwijaj futurystyczne technologie, aby zbudować flotę zdolną do dominacji w galaktyce.
-                    Gra łączy głęboką strategię ekonomiczną z dynamiczną symulacją walki w czasie rzeczywistym, oferując immersyjne doświadczenie w nowoczesnym wydaniu.
-                </p>
-                <div className="text-xs text-[#555a7a] font-mono">
-                    Wersja: v1.2.5 (Ranking & Security)
                 </div>
             </div>
 
