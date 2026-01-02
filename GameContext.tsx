@@ -1177,7 +1177,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     });
                 }
 
-                const newRes = { ...myProfile.resources };
+                // Auto-repair missing fields in DB by merging with initial structure
+                const newRes = { ...initialState.resources, ...(myProfile.resources || {}) };
                 if (mission.resources) {
                     newRes.metal = (Number(newRes.metal) || 0) + (Number(mission.resources.metal) || 0);
                     newRes.crystal = (Number(newRes.crystal) || 0) + (Number(mission.resources.crystal) || 0);
@@ -1972,7 +1973,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             endTime: endTime
         };
 
+        // FIXED: Spread existing resources to preserve storage and darkMatter
         const newResources = {
+            ...gameState.resources,
             metal: gameState.resources.metal - cost.metal,
             crystal: gameState.resources.crystal - cost.crystal,
             deuterium: gameState.resources.deuterium - cost.deuterium
@@ -2138,7 +2141,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         const { error } = await supabase.from('profiles').update({
             resources: {
-                ...gameState.resources,
+                ...gameState.resources, // FIXED: Spread existing resources
                 metal: gameState.resources.metal - cost.metal,
                 crystal: gameState.resources.crystal - cost.crystal,
                 deuterium: gameState.resources.deuterium - cost.deuterium
@@ -2202,7 +2205,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         addXP(Math.floor((totalCost.metal + totalCost.crystal) / 200), 'Fleet Production');
 
         const { error } = await supabase.from('profiles').update({
-            resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
+            resources: {
+                ...gameState.resources, // FIXED: Spread existing resources
+                metal: gameState.resources.metal - totalCost.metal,
+                crystal: gameState.resources.crystal - totalCost.crystal,
+                deuterium: gameState.resources.deuterium - totalCost.deuterium
+            },
             shipyard_queue: newQueue
         }).eq('id', session.user.id);
 
@@ -2263,7 +2271,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         addXP(Math.floor((totalCost.metal + totalCost.crystal) / 200), 'Defense Production');
 
         const { error } = await supabase.from('profiles').update({
-            resources: { ...gameState.resources, metal: gameState.resources.metal - totalCost.metal, crystal: gameState.resources.crystal - totalCost.crystal, deuterium: gameState.resources.deuterium - totalCost.deuterium },
+            resources: {
+                ...gameState.resources, // FIXED: Spread existing resources
+                metal: gameState.resources.metal - totalCost.metal,
+                crystal: gameState.resources.crystal - totalCost.crystal,
+                deuterium: gameState.resources.deuterium - totalCost.deuterium
+            },
             shipyard_queue: newQueue
         }).eq('id', session.user.id);
 
