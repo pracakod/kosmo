@@ -1028,10 +1028,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 rewards: pvpBattleResults.loot,
                                 report: pvpBattleResults.report
                             };
-                            id: `${mission.id}-result`, timestamp: Date.now(), title: battle.attackerWon ? 'Zwycięstwo!' : 'Porażka',
-                                message: `Wynik: ${battle.attackerWon ? 'Wygrana' : 'Przegrana'}. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)}.`,
-                                    outcome: battle.attackerWon ? 'success' : 'failure', rewards: battle.loot, report: battle.report
-                        };
                         loot = pvpBattleResults.loot;
                         survivingAttacker = pvpBattleResults.survivingAttackerShips as any;
 
