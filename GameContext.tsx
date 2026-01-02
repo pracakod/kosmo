@@ -1287,7 +1287,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const checkMissions = async () => {
             const now = Date.now();
             // Access state via ref to avoid dependency loop
-            const missions = gameStateRef.current.activeMissions;
+            // FIX: Include incoming missions so we can process/rescue them if they get stuck!
+            const missions = [...(gameStateRef.current.activeMissions || []), ...(gameStateRef.current.incomingMissions || [])];
 
             // Poll for incoming attacks every 30 seconds (backup for Realtime)
             pollCounter++;
