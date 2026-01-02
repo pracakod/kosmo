@@ -276,10 +276,10 @@ const Galaxy: React.FC = () => {
                                             {planet.activity && <span className="text-[9px] text-red-400">(*)</span>}
                                         </div>
                                         {planet.rank && <div className="text-xs text-green-400 font-mono">Level {planet.rank}</div>}
-                                        {planet.debris && (planet.debris.metal > 0 || planet.debris.crystal > 0) && (
-                                            <div className="flex items-center gap-2 text-[10px] text-orange-400 mt-1" title={`Pole Zniszczeń: Metal ${planet.debris.metal}, Kryształ ${planet.debris.crystal}`}>
+                                        {planet.debris && ((planet.debris.metal || 0) > 0 || (planet.debris.crystal || 0) > 0) && (
+                                            <div className="flex items-center gap-2 text-[10px] text-orange-400 mt-1" title={`Pole Zniszczeń: Metal ${planet.debris.metal || 0}, Kryształ ${planet.debris.crystal || 0}`}>
                                                 <span className="material-symbols-outlined text-[10px]">recycling</span>
-                                                <span>M:{(planet.debris.metal / 1000).toFixed(1)}k C:{(planet.debris.crystal / 1000).toFixed(1)}k</span>
+                                                <span>M:{((planet.debris.metal || 0) / 1000).toFixed(1)}k C:{((planet.debris.crystal || 0) / 1000).toFixed(1)}k</span>
                                             </div>
                                         )}
                                     </div>
@@ -312,7 +312,7 @@ const Galaxy: React.FC = () => {
                                 ) : (
                                     <div className="flex gap-1">
                                         {/* Recycle Button - Show if Debris exists */}
-                                        {planet.debris && (planet.debris.metal > 0 || planet.debris.crystal > 0) && (
+                                        {planet.debris && ((planet.debris.metal || 0) > 0 || (planet.debris.crystal || 0) > 0) && (
                                             <button
                                                 onClick={() => {
                                                     // Reuse Transport Modal logic but Set type to Recycle? 
