@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { useGame } from '../GameContext';
-import { DEFENSES } from '../constants';
-import { DefenseId } from '../types';
+import { DEFENSES, SHIPS } from '../constants';
+import { DefenseId, ShipId } from '../types';
 
 const DEFENSE_LIST = Object.values(DEFENSES);
 
@@ -133,6 +133,19 @@ const Defense: React.FC = () => {
                                                     <span>{formatTime(buildTime)}</span>
                                                 </div>
                                             </div>
+
+                                            {def.bonuses && Object.keys(def.bonuses).length > 0 && (
+                                                <div className="mb-2 text-[10px] text-[#929bc9]">
+                                                    <span className="font-bold text-white uppercase block mb-1 text-[9px]">Silny przeciwko:</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {Object.keys(def.bonuses).map(targetId => (
+                                                            <span key={targetId} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                                {SHIPS[targetId as ShipId]?.name || DEFENSES[targetId as DefenseId]?.name || targetId}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="flex flex-wrap gap-1 text-[10px] mb-3">
                                                 <span className={`px-1.5 py-0.5 rounded ${resources.metal >= def.cost.metal ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>

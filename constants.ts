@@ -65,9 +65,9 @@ export const IMAGES = {
 };
 
 export const PLANET_IMAGES: Record<string, string> = {
-  terran: "/kosmo/planets/planet_terran.png",
-  desert: "/kosmo/planets/planet_desert.png",
-  ice: "/kosmo/planets/planet_ice.png",
+  terran: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc", // Fallback to reliable
+  desert: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc",
+  ice: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSLdQjiDuWVTAfBaEU-HCuYBah9ZQiEwQ-pDEofrc4cE_VxNy9QrAshJikmgoDRsSiufik3xpY-aK01ZyAD-oMT7oiGEoiGMpFWgFdZ7P3A8bg6_W71He4ede4ePe-0BNBFOYzd9apqH_IBj5ZXTOU7lbf7qfnmAK01iO7b2ckjVagWx4YlZdAbeOGA1_vJMuSCRVCtupT_RNvx19THDplwxx3PvEcIgc4g0ljwPyZlPI8DaYq7UaMbOiwXHxzgV-oCUQBi8YwaGc",
   default: IMAGES.planet
 };
 
@@ -438,12 +438,36 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
 };
 
 export const DEFENSES = {
-  rocketLauncher: { id: 'rocketLauncher', name: 'Wyrzutnia Rakiet', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko małym celom.', attack: 40, defense: 10, cost: { metal: 500, crystal: 0, deuterium: 0 }, buildTime: 20, icon: 'rocket_launch' },
-  lightLaser: { id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców.', attack: 50, defense: 12, cost: { metal: 400, crystal: 100, deuterium: 0 }, buildTime: 30, icon: 'electric_bolt' },
-  heavyLaser: { id: 'heavyLaser', name: 'Ciężkie Działko Laserowe', desc: 'Potężny laser zdolny przebić pancerz średnich okrętów.', attack: 125, defense: 50, cost: { metal: 1500, crystal: 500, deuterium: 0 }, buildTime: 60, icon: 'bolt' },
-  gaussCannon: { id: 'gaussCannon', name: 'Działo Gaussa', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 550, defense: 100, cost: { metal: 5000, crystal: 3500, deuterium: 500 }, buildTime: 150, icon: 'target' },
-  ionCannon: { id: 'ionCannon', name: 'Działo Jonowe', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 75, defense: 250, cost: { metal: 1200, crystal: 700, deuterium: 250 }, buildTime: 120, icon: 'storm' },
-  plasmaTurret: { id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć niszczyciele jednym strzałem.', attack: 1500, defense: 150, cost: { metal: 12000, crystal: 12000, deuterium: 7500 }, buildTime: 300, icon: 'whatshot' },
-  smallShield: { id: 'smallShield', name: 'Mała Osłona Tarczowa', desc: 'Kopuła energetyczna chroniąca część planety przed atakami.', attack: 1, defense: 500, cost: { metal: 2500, crystal: 2500, deuterium: 0 }, buildTime: 60, icon: 'shield' },
-  largeShield: { id: 'largeShield', name: 'Duża Osłona Tarczowa', desc: 'Masywna tarcza energetyczna obejmująca całą planetę.', attack: 1, defense: 2500, cost: { metal: 12000, crystal: 12000, deuterium: 0 }, buildTime: 300, icon: 'security' }
+  rocketLauncher: {
+    id: 'rocketLauncher', name: 'Wyrzutnia Rakiet', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko lekkim celom.', attack: 40, defense: 10, cost: { metal: 500, crystal: 0, deuterium: 0 }, buildTime: 20, icon: 'rocket_launch',
+    bonuses: { [ShipId.ESPIONAGE_PROBE]: 2.0 }
+  },
+  lightLaser: {
+    id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców.', attack: 50, defense: 12, cost: { metal: 400, crystal: 100, deuterium: 0 }, buildTime: 30, icon: 'electric_bolt',
+    bonuses: { [ShipId.LIGHT_FIGHTER]: 1.5, [ShipId.ESPIONAGE_PROBE]: 2.0 }
+  },
+  heavyLaser: {
+    id: 'heavyLaser', name: 'Ciężkie Działko Laserowe', desc: 'Potężny laser zdolny przebić pancerz średnich okrętów.', attack: 125, defense: 50, cost: { metal: 1500, crystal: 500, deuterium: 0 }, buildTime: 60, icon: 'bolt',
+    bonuses: { [ShipId.HEAVY_FIGHTER]: 1.5, [ShipId.CRUISER]: 1.0 }
+  },
+  gaussCannon: {
+    id: 'gaussCannon', name: 'Działo Gaussa', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 550, defense: 100, cost: { metal: 5000, crystal: 3500, deuterium: 500 }, buildTime: 150, icon: 'target',
+    bonuses: { [ShipId.CRUISER]: 2.0, [ShipId.BATTLESHIP]: 1.0, [DefenseId.SMALL_SHIELD]: 2.0 }
+  },
+  ionCannon: {
+    id: 'ionCannon', name: 'Działo Jonowe', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 75, defense: 250, cost: { metal: 1200, crystal: 700, deuterium: 250 }, buildTime: 120, icon: 'storm',
+    bonuses: { [ShipId.BATTLESHIP]: 1.5, [ShipId.DESTROYER]: 0.5, [DefenseId.LARGE_SHIELD]: 2.0 }
+  },
+  plasmaTurret: {
+    id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć niszczyciele jednym strzałem.', attack: 1500, defense: 150, cost: { metal: 12000, crystal: 12000, deuterium: 7500 }, buildTime: 300, icon: 'whatshot',
+    bonuses: { [ShipId.DESTROYER]: 1.5, [ShipId.DEATH_STAR]: 0.1, [ShipId.BATTLESHIP]: 1.5 }
+  },
+  smallShield: {
+    id: 'smallShield', name: 'Mała Osłona Tarczowa', desc: 'Kopuła energetyczna chroniąca część planety przed atakami.', attack: 1, defense: 500, cost: { metal: 2500, crystal: 2500, deuterium: 0 }, buildTime: 60, icon: 'shield',
+    bonuses: {}
+  },
+  largeShield: {
+    id: 'largeShield', name: 'Duża Osłona Tarczowa', desc: 'Masywna tarcza energetyczna obejmująca całą planetę.', attack: 1, defense: 2500, cost: { metal: 12000, crystal: 12000, deuterium: 0 }, buildTime: 300, icon: 'security',
+    bonuses: {}
+  }
 };

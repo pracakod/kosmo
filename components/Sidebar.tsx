@@ -48,6 +48,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
                     <div className="flex flex-col">
                         <h1 className="text-white text-base font-bold tracking-tight uppercase">Centrum Dowodzenia</h1>
                         <p className="text-[#929bc9] text-xs font-normal">{userName}</p>
+                        <div className="text-[10px] text-primary font-mono mt-0.5 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[10px]">military_tech</span>
+                            LVL {game.level || 1}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { useGame } from '../GameContext';
 import { supabase } from '../lib/supabase';
 import { IMAGES } from '../constants';
 
@@ -17,6 +18,7 @@ interface RankedPlayer {
 }
 
 const Ranking: React.FC = () => {
+    const { userId } = useGame();
     const [players, setPlayers] = useState<RankedPlayer[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -98,18 +100,21 @@ const Ranking: React.FC = () => {
                                 const isTop3 = index < 3;
                                 const rankColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-600' : 'text-[#929bc9]';
                                 const level = player.level || 1;
+                                const isCurrentUser = userId === player.id;
 
                                 // Online status check (5 minutes threshold)
                                 const now = Date.now();
                                 const isOnline = player.last_updated && (now - player.last_updated) < 5 * 60 * 1000;
 
                                 return (
-                                    <tr key={player.id} className={`hover:bg-white/5 transition-colors group ${index === 0 ? 'bg-yellow-500/5' : ''}`}>
-                                        <td className={`p-4 text-center font-bold ${rankColor} text-lg`}>
-                                            <div className="flex justify-center items-center gap-1">
-                                                {index === 0 && <span className="material-symbols-outlined text-yellow-500 animate-[bounce_2s_infinite]">crown</span>}
-                                                {isTop3 ? ['🥇', '🥈', '🥉'][index] : index + 1}
-                                            </div>
+                                    <tr key={player.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${isCurrentUser ? 'bg-primary/10 border-primary/30' : ''}`}>
+                                        <td className={`p-4 font-bold text-center w-16 ${rankColor} relative`}>
+                                            {index === 0 && (
+                                                <span className="material-symbols-outlined text-yellow-400 absolute top-2 left-1/2 -translate-x-1/2 -mt-1 text-sm animate-bounce" title="Lider Galaktyki">
+                                                    crown
+                                                </span>
+                                            )}
+                                            <span className={index === 0 ? "relative top-1" : ""}>{index + 1}</span>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
