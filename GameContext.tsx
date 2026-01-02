@@ -125,6 +125,7 @@ const initialState: GameState = {
         [ShipId.COLONY_SHIP]: 0,
         [ShipId.ESPIONAGE_PROBE]: 0,
         [ShipId.PIONEER]: 1,
+        [ShipId.RECYCLER]: 0
     },
     defenses: {
         [DefenseId.ROCKET_LAUNCHER]: 0,
@@ -309,7 +310,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // Fetch current profile to get Safe Resources
             const { data: profileData } = await supabase
                 .from('profiles')
-                .select('resources')
+                .select('resources, debris')
                 .eq('id', session.user.id)
                 .single();
 
@@ -724,7 +725,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 planetType: data.production_settings?.planetType || 'terran',
                 missionLogs: data.mission_logs || [],
                 galaxyCoords: data.galaxy_coords,
-                version: data.version || 1 // Load version from DB
+                version: data.version || 1, // Load version from DB
+                debris: data.debris || { metal: 0, crystal: 0 },
             };
 
             // Store main planet coords permanently (doesn't change when switching colonies)
@@ -911,6 +913,107 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     // Break loop
                     retries = MAX_RETRIES + 1;
 
+                    // --- RECYCLE MISSION ---
+                } else if (mission.type === MissionType.RECYCLE) {
+                    // 1. Fetch Target (Profile or Planet)
+                    const { data: ps } = await supabase.from('planets').select('*').contains('galaxy_coords', mission.targetCoords);
+                    const { data: pr } = await supabase.from('profiles').select('*').contains('galaxy_coords', mission.targetCoords);
+
+                    let targetObj = (ps && ps[0]) || (pr && pr[0]);
+                    let table = (ps && ps[0]) ? 'planets' : 'profiles';
+
+                    if (!targetObj) {
+                        result = { id: `${mission.id}-fail`, timestamp: Date.now(), title: 'Recykling Nieudany', message: `Brak pola zniszczeń na tych koordynatach.`, outcome: 'failure' };
+                    } else {
+                        const debris = targetObj.debris || { metal: 0, crystal: 0 };
+                        const totalDebris = (debris.metal || 0) + (debris.crystal || 0);
+
+                        if (totalDebris <= 0) {
+                            result = { id: `${mission.id}-empty`, timestamp: Date.now(), title: 'Raport Recyklingu', message: `Pole zniszczeń jest puste.`, outcome: 'neutral' };
+                        } else {
+                            const recyclerCount = mission.ships[ShipId.RECYCLER] || 0;
+                            const capacity = recyclerCount * 20000;
+
+                            let remainingCapacity = capacity;
+                            const metalToTake = Math.min(debris.metal, remainingCapacity);
+                            remainingCapacity -= metalToTake;
+                            const crystalToTake = Math.min(debris.crystal, remainingCapacity);
+
+                            const newDebris = {
+                                metal: debris.metal - metalToTake,
+                                crystal: debris.crystal - crystalToTake
+                            };
+
+                            const { error: upError } = await supabase.from(table).update({ debris: newDebris }).eq('id', targetObj.id);
+
+                            if (upError) {
+                                result = { id: `${mission.id}-err`, timestamp: Date.now(), title: 'Błąd Recyklingu', message: upError.message, outcome: 'failure' };
+                            } else {
+                                await supabase.from('fleets').update({
+                                    resources: { metal: metalToTake, crystal: crystalToTake, deuterium: 0 }
+                                }).eq('id', mission.id);
+
+                                result = { id: `${mission.id}-success`, timestamp: Date.now(), title: 'Recykling Zakończony', message: `Odzyskano: M:${metalToTake} K:${crystalToTake}.`, outcome: 'success', rewards: { metal: metalToTake, crystal: crystalToTake } };
+                            }
+                        }
+                    }
+                    retries = MAX_RETRIES + 1;
+
+                    // --- RECYCLE MISSION ---
+                } else if (mission.type === MissionType.RECYCLE) {
+                    // 1. Fetch Target (Profile or Planet)
+                    const { data: ps } = await supabase.from('planets').select('*').contains('galaxy_coords', mission.targetCoords);
+                    const { data: pr } = await supabase.from('profiles').select('*').contains('galaxy_coords', mission.targetCoords);
+
+                    let targetObj = (ps && ps[0]) || (pr && pr[0]);
+                    let table = (ps && ps[0]) ? 'planets' : 'profiles';
+
+                    if (!targetObj) {
+                        result = { id: `${mission.id}-fail`, timestamp: Date.now(), title: 'Recykling Nieudany', message: `Brak pola zniszczeń na tych koordynatach.`, outcome: 'failure' };
+                    } else {
+                        const debris = targetObj.debris || { metal: 0, crystal: 0 };
+                        const totalDebris = (debris.metal || 0) + (debris.crystal || 0);
+
+                        if (totalDebris <= 0) {
+                            result = { id: `${mission.id}-empty`, timestamp: Date.now(), title: 'Raport Recyklingu', message: `Pole zniszczeń jest puste.`, outcome: 'neutral' };
+                        } else {
+                            // Calculate Capacity
+                            const recyclerCount = mission.ships[ShipId.RECYCLER] || 0;
+                            const capacity = recyclerCount * 20000;
+
+                            let collectedMetal = 0;
+                            let collectedCrystal = 0;
+                            let remainingCapacity = capacity;
+
+                            const metalToTake = Math.min(debris.metal, remainingCapacity);
+                            collectedMetal = metalToTake;
+                            remainingCapacity -= metalToTake;
+
+                            const crystalToTake = Math.min(debris.crystal, remainingCapacity);
+                            collectedCrystal = crystalToTake;
+
+                            // Update Debris in DB
+                            const newDebris = {
+                                metal: debris.metal - collectedMetal,
+                                crystal: debris.crystal - collectedCrystal
+                            };
+
+                            const { error: upError } = await supabase.from(table).update({ debris: newDebris }).eq('id', targetObj.id);
+
+                            if (upError) {
+                                result = { id: `${mission.id}-err`, timestamp: Date.now(), title: 'Błąd Recyklingu', message: upError.message, outcome: 'failure' };
+                            } else {
+                                // Update Mission in DB with new resources
+                                await supabase.from('fleets').update({
+                                    resources: { metal: collectedMetal, crystal: collectedCrystal, deuterium: 0 }
+                                }).eq('id', mission.id);
+
+                                result = { id: `${mission.id}-success`, timestamp: Date.now(), title: 'Recykling Zakończony', message: `Odzyskano: M:${collectedMetal} K:${collectedCrystal}.`, outcome: 'success', rewards: { metal: collectedMetal, crystal: collectedCrystal } };
+                            }
+                        }
+                    }
+                    retries = MAX_RETRIES + 1;
+
                     // --- 3. ATTACK / SPY / TRANSPORT (CRITICAL: TARGET UPDATE) ---
                 } else if (mission.type === MissionType.ATTACK || mission.type === MissionType.SPY || mission.type === MissionType.TRANSPORT) {
 
@@ -927,7 +1030,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'neutral', title: 'Raport', message: 'Cel nie istnieje (Pustka).' };
                             if (mission.type === MissionType.TRANSPORT) loot = mission.resources || {};
                         }
-                        retries = MAX_RETRIES + 1; // Exit loop
+                        // Break loop for Colonize
+                        retries = MAX_RETRIES + 1;
 
                     } else {
                         // PvP - ATOMIC UPDATE REQUIRED
@@ -976,11 +1080,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             });
                             newTargetData.buildings = newBuildings;
 
+                            // Resources Update (Loot)
                             newTargetData.resources = {
                                 ...targetProfile.resources,
                                 metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
                                 crystal: Math.max(0, targetProfile.resources.crystal - (loot.crystal || 0)),
                                 deuterium: Math.max(0, targetProfile.resources.deuterium - (loot.deuterium || 0))
+                            };
+
+                            // Debris Update
+                            const existingDebris = targetProfile.debris || { metal: 0, crystal: 0 };
+                            const addedDebris = (battle as any).debris || { metal: 0, crystal: 0 };
+                            newTargetData.debris = {
+                                metal: (existingDebris.metal || 0) + (addedDebris.metal || 0),
+                                crystal: (existingDebris.crystal || 0) + (addedDebris.crystal || 0)
                             };
 
                             // Target Log
@@ -2592,6 +2705,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     constructionQueue: colony.construction_queue || [],
                     shipyardQueue: colony.shipyard_queue || [],
                     galaxyCoords: colony.galaxy_coords,
+                    debris: colony.debris || { metal: 0, crystal: 0 },
                     // Keep research from main planet (shared)
                     // research: prev.research
                 }));
@@ -2741,7 +2855,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // 1. Fetch Main Planets (Profiles that are in this system)
             const { data: mainPlanets, error: mainError } = await supabase
                 .from('profiles')
-                .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname, level')
+                .select('id, planet_name, galaxy_coords, points, production_settings, buildings, nickname, level, debris')
                 .contains('galaxy_coords', { galaxy, system });
 
             if (mainError) throw mainError;
@@ -2749,7 +2863,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             // 2. Fetch Colonies (Planets that are in this system)
             const { data: colonies, error: colonyError } = await supabase
                 .from('planets')
-                .select('id, owner_id, planet_name, planet_type, galaxy_coords, buildings, ships, defenses')
+                .select('id, owner_id, planet_name, planet_type, galaxy_coords, buildings, ships, defenses, debris')
                 .contains('galaxy_coords', { galaxy, system });
 
             if (colonyError) throw colonyError;
@@ -2787,7 +2901,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         },
                         buildings: col.buildings,
                         nickname: (owner?.nickname || 'Unknown') + ' (Kolonia)',
-                        isColony: true
+                        isColony: true,
+                        debris: col.debris
                     };
                 });
 

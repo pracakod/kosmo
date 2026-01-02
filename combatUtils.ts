@@ -22,7 +22,8 @@ export const generatePvPBattleResult = (
     damagedBuildings: Record<string, number>,
     loot: Cost,
     attackerWon: boolean,
-    totalAttackerLost: number // For XP calculation
+    totalAttackerLost: number, // For XP calculation
+    debris?: { metal: number; crystal: number }
 } => {
 
     // 1. Setup Initial State
@@ -304,14 +305,30 @@ export const generatePvPBattleResult = (
         result: attackerWon ? 'attacker_win' : 'defender_win'
     };
 
+    // Debris Calculation (30% of Metal/Crystal from destroyed ships)
+    let debrisMetal = 0;
+    let debrisCrystal = 0;
+
+    const addDebris = (id: string, count: number) => {
+        if (SHIPS[id as ShipId]) {
+            const cost = SHIPS[id as ShipId].baseCost;
+            debrisMetal += (cost.metal * count) * 0.3;
+            debrisCrystal += (cost.crystal * count) * 0.3;
+        }
+    };
+
+    Object.entries(attackerLosses).forEach(([id, count]) => addDebris(id, count));
+    Object.entries(defenderLosses).forEach(([id, count]) => addDebris(id, count));
+
     return {
         report,
         survivingAttackerShips: currentAttackerShips,
         survivingDefenderShips: currentDefenderShips,
-        survivingDefenderDefenses: survivingDefenderDefensesFinal, // Repaired
+        survivingDefenderDefenses: survivingDefenderDefensesFinal,
         damagedBuildings,
         loot,
         attackerWon,
-        totalAttackerLost
+        totalAttackerLost,
+        debris: { metal: Math.floor(debrisMetal), crystal: Math.floor(debrisCrystal) }
     };
 };

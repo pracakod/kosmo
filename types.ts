@@ -49,7 +49,8 @@ export enum ShipId {
   HUGE_CARGO = 'hugeCargo',
   COLONY_SHIP = 'colonyShip',
   ESPIONAGE_PROBE = 'espionageProbe',
-  PIONEER = 'pioneer'
+  PIONEER = 'pioneer',
+  RECYCLER = 'recycler'
 }
 
 export enum DefenseId {
@@ -127,7 +128,8 @@ export enum MissionType {
   ATTACK = 'attack',
   TRANSPORT = 'transport',
   SPY = 'spy',
-  COLONIZE = 'colonize'
+  COLONIZE = 'colonize',
+  RECYCLE = 'recycle'
 }
 
 export interface MissionRewards {
@@ -227,4 +229,5 @@ export interface GameState {
   xp: number;
   level: number;
   version?: number;
+  debris?: { metal: number; crystal: number }; // Debris field at current planet location
 }

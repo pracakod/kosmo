@@ -43,7 +43,10 @@ const GalaxySetup: React.FC<GalaxySetupProps> = ({ session, onComplete }) => {
 
                 // Add Colonies
                 colonies?.forEach((colony: any) => {
-                    occupied.set(`${colony.galaxy}:${colony.system}:${colony.position}`, colony.name || "Kolonia");
+                    if (colony.galaxy_coords) {
+                        const c = colony.galaxy_coords;
+                        occupied.set(`${c.galaxy}:${c.system}:${c.position}`, colony.planet_name || "Kolonia");
+                    }
                 });
 
                 // Add Bot Base manually for specific coords (e.g. 1:1:2 like in Galaxy.tsx)

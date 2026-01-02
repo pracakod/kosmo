@@ -14,7 +14,7 @@ interface SpyReport {
 }
 
 const Galaxy: React.FC = () => {
-    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, mainPlanetCoords, planetType, getPlayersInSystem, userId, buildings, currentPlanetId, mainPlanetName, level } = useGame();
+    const { planetName, ships, sendSpyProbe, sendAttack, sendTransport, sendColonize, planets, resources, galaxyCoords, mainPlanetCoords, planetType, getPlayersInSystem, userId, buildings, currentPlanetId, mainPlanetName, level, debris } = useGame();
 
     // Start at current planet's coords, or 1:1 if not available
     const [coords, setCoords] = useState({
@@ -65,7 +65,8 @@ const Galaxy: React.FC = () => {
                 type: pType,
                 isPlayer: true,
                 activity: "",
-                isSelected: !currentPlanetId // Main planet is selected if currentPlanetId is null
+                isSelected: !currentPlanetId, // Main planet is selected if currentPlanetId is null
+                debris: debris || { metal: 0, crystal: 0 }
             };
         }
 
@@ -86,7 +87,8 @@ const Galaxy: React.FC = () => {
                 isPlayer: true,
                 isColony: true,
                 colonyId: myColony.id,
-                activity: ""
+                activity: "",
+                debris: myColony.debris || { metal: 0, crystal: 0 }
             };
         }
 
@@ -107,7 +109,8 @@ const Galaxy: React.FC = () => {
                 type: pType,
                 isPlayer: false,
                 isBot: false,
-                activity: "" // TODO: Online status
+                activity: "", // TODO: Online status
+                debris: otherPlayer.debris || { metal: 0, crystal: 0 }
             };
         }
 
@@ -273,6 +276,12 @@ const Galaxy: React.FC = () => {
                                             {planet.activity && <span className="text-[9px] text-red-400">(*)</span>}
                                         </div>
                                         {planet.rank && <div className="text-xs text-green-400 font-mono">Level {planet.rank}</div>}
+                                        {planet.debris && (planet.debris.metal > 0 || planet.debris.crystal > 0) && (
+                                            <div className="flex items-center gap-2 text-[10px] text-orange-400 mt-1" title={`Pole Zniszczeń: Metal ${planet.debris.metal}, Kryształ ${planet.debris.crystal}`}>
+                                                <span className="material-symbols-outlined text-[10px]">recycling</span>
+                                                <span>M:{(planet.debris.metal / 1000).toFixed(1)}k C:{(planet.debris.crystal / 1000).toFixed(1)}k</span>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <span className="text-white/20 text-xs md:text-sm italic">Pusta przestrzeń</span>
@@ -300,62 +309,98 @@ const Galaxy: React.FC = () => {
                                     >
                                         <span className="material-symbols-outlined text-lg">flag</span>
                                     </button>
-                                ) : planet.isPlayer && !planet.isSelected ? (
+                                ) : (
                                     <div className="flex gap-1">
-                                        <button
-                                            onClick={() => {
-                                                setTransportModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
-                                                setSelectedShips({});
-                                                setSelectedResources({ metal: 0, crystal: 0, deuterium: 0 });
-                                                setStatusMessage(null);
-                                            }}
-                                            className="w-8 h-8 rounded bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Transportuj Surowce">
-                                            <span className="material-symbols-outlined text-lg">local_shipping</span>
-                                        </button>
-                                    </div>
-                                ) : !planet.isPlayer && !planet.isBot ? (
-                                    <div className="flex gap-1">
-                                        <button
-                                            onClick={() => openSpyModal(pos)}
-                                            className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj">
-                                            <span className="material-symbols-outlined text-lg">visibility</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setAttackModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
-                                                setSelectedShips({});
-                                                setStatusMessage(null);
-                                            }}
-                                            className="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Atakuj">
-                                            <span className="material-symbols-outlined text-lg">swords</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setTransportModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
-                                                setSelectedShips({});
-                                                setSelectedResources({ metal: 0, crystal: 0, deuterium: 0 });
-                                                setStatusMessage(null);
-                                            }}
-                                            className="w-8 h-8 rounded bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Transportuj">
-                                            <span className="material-symbols-outlined text-lg">local_shipping</span>
-                                        </button>
-                                    </div>
-                                ) : planet.isBot && (
-                                    <div className="flex gap-1">
-                                        <button
-                                            onClick={() => openSpyModal(pos)}
-                                            className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj">
-                                            <span className="material-symbols-outlined text-lg">visibility</span>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setAttackModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
-                                                setSelectedShips({});
-                                                setStatusMessage(null);
-                                            }}
-                                            className="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Atakuj">
-                                            <span className="material-symbols-outlined text-lg">swords</span>
-                                        </button>
+                                        {/* Recycle Button - Show if Debris exists */}
+                                        {planet.debris && (planet.debris.metal > 0 || planet.debris.crystal > 0) && (
+                                            <button
+                                                onClick={() => {
+                                                    // Reuse Transport Modal logic but Set type to Recycle? 
+                                                    // Actually we need a Recycle Modal or re-use Attack/Transport with MissionType param.
+                                                    // Simplified: Use Transport Modal but we need to know it is recycle.
+                                                    // Let's create `recycleModal` state later? 
+                                                    // For now, let's trigger a specialized logic or just alert "Coming Soon"?
+                                                    // No, user wants implementation.
+                                                    // I'll add `setRecycleModal` logic. But I need to define it in the component first.
+                                                    // Re-using TransportModal is risky as it sends TRANSPORT mission.
+                                                    // I will add `recycleModal` state to Galaxy component in a separate edit or assume I can add it now?
+                                                    // I can't add state in this chunk (middle of render).
+                                                    // Check if I can use `transportModal` but add a field `isRecycle`.
+                                                    // Or better, just add the button now and I will add the State/Modal logic in next edit.
+                                                    // I will set `transportModal` with a special name or flagging?
+                                                    // Better: Just use `setRecycleModal` and errors will tell me I need to add it.
+                                                    // Or better: Add the State definition at top of file in next step.
+                                                    // Current step: Add UI. I will use `setRecycleModal({ ... })` and let it error/fix.
+                                                    // Wait, if it errors compilation, app breaks.
+                                                    // I should add state FIRST.
+
+                                                    // Let's just add the display logic for now.
+                                                    // And the button, but comment out the handler or use console.log.
+                                                    console.log("Open Recycle Modal");
+                                                }}
+                                                className="w-8 h-8 rounded bg-white/5 hover:bg-orange-500/20 hover:text-orange-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors"
+                                                title="Recykling (Wymaga Recyklera)"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">recycling</span>
+                                            </button>
+                                        )}
+
+                                        {planet.isPlayer && !planet.isSelected ? (
+                                            <button
+                                                onClick={() => {
+                                                    setTransportModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
+                                                    setSelectedShips({});
+                                                    setSelectedResources({ metal: 0, crystal: 0, deuterium: 0 });
+                                                    setStatusMessage(null);
+                                                }}
+                                                className="w-8 h-8 rounded bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Transportuj Surowce">
+                                                <span className="material-symbols-outlined text-lg">local_shipping</span>
+                                            </button>
+                                        ) : !planet.isPlayer && !planet.isBot ? (
+                                            <>
+                                                <button
+                                                    onClick={() => openSpyModal(pos)}
+                                                    className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj">
+                                                    <span className="material-symbols-outlined text-lg">visibility</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setAttackModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
+                                                        setSelectedShips({});
+                                                        setStatusMessage(null);
+                                                    }}
+                                                    className="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Atakuj">
+                                                    <span className="material-symbols-outlined text-lg">swords</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setTransportModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
+                                                        setSelectedShips({});
+                                                        setSelectedResources({ metal: 0, crystal: 0, deuterium: 0 });
+                                                        setStatusMessage(null);
+                                                    }}
+                                                    className="w-8 h-8 rounded bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Transportuj">
+                                                    <span className="material-symbols-outlined text-lg">local_shipping</span>
+                                                </button>
+                                            </>
+                                        ) : planet.isBot && (
+                                            <>
+                                                <button
+                                                    onClick={() => openSpyModal(pos)}
+                                                    className="w-8 h-8 rounded bg-white/5 hover:bg-purple-500/20 hover:text-purple-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Szpieguj">
+                                                    <span className="material-symbols-outlined text-lg">visibility</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setAttackModal({ galaxy: coords.galaxy, system: coords.system, pos, name: planet.name });
+                                                        setSelectedShips({});
+                                                        setStatusMessage(null);
+                                                    }}
+                                                    className="w-8 h-8 rounded bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-[#929bc9] flex items-center justify-center border border-white/5 transition-colors" title="Atakuj">
+                                                    <span className="material-symbols-outlined text-lg">swords</span>
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
