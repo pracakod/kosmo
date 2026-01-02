@@ -109,7 +109,7 @@ const LogCard: React.FC<{ log: MissionLog, type: string, onDetail: () => void }>
     const isDanger = log.outcome === 'danger';
 
     // Custom logic per type
-    if (type === 'spy') {
+    if (type === 'spy' || (type === 'threats' && log.title.toLowerCase().includes('skan'))) {
         return (
             <div className={`${isDanger ? 'bg-red-900/20 border-red-500/30' : 'bg-[#1c2136] border-white/10'} border rounded-lg overflow-hidden group hover:border-primary/50 transition-colors`}>
                 <div className={`${isDanger ? 'bg-red-900/30 border-red-500/20' : 'bg-[#111422] border-white/5'} p-3 border-b flex justify-between items-center`}>

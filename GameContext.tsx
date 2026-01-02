@@ -1133,14 +1133,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             }
 
                             // 3. Logs & Result
+                            const originStr = mission.originCoords ? `[${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}]` : '[?:?:?]';
                             newLogs.unshift({
                                 id: `${mission.id}-def-log`,
                                 timestamp: Date.now(),
                                 title: "Wykryto Skanowanie!",
-                                message: `Gracz ${attackerName} przeskanował Twoją planetę.`,
-                                outcome: 'warning'
+                                message: `Gracz ${attackerName} ${originStr} przeskanował Twoją planetę.`,
+                                outcome: 'danger'
                             });
-
                             result = {
                                 id: `${mission.id}-result`,
                                 timestamp: Date.now(),
