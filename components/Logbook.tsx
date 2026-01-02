@@ -3,6 +3,7 @@ import { useGame } from '../GameContext';
 import { MissionLog, MissionType, ShipId, DefenseId } from '../types';
 import { SHIPS, DEFENSES, formatTime } from '../constants';
 import BattleReportModal from './BattleReportModal';
+import SpyReportModal from './SpyReportModal';
 
 const Logbook: React.FC = () => {
     const { missionLogs, clearLogs } = useGame();
@@ -90,7 +91,11 @@ const Logbook: React.FC = () => {
             {/* Modal for Details (Battle Reports etc) */}
             {selectedDetail && (
                 selectedDetail.report ? (
-                    <BattleReportModal report={selectedDetail.report} onClose={() => setSelectedDetail(null)} />
+                    selectedDetail.title && selectedDetail.title.includes('Szpieg') ? (
+                        <SpyReportModal report={selectedDetail.report} onClose={() => setSelectedDetail(null)} />
+                    ) : (
+                        <BattleReportModal report={selectedDetail.report as any} onClose={() => setSelectedDetail(null)} />
+                    )
                 ) : (
                     <DetailModal log={selectedDetail} onClose={() => setSelectedDetail(null)} />
                 )
