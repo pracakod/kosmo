@@ -21,6 +21,11 @@ DECLARE
     new_version INT;
     result_json JSONB;
 BEGIN
+    -- SECURITY: Verify the requesting user matches p_user_id
+    IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
+        RAISE EXCEPTION 'UNAUTHORIZED: Cannot modify another users profile';
+    END IF;
+
     -- Check current version of the profile
     SELECT version INTO current_version FROM profiles WHERE id = p_user_id;
     
