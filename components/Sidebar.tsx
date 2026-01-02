@@ -33,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
     const userEmail = game.session?.user?.email?.toLowerCase();
 
     // DEBUG LOG
-    console.log("Current Email:", userEmail, "Is Admin?", ADMIN_EMAILS.includes(userEmail));
+
 
     if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
         navItems.push({ id: 'admin', label: 'ADMIN', icon: 'shield_person' });

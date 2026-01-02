@@ -220,7 +220,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Debug version
     useEffect(() => {
-        console.log('🚀 GameContext v3.0 (Persistence Audit) LOADED - Full Debug Active');
+
     }, []);
 
     // Last saved state for validation
