@@ -972,61 +972,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     }
                     retries = MAX_RETRIES + 1;
 
-                    // --- RECYCLE MISSION ---
-                } else if (mission.type === MissionType.RECYCLE) {
-                    // 1. Fetch Target (Profile or Planet)
-                    const { data: ps } = await supabase.from('planets').select('*').contains('galaxy_coords', mission.targetCoords);
-                    const { data: pr } = await supabase.from('profiles').select('*').contains('galaxy_coords', mission.targetCoords);
-
-                    let targetObj = (ps && ps[0]) || (pr && pr[0]);
-                    let table = (ps && ps[0]) ? 'planets' : 'profiles';
-
-                    if (!targetObj) {
-                        result = { id: `${mission.id}-fail`, timestamp: Date.now(), title: 'Recykling Nieudany', message: `Brak pola zniszczeń na tych koordynatach.`, outcome: 'failure' };
-                    } else {
-                        const debris = targetObj.debris || { metal: 0, crystal: 0 };
-                        const totalDebris = (debris.metal || 0) + (debris.crystal || 0);
-
-                        if (totalDebris <= 0) {
-                            result = { id: `${mission.id}-empty`, timestamp: Date.now(), title: 'Raport Recyklingu', message: `Pole zniszczeń jest puste.`, outcome: 'neutral' };
-                        } else {
-                            // Calculate Capacity
-                            const recyclerCount = mission.ships[ShipId.RECYCLER] || 0;
-                            const capacity = recyclerCount * 20000;
-
-                            let collectedMetal = 0;
-                            let collectedCrystal = 0;
-                            let remainingCapacity = capacity;
-
-                            const metalToTake = Math.min(debris.metal || 0, remainingCapacity);
-                            collectedMetal = metalToTake;
-                            remainingCapacity -= metalToTake;
-
-                            const crystalToTake = Math.min(debris.crystal || 0, remainingCapacity);
-                            collectedCrystal = crystalToTake;
-
-                            // Update Debris in DB
-                            const newDebris = {
-                                metal: (debris.metal || 0) - collectedMetal,
-                                crystal: (debris.crystal || 0) - collectedCrystal
-                            };
-
-                            const { error: upError } = await supabase.from(table).update({ debris: newDebris }).eq('id', targetObj.id);
-
-                            if (upError) {
-                                result = { id: `${mission.id}-err`, timestamp: Date.now(), title: 'Błąd Recyklingu', message: upError.message, outcome: 'failure' };
-                            } else {
-                                // Update Mission in DB with new resources
-                                await supabase.from('fleets').update({
-                                    resources: { metal: collectedMetal, crystal: collectedCrystal, deuterium: 0 }
-                                }).eq('id', mission.id);
-
-                                result = { id: `${mission.id}-success`, timestamp: Date.now(), title: 'Recykling Zakończony', message: `Odzyskano: M:${collectedMetal} K:${collectedCrystal}.`, outcome: 'success', rewards: { metal: collectedMetal, crystal: collectedCrystal } };
-                            }
-                        }
-                    }
-                    retries = MAX_RETRIES + 1;
-
                     // --- 3. ATTACK / SPY / TRANSPORT (CRITICAL: TARGET UPDATE) ---
                 } else if (mission.type === MissionType.ATTACK || mission.type === MissionType.SPY || mission.type === MissionType.TRANSPORT) {
 
@@ -2441,7 +2386,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             resources: cappedResources
         };
 
-        // Optimistic Update
+        // STEP 1: Deduct resources from DB FIRST (anti-exploit)
+        const { error: profileError } = await supabase.from('profiles').update({
+            ships: newShips,
+            resources: newResources
+        }).eq('id', session.user.id);
+
+        if (profileError) {
+            console.error('❌ COLONIZE PROFILE UPDATE ERROR:', profileError);
+            alert('Błąd odejmowania surowców.');
+            return false;
+        }
+
+        // STEP 2: Optimistic Update (safe now - DB already updated)
         setGameState(prev => ({
             ...prev,
             ships: newShips,
@@ -2449,7 +2406,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             activeMissions: [...prev.activeMissions, mission]
         }));
 
-        // DB Updates
+        // STEP 3: Insert mission to DB
         const { error: missionError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
@@ -2460,63 +2417,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             origin_coords: origin,
             start_time: now,
             arrival_time: now + duration,
-            // No return_time for colonization - one-way
             status: 'flying',
             resources: cappedResources
         });
 
         if (missionError) {
             console.error('❌ COLONIZE MISSION ERROR:', missionError);
-            alert('Błąd wysyłania misji kolonizacyjnej.');
-            // SAFE REVERT: Restore colony ship and resources locally
-            setGameState(prev => ({
-                ...prev,
-                ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
-                resources: {
-                    metal: prev.resources.metal + resources.metal,
-                    crystal: prev.resources.crystal + resources.crystal,
-                    deuterium: prev.resources.deuterium + resources.deuterium,
-                    energy: prev.resources.energy,
-                    maxEnergy: prev.resources.maxEnergy,
-                    storage: prev.resources.storage,
-                    darkMatter: prev.resources.darkMatter
-                },
-                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-            }));
+            alert('Błąd tworzenia misji. Surowce zostały odjęte.');
+            // Resources already deducted - safer than allowing duplication
             return false;
         }
-
-        // CRITICAL FIX: Persist resource deduction to DB immediately to prevent free colonization exploit via reload
-        const { error: profileError } = await supabase.from('profiles').update({
-            ships: newShips,
-            resources: newResources
-        }).eq('id', session.user.id);
 
         addXP(500, 'New Colony');
-
-        if (profileError) {
-            console.error('❌ COLONIZE PROFILE UPDATE ERROR:', profileError);
-            // We have a mission but no resource deduction?
-            // Ideally we should delete the mission to be fair, or let it slide as rare edge case?
-            // To be safe, we try to cancel the mission in DB
-            await supabase.from('missions').delete().eq('id', missionId);
-            alert('Błąd aktualizacji profilu. Misja anulowana.');
-            setGameState(prev => ({
-                ...prev,
-                ships: { ...prev.ships, [ShipId.COLONY_SHIP]: (prev.ships[ShipId.COLONY_SHIP] || 0) + 1 },
-                resources: {
-                    metal: prev.resources.metal + resources.metal,
-                    crystal: prev.resources.crystal + resources.crystal,
-                    deuterium: prev.resources.deuterium + resources.deuterium,
-                    energy: prev.resources.energy,
-                    maxEnergy: prev.resources.maxEnergy,
-                    storage: prev.resources.storage,
-                    darkMatter: prev.resources.darkMatter
-                },
-                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-            }));
-            return false;
-        }
 
         // Update Reference to prevent Desync warning
         lastSavedStateRef.current = {
@@ -2525,9 +2437,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             resources: newResources
         };
 
-
-        // Save deducted resources/ships
-        // Mission success
         console.log('✅ Colonization mission sent!', mission);
         alert(`Misja kolonizacyjna rozpoczęta! Czas lotu: ${(duration / 1000).toFixed(0)}s`);
 
