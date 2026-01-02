@@ -1328,8 +1328,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             for (const m of extremelyOverdue) {
                 console.warn(`🚨 AGGRESSIVE RESCUE: Force-completing stuck mission ${m.id}`);
+
+                // IMMEDIATELY remove from local state to clear UI alert (before DB call)
+                setGameState(prev => ({
+                    ...prev,
+                    activeMissions: prev.activeMissions.filter(am => am.id !== m.id),
+                    incomingMissions: prev.incomingMissions.filter(im => im.id !== m.id)
+                }));
+
                 // Force complete in DB to clear up the stuck notification
-                await supabase.from('missions').update({
+                const { error: updateError } = await supabase.from('missions').update({
                     status: 'completed',
                     result: {
                         id: now.toString(),
@@ -1339,6 +1347,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         outcome: 'neutral'
                     }
                 }).eq('id', m.id);
+
+                if (updateError) {
+                    console.error('❌ AGGRESSIVE RESCUE DB UPDATE FAILED:', updateError);
+                } else {
+                    console.log('✅ AGGRESSIVE RESCUE: Mission marked completed in DB');
+                }
 
                 // If this is my mission, return ships to my planet
                 if (m.ownerId === session.user.id) {
