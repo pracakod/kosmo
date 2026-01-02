@@ -80,14 +80,67 @@ const GalaxySetup: React.FC<GalaxySetupProps> = ({ session, onComplete }) => {
             position: position
         };
 
-        // Zapisz pozycję w profilu
+        // Zapisz pozycję w profilu Z PEŁNYM STANEM POCZĄTKOWYM
+        const initialResources = {
+            metal: 500,
+            crystal: 300,
+            deuterium: 100,
+            darkMatter: 0,
+            energy: 0,
+            maxEnergy: 0,
+            storage: { metal: 10000, crystal: 10000, deuterium: 10000 }
+        };
+
+        const initialBuildings = {
+            metal_mine: 1,
+            crystal_mine: 0,
+            deuterium_synth: 0,
+            solar_plant: 1,
+            fusion_reactor: 0,
+            robot_factory: 0,
+            shipyard: 0,
+            research_lab: 0,
+            metal_storage: 0,
+            crystal_storage: 0,
+            deuterium_tank: 0
+        };
+
+        const initialShips = {
+            light_fighter: 0,
+            heavy_fighter: 0,
+            cruiser: 0,
+            battleship: 0,
+            destroyer: 0,
+            death_star: 0,
+            small_cargo: 0,
+            medium_cargo: 0,
+            huge_cargo: 0,
+            colony_ship: 0,
+            espionage_probe: 0,
+            pioneer: 1,
+            recycler: 0
+        };
+
         const { error: updateError } = await supabase
             .from('profiles')
             .upsert({
                 id: session.user.id,
                 galaxy_coords: newCoords,
                 planet_name: `Kolonia [${newCoords.galaxy}:${newCoords.system}:${newCoords.position}]`,
-                last_updated: Date.now()
+                last_updated: Date.now(),
+                resources: initialResources,
+                buildings: initialBuildings,
+                ships: initialShips,
+                research: {},
+                defenses: {},
+                debris: { metal: 0, crystal: 0 },
+                construction_queue: [],
+                shipyard_queue: [],
+                mission_logs: [],
+                points: 0,
+                xp: 0,
+                level: 1,
+                version: 1
             });
 
         if (updateError) {
