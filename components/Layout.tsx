@@ -216,40 +216,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                 </div>
             </nav>
 
-            {/* Debug Console - HIDDEN FOR NOW
+            {/* Debug Console - RESTORED */}
             <DebugButton onClick={() => setShowDebugConsole(true)} />
             <ErrorConsole visible={showDebugConsole} onClose={() => setShowDebugConsole(false)} />
-            */}
 
-            {/* Info / Changelog Button */}
-            <button
-                onClick={() => setShowChangelog(true)}
-                style={{
-                    position: 'fixed',
-                    bottom: '80px',
-                    right: '10px',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'rgba(59, 130, 246, 0.4)', // More transparent
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'white',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    zIndex: 9998,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                    transition: 'all 0.2s',
-                    backdropFilter: 'blur(4px)'
-                }}
-                className="hover:bg-blue-600 hover:scale-110"
-                title="Szybkie Info / Nowości"
-            >
-                I
-            </button>
+            {/* Info / Changelog Button - Replaced by Debug Console
+            {/* <button ... > I </button> */}
 
             {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
         </div >

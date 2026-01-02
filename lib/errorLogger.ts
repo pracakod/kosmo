@@ -162,6 +162,22 @@ export const initGlobalErrorHandlers = () => {
             logError(`Failed to load resource: <${tagName} src="${src}">`, 'ResourceLoader');
         }
     }, true); // true = capture phase
+
+    // Capture explicit console.error calls
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+        // Call original
+        originalConsoleError.apply(console, args);
+
+        // Log to our system
+        // Avoid infinite loop if logError calls console.error (it does!)
+        // Check if the error came from our own logger to avoid duplicates/loops
+        const msg = args.map(a => (typeof a === 'object' ? (a.message || JSON.stringify(a)) : String(a))).join(' ');
+
+        if (!msg.includes('🔴 [ERROR]')) { // Filter out our own logs
+            addLog('error', msg, 'Console');
+        }
+    };
 };
 
 // Load existing logs
