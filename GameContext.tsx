@@ -866,6 +866,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const processMissionArrival = async (mission: FleetMission) => {
         if (mission.eventProcessed) return;
 
+        // ATOMIC LOCK: Prevent double-processing by multiple sessions
+        const { data: lockResult, error: lockError } = await supabase
+            .from('missions')
+            .update({ status: 'processing' })
+            .eq('id', mission.id)
+            .eq('status', 'flying')
+            .select('id');
+
+        if (lockError || !lockResult || lockResult.length === 0) {
+            console.log('⚠️ Mission already being processed by another session:', mission.id);
+            return; // Another session grabbed this mission
+        }
+
         let retries = 0;
         const MAX_RETRIES = 5;
 

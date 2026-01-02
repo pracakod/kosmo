@@ -66,7 +66,7 @@ const App: React.FC = () => {
                 .from('profiles')
                 .select('galaxy_coords')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle(); // Use maybeSingle to handle new users without profile
 
             if (data && !error && data.galaxy_coords) {
                 setHasGalaxyCoords(true);
