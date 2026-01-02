@@ -1214,8 +1214,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 }
                             }
 
-                            const attackerSpyLevel = (attackerResearch as any)?.espionage_technology || 0;
-                            const defenderSpyLevel = (targetProfile.research as any)?.espionage_technology || 0;
+                            const attackerSpyLevel = (attackerResearch as any)?.espionageTech || 0;
+                            const defenderSpyLevel = (targetProfile.research as any)?.espionageTech || 0;
                             const levelDiff = attackerSpyLevel - defenderSpyLevel;
 
                             // 2. Build Report based on Difference
