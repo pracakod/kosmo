@@ -11,7 +11,7 @@ WHERE EXISTS (
     SELECT 1 FROM profiles p2 
     WHERE LOWER(p2.nickname) = LOWER(p1.nickname)  -- Case-insensitive comparison
     AND p2.id != p1.id
-    AND p2.created_at < p1.created_at  -- Older player keeps original
+    AND p2.updated_at < p1.updated_at  -- Older player keeps original
 );
 
 -- STEP 2: Add unique constraint (case-insensitive via lower index)

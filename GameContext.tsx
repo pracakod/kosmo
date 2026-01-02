@@ -1064,6 +1064,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                         } else if (mission.type === MissionType.TRANSPORT) {
                             newTargetData.resources = {
+                                ...(targetProfile.resources || {}), // PRESERVE STORAGE & DARK MATTER
                                 metal: (targetProfile.resources?.metal || 0) + (mission.resources?.metal || 0),
                                 crystal: (targetProfile.resources?.crystal || 0) + (mission.resources?.crystal || 0),
                                 deuterium: (targetProfile.resources?.deuterium || 0) + (mission.resources?.deuterium || 0),
