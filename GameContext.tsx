@@ -1865,7 +1865,32 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const missionId = crypto.randomUUID();
         const targetUserId = await findTargetUser(coords);
 
-        // Optimistic update
+        // Calculate new ships and resources
+        const newShips = { ...gameState.ships };
+        Object.entries(ships).forEach(([id, count]) => {
+            newShips[id as ShipId] = (newShips[id as ShipId] || 0) - count;
+        });
+        const newResources = {
+            ...gameState.resources,
+            metal: gameState.resources.metal - (resources.metal || 0),
+            crystal: gameState.resources.crystal - (resources.crystal || 0),
+            deuterium: gameState.resources.deuterium - (resources.deuterium || 0)
+        };
+
+        // STEP 1: Deduct resources from DB FIRST (anti-exploit)
+        const { error: profileError } = await supabase.from('profiles').update({
+            ships: newShips,
+            resources: newResources,
+            points: calculatePoints(newResources, gameState.buildings, newShips, gameState.research, gameState.defenses)
+        }).eq('id', session.user.id);
+
+        if (profileError) {
+            console.error("Error deducting resources:", profileError);
+            alert("Błąd odejmowania surowców.");
+            return;
+        }
+
+        // STEP 2: Update local state
         const mission: FleetMission = {
             id: missionId,
             ownerId: session?.user.id,
@@ -1882,24 +1907,15 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             status: 'flying'
         };
 
-        setGameState(prev => {
-            const newShips = { ...prev.ships };
-            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] = (newShips[id as ShipId] || 0) - count; });
-            return {
-                ...prev,
-                ships: newShips,
-                resources: {
-                    ...prev.resources,
-                    metal: prev.resources.metal - (resources.metal || 0),
-                    crystal: prev.resources.crystal - (resources.crystal || 0),
-                    deuterium: prev.resources.deuterium - (resources.deuterium || 0)
-                },
-                activeMissions: [...prev.activeMissions, mission]
-            };
-        });
+        setGameState(prev => ({
+            ...prev,
+            ships: newShips,
+            resources: newResources,
+            activeMissions: [...prev.activeMissions, mission]
+        }));
 
-        // DB Insert
-        const { error } = await supabase.from('missions').insert({
+        // STEP 3: Insert mission to DB
+        const { error: missionError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
             target_user_id: targetUserId,
@@ -1914,47 +1930,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             status: 'flying'
         });
 
-        if (error) {
-            console.error("Error sending transport:", error);
-            alert("Błąd wysyłania transportu.");
-            // SAFE REVERT: Restore ships and resources locally
-            setGameState(prev => {
-                const revertedShips = { ...prev.ships };
-                Object.entries(ships).forEach(([id, count]) => {
-                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
-                });
-                return {
-                    ...prev,
-                    ships: revertedShips,
-                    resources: {
-                        ...prev.resources,
-                        metal: prev.resources.metal + (resources.metal || 0),
-                        crystal: prev.resources.crystal + (resources.crystal || 0),
-                        deuterium: prev.resources.deuterium + (resources.deuterium || 0)
-                    },
-                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-                };
-            });
-            return;
-        }
-
-        if (error) console.error("Error sending transport:", error);
-        else {
-            // Update Profile (Deduct Ships & Resources)
-            const currentShips = { ...gameState.ships };
-            Object.entries(ships).forEach(([id, count]) => {
-                currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
-            });
-            const currentRes = { ...gameState.resources };
-            currentRes.metal -= (resources.metal || 0);
-            currentRes.crystal -= (resources.crystal || 0);
-            currentRes.deuterium -= (resources.deuterium || 0);
-
-            await supabase.from('profiles').update({
-                ships: currentShips,
-                resources: currentRes,
-                points: calculatePoints(currentRes, gameState.buildings, currentShips, gameState.research, gameState.defenses)
-            }).eq('id', session.user.id);
+        if (missionError) {
+            console.error("Error creating mission:", missionError);
+            // Resources already deducted - safer than allowing duplication
         }
     };
 
