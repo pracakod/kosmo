@@ -413,9 +413,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
                 galaxy_coords: current.galaxyCoords,
-                active_missions: current.activeMissions,
-                mission_logs: current.missionLogs,
-                galaxy_coords: current.galaxyCoords,
+
                 points: (() => {
                     // CALCULATE TOTAL GLOBAL POINTS (Account Wide)
                     let totalPoints = 0;
@@ -1205,17 +1203,6 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             if (mission.ownerId === session.user.id) {
                                 attackerResearch = gameStateRef.current.research;
                             } else {
-                                // If we fetched it safely above (we added .select('nickname, research'))
-                                // But variable 'attProfile' scope is inside the if block above.
-                                // We need to re-fetch or ensure scope availability.
-                                // Actually, let's just grab it from 'attProfile' if it was fetched, but 'attProfile' is block scoped.
-                                // To be safe and minimal: fetch if missing, or rely on what we have.
-                                // Better: use a fresh fetch if needed or reuse. 
-                                // Since 'attProfile' is let defined in block 1006, it's not visible here?
-                                // Checked file view: 1006: else if (!mission.attackerName) { const { data: attProfile }... } 
-                                // It is scoped. 
-                                // So we need to fetch research here if not current user.
-                            } else {
                                 // Fallback fetch for Spy Logic if not already available
                                 const { data: spyAttacker, error: spyError } = await supabase.from('profiles').select('nickname, research').eq('id', mission.ownerId).single();
                                 attackerResearch = spyAttacker?.research || {};
@@ -1432,7 +1419,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                 let shipsDetails = '';
                 Object.entries(mission.ships || {}).forEach(([id, count]) => {
-                    if (count > 0) shipsDetails += `${SHIPS[id as ShipId].name}: ${count}, `;
+                    if ((count as number) > 0) shipsDetails += `${SHIPS[id as ShipId].name}: ${count}, `;
                 });
                 if (shipsDetails) shipsDetails = shipsDetails.slice(0, -2); // Remove trailing comma
 
