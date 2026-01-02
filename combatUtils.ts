@@ -170,7 +170,9 @@ export const generatePvPBattleResult = (
             // Here we have 'defense' in stats. Let's say Health = (Cost.M + Cost.C) / 10 + defense * 10?
             // Simplified using stats we have: 'defense' * 10 * techShield + (baseCost.metal+crystal)/10
             // Let's use simpler: (defense * techShield) * 10 (Shields) + (metal+crystal)/10 (Structure)
-            const structure = (def.baseCost.metal + def.baseCost.crystal) / 10;
+            // FIX: Defenses use 'cost', Ships use 'baseCost'. Handle both.
+            const cost = def.baseCost || (def as any).cost || { metal: 0, crystal: 0 };
+            const structure = (cost.metal + cost.crystal) / 10;
             const shield = def.defense * techShield;
             // Effective Health
             return (structure + shield);

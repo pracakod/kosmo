@@ -1080,7 +1080,27 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         } catch (err: any) {
             console.error('Critical Error in processMissionArrival:', err);
-            alert(`BŁĄD PRZYLOTU: ${err.message || err} `);
+            // RESCUE LOGIC: If arrival crashes, force fleet adjustment to 'returning' so it doesn't get stuck!
+            alert(`BŁĄD PRZYLOTU: ${err.message || err}. Flota zawraca awaryjnie.`);
+
+            // Calculate Force Return Time
+            const now = Date.now();
+            const timeTraveled = now - mission.startTime;
+
+            await supabase.from('missions').update({
+                status: 'returning',
+                return_time: now + timeTraveled,
+                arrival_time: now,
+                result: {
+                    id: now.toString(),
+                    timestamp: now,
+                    title: 'Awaryjny Powrót',
+                    message: `Wystąpił błąd systemu podczas dolotu. Flota została zawrócona, aby zapobiec utracie jednostek. Błąd: ${err.message}`,
+                    outcome: 'neutral'
+                }
+            }).eq('id', mission.id);
+
+            fetchMissions();
         }
     };
 
