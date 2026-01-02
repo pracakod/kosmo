@@ -80,7 +80,7 @@ const Galaxy: React.FC = () => {
             return {
                 name: myColony.planet_name || "Kolonia",
                 player: "Ty (Kolonia)",
-                rank: 0,
+                rank: level || 1, // Use Commander Level from context
                 img: PLANET_IMAGES[myColony.planet_type] || IMAGES.planet,
                 type: pType,
                 isPlayer: true,
