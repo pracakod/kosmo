@@ -1318,6 +1318,42 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.filter(am => am.id !== m.id) })); // Optimistic remove
                 await processMissionReturn(m);
             }
+
+            // AGGRESSIVE RESCUE: Force-complete missions that are EXTREMELY overdue (5+ min past arrival, still 'flying')
+            // This handles edge cases where processMissionArrival keeps crashing
+            const extremelyOverdue = missions.filter(m =>
+                m.status === 'flying' &&
+                now > m.arrivalTime + (5 * 60 * 1000) // 5 minutes overdue
+            );
+
+            for (const m of extremelyOverdue) {
+                console.warn(`🚨 AGGRESSIVE RESCUE: Force-completing stuck mission ${m.id}`);
+                // Force complete in DB to clear up the stuck notification
+                await supabase.from('missions').update({
+                    status: 'completed',
+                    result: {
+                        id: now.toString(),
+                        timestamp: now,
+                        title: 'Misja Anulowana (System)',
+                        message: 'Misja utknęła i została automatycznie zakończona przez system. Statki wracają do bazy.',
+                        outcome: 'neutral'
+                    }
+                }).eq('id', m.id);
+
+                // If this is my mission, return ships to my planet
+                if (m.ownerId === session.user.id) {
+                    const { data: myProfile } = await supabase.from('profiles').select('ships').eq('id', session.user.id).single();
+                    if (myProfile && m.ships) {
+                        const newShips = { ...myProfile.ships };
+                        Object.entries(m.ships).forEach(([id, count]) => {
+                            newShips[id] = (Number(newShips[id]) || 0) + (Number(count) || 0);
+                        });
+                        await supabase.from('profiles').update({ ships: newShips }).eq('id', session.user.id);
+                    }
+                }
+
+                fetchMissions();
+            }
         };
 
         // Also fetch immediately on load
@@ -3024,8 +3060,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Retroactive XP Calculation
     // Retroactive XP Catch-Up (Corrects missing XP for existing players)
+    // FIX: Use a ref to ensure this only runs ONCE per session to prevent loop!
+    const xpCatchUpAppliedRef = useRef(false);
+
     useEffect(() => {
         if (!loaded) return;
+        if (xpCatchUpAppliedRef.current) return; // Already applied this session
 
         // Calculate expected XP based on current assets
         let calculatedTotal = 0;
@@ -3084,7 +3124,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         if (calculatedTotal > currentXP + 10) {
             const diff = calculatedTotal - currentXP;
             console.log(`⭐ Retroactive XP Fix: Player has ${currentXP}, Assets worth ${calculatedTotal}. Adding ${diff}.`);
+            xpCatchUpAppliedRef.current = true; // Mark as applied BEFORE calling addXP
             addXP(diff, 'Retroactive Catch-Up');
+        } else {
+            xpCatchUpAppliedRef.current = true; // No catch-up needed, but mark as checked
         }
     }, [loaded, planets.length]);
 
