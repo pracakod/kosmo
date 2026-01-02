@@ -46,7 +46,7 @@ const ResourceItem: React.FC<{
 );
 
 const ResourceHeader: React.FC = () => {
-    const { resources, productionRates, logout, planets, currentPlanetId, switchPlanet, planetName, galaxyCoords } = useGame();
+    const { resources, productionRates, logout, planets, currentPlanetId, switchPlanet, planetName, mainPlanetName, galaxyCoords } = useGame();
     const [showPlanetMenu, setShowPlanetMenu] = React.useState(false);
 
     return (
@@ -71,7 +71,7 @@ const ResourceHeader: React.FC = () => {
                                     className={`w-full text-left px-4 py-3 text-sm hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-white/5 ${!currentPlanetId || currentPlanetId === 'main' ? 'text-primary bg-primary/10' : 'text-white'}`}
                                 >
                                     <span className="material-symbols-outlined text-lg">home</span>
-                                    Główna
+                                    {mainPlanetName || 'Główna'}
                                 </button>
                                 {/* Colony Planets */}
                                 {planets.map((p, i) => (
