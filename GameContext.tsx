@@ -673,15 +673,23 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             if (incoming.length > 0) {
                 // Fetch attacker nicknames
-                const attackerIds = Array.from(new Set(incoming.map(m => m.ownerId)));
-                const { data: attackers } = await supabase.from('profiles').select('id, nickname').in('id', attackerIds);
+                // Fetch attacker nicknames - ROBUST
+                const pIds = incoming.map(m => m.ownerId).filter(id => !!id) as string[];
+                const uniqueIds = Array.from(new Set(pIds));
 
-                if (attackers) {
-                    const attackerMap = new Map(attackers.map(a => [a.id, a.nickname]));
-                    incoming = incoming.map(m => ({
-                        ...m,
-                        attackerName: attackerMap.get(m.ownerId!) || 'Nieznany'
-                    }));
+                if (uniqueIds.length > 0) {
+                    console.log('🔍 Resolving Incoming Attackers:', uniqueIds);
+                    const { data: attackers, error: attError } = await supabase.from('profiles').select('id, nickname').in('id', uniqueIds);
+
+                    if (attError) console.error('❌ Error fetching incoming attackers:', attError);
+
+                    if (attackers) {
+                        const attackerMap = new Map(attackers.map(a => [a.id, a.nickname]));
+                        incoming = incoming.map(m => ({
+                            ...m,
+                            attackerName: (m.ownerId && attackerMap.get(m.ownerId)) || `Obcy [${m.ownerId?.slice(0, 4) || '???'}]`
+                        }));
+                    }
                 }
 
                 // Check for NEW incoming missions to notify
