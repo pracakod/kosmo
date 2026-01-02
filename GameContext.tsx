@@ -987,7 +987,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             newLogs.unshift({
                                 id: `${mission.id}-def-log`, timestamp: Date.now(), title: "ZOSTAŁEŚ ZAATAKOWANY!",
                                 message: `Gracz ${attackerName} zaatakował Cię. Wynik: ${battle.attackerWon ? 'PRZEGRANA' : 'OBRONA'}.`,
-                                outcome: 'danger', report: battle.report
+                                outcome: 'danger',
+                                report: battle.report // Nested Report for UI
                             });
 
                         } else if (mission.type === MissionType.TRANSPORT) {
@@ -1122,8 +1123,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
                 const outcome = (mission.result?.outcome as any) || 'success';
 
+                // CRITICAL FIX: Preserve report from mission result locally
+                const report = (mission.result as any)?.report;
+
                 const newLogs = [
-                    { id: logId, timestamp: Date.now(), title, message, outcome, rewards: mission.resources },
+                    { id: logId, timestamp: Date.now(), title, message, outcome, rewards: mission.resources, report },
                     ...(myProfile.mission_logs || [])
                 ].slice(0, 50);
 

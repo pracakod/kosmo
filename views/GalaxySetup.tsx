@@ -19,19 +19,33 @@ const GalaxySetup: React.FC<GalaxySetupProps> = ({ session, onComplete }) => {
     useEffect(() => {
         const fetchOccupied = async () => {
             setLoading(true);
-            const { data, error } = await supabase
+            // 1. Fetch Main Planets
+            const { data: profiles, error: profilesError } = await supabase
                 .from('profiles')
                 .select('galaxy_coords, planet_name')
                 .not('galaxy_coords', 'is', null);
 
-            if (data && !error) {
+            // 2. Fetch Colonies
+            const { data: colonies, error: coloniesError } = await supabase
+                .from('planets')
+                .select('galaxy, system, position, name');
+
+            if (!profilesError && !coloniesError) {
                 const occupied = new Map<string, string>();
-                data.forEach((profile: any) => {
+
+                // Add Main Planets
+                profiles?.forEach((profile: any) => {
                     if (profile.galaxy_coords) {
                         const c = profile.galaxy_coords;
-                        occupied.set(`${c.galaxy}:${c.system}:${c.position}`, profile.planet_name || "Nieznana Planeta");
+                        occupied.set(`${c.galaxy}:${c.system}:${c.position}`, profile.planet_name || "Główna Planeta");
                     }
                 });
+
+                // Add Colonies
+                colonies?.forEach((colony: any) => {
+                    occupied.set(`${colony.galaxy}:${colony.system}:${colony.position}`, colony.name || "Kolonia");
+                });
+
                 // Add Bot Base manually for specific coords (e.g. 1:1:2 like in Galaxy.tsx)
                 occupied.set("1:1:2", "Piracka Baza");
 
