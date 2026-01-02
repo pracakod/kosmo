@@ -721,7 +721,20 @@ const Galaxy: React.FC = () => {
                             </div>
 
                             <div className="mb-4">
-                                <p className="text-sm font-bold text-white mb-2">Wyślij surowce z nową kolonią:</p>
+                                <div className="flex justify-between items-center mb-2">
+                                    <p className="text-sm font-bold text-white">Wyślij surowce z nową kolonią:</p>
+                                    <button
+                                        onClick={() => setColonizeResources({
+                                            metal: Math.min(resources.metal, 15000),
+                                            crystal: Math.min(resources.crystal, 15000),
+                                            deuterium: Math.min(resources.deuterium, 15000)
+                                        })}
+                                        className="px-2 py-1 bg-green-600/20 hover:bg-green-600/40 text-green-400 text-xs font-bold rounded border border-green-500/30"
+                                    >
+                                        MAX (15k)
+                                    </button>
+                                </div>
+                                <p className="text-xs text-yellow-400 mb-3">Limit: 15,000 każdego surowca</p>
 
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
@@ -729,39 +742,39 @@ const Galaxy: React.FC = () => {
                                         <input
                                             type="number"
                                             min="0"
-                                            max={resources.metal}
+                                            max="15000"
                                             value={colonizeResources.metal}
                                             onFocus={(e) => e.target.select()}
-                                            onChange={e => setColonizeResources(p => ({ ...p, metal: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                            onChange={e => setColonizeResources(p => ({ ...p, metal: Math.min(15000, Math.max(0, parseInt(e.target.value) || 0)) }))}
                                             className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
                                         />
-                                        <span className="text-gray-500 text-xs">/ {resources.metal.toLocaleString()}</span>
+                                        <span className="text-gray-500 text-xs">/ 15k</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[#929bc9] text-xs w-16">Kryształ:</span>
                                         <input
                                             type="number"
                                             min="0"
-                                            max={resources.crystal}
+                                            max="15000"
                                             value={colonizeResources.crystal}
                                             onFocus={(e) => e.target.select()}
-                                            onChange={e => setColonizeResources(p => ({ ...p, crystal: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                            onChange={e => setColonizeResources(p => ({ ...p, crystal: Math.min(15000, Math.max(0, parseInt(e.target.value) || 0)) }))}
                                             className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
                                         />
-                                        <span className="text-gray-500 text-xs">/ {resources.crystal.toLocaleString()}</span>
+                                        <span className="text-gray-500 text-xs">/ 15k</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[#929bc9] text-xs w-16">Deuter:</span>
                                         <input
                                             type="number"
                                             min="0"
-                                            max={resources.deuterium}
+                                            max="15000"
                                             value={colonizeResources.deuterium}
                                             onFocus={(e) => e.target.select()}
-                                            onChange={e => setColonizeResources(p => ({ ...p, deuterium: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                            onChange={e => setColonizeResources(p => ({ ...p, deuterium: Math.min(15000, Math.max(0, parseInt(e.target.value) || 0)) }))}
                                             className="flex-1 bg-[#111422] border border-white/10 rounded px-2 py-1 text-white text-sm"
                                         />
-                                        <span className="text-gray-500 text-xs">/ {resources.deuterium.toLocaleString()}</span>
+                                        <span className="text-gray-500 text-xs">/ 15k</span>
                                     </div>
                                 </div>
                             </div>
