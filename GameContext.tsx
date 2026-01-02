@@ -143,6 +143,7 @@ const initialState: GameState = {
     lastTick: Date.now(),
     xp: 0,
     level: 1,
+    version: 1,
 };
 
 const calculatePoints = (resources: any, buildings: any, ships: any, research: any, defenses: any) => {
@@ -235,7 +236,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         const current = gameStateRef.current;
         const targetPlanet = currentPlanetRef.current;
-        const isColony = targetPlanet && targetPlanet !== 'main';
+        const isColony = targetPlanet && targetPlanet !== 'main' && targetPlanet !== null; // Strict check
 
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`💾 [SAVE START] Reason: ${reason}`);
@@ -257,9 +258,19 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         let success = false;
 
+        // Prepare global profile payload
+        // If on Colony, we must MERGE synced data (missions, research) with existing Main Planet data (resources)
+        // If on Main, we overwrite everything (except we don't zero out missing fields usually, but here we construct full payload)
+
+        let profilePayload: any = {};
+        let planetPayload: any = null;
+        let targetPlanetId: string | null = null;
+
         if (isColony) {
-            // Save Colony to planets table
-            const payload = {
+            // COLONY SAVE: We need to update PLanets table AND sync Global parts to Profile
+
+            // 1. Prepare Colony Data (Planets Table)
+            planetPayload = {
                 buildings: current.buildings,
                 ships: current.ships,
                 defenses: current.defenses,
@@ -267,23 +278,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 construction_queue: current.constructionQueue,
                 shipyard_queue: current.shipyardQueue,
             };
+            targetPlanetId = targetPlanet;
 
-            // CRITICAL FIX: Update Reference State immediately to match loaded colony
-            // This prevents "Data desync" warnings when validation runs
-            lastSavedStateRef.current = { ...current };
-
-            console.log('💾 [SAVE] Colony Payload:', JSON.stringify(payload));
-
-            // Save Colony Stats
-            const { error } = await supabase.from('planets').update(payload).eq('id', targetPlanet);
-            if (error) {
-                console.error('❌ [SAVE ERROR] Colony:', error.message);
-            } else {
-                success = true;
-            }
-
-            // CRITICAL: Sync Global Data (Dark Matter, Missions, Research) to Profile
-            // 1. Fetch current profile to get Main Planet resources (to avoid overwrite)
+            // 2. Prepare Profile Sync (Global Data only)
+            // Fetch current profile to get Safe Resources
             const { data: profileData } = await supabase
                 .from('profiles')
                 .select('resources')
@@ -292,13 +290,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
             const dbResources = profileData?.resources || {};
 
-            // 2. Merge Resources: DB Metal/Crystal + Local Dark Matter
+            // Merge Resources: DB Metal/Crystal + Local Dark Matter
             const safeResources = {
                 ...dbResources,
                 darkMatter: gameState.resources.darkMatter
             };
 
-            const globalPayload = {
+            profilePayload = {
                 research: current.research,
                 production_settings: {
                     ...current.productionSettings,
@@ -307,28 +305,21 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     nickname: current.nickname
                 },
                 nickname: current.nickname,
-                // points: calculatePoints(...), // Skipping points to avoid fluctuation
-                active_missions: current.activeMissions, // Sync Global Missions
-                resources: safeResources, // Write SAFE resources (Dark Matter only updated)
+                active_missions: current.activeMissions,
+                resources: safeResources, // Global resources (Dark Matter sync)
                 last_updated: Date.now(),
                 level: current.level,
                 xp: current.xp
             };
-            console.log('💾 [SAVE] Profile Sync Payload (Safe):', JSON.stringify(globalPayload));
 
-            const { error: profileError } = await supabase.from('profiles').update(globalPayload).eq('id', session.user.id);
-            if (profileError) {
-                console.error('❌ [SAVE ERROR] Profile Sync:', profileError.message);
-            } else {
-                console.log('✅ [SAVE SUCCESS] Profile synced');
-            }
+            // Update Reference State immediately for Colony to prevent Desync
+            lastSavedStateRef.current = { ...current };
 
         } else {
-            // Save Main Planet to profiles table
-            const payload = {
-                id: session.user.id,
+            // MAIN PLANET SAVE: Everything goes to Profile
+            profilePayload = {
                 planet_name: current.planetName,
-                nickname: current.nickname, // Root level
+                nickname: current.nickname,
                 resources: current.resources,
                 buildings: current.buildings,
                 research: current.research,
@@ -340,7 +331,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     ...current.productionSettings,
                     avatarUrl: current.avatarUrl,
                     planetType: current.planetType,
-                    nickname: current.nickname // Also in settings for legacy
+                    nickname: current.nickname
                 },
                 active_missions: current.activeMissions,
                 mission_logs: current.missionLogs,
@@ -350,28 +341,58 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 level: current.level,
                 xp: current.xp
             };
-            console.log('💾 [SAVE] Profile Payload:', JSON.stringify(payload));
-
-            const { error } = await supabase.from('profiles').upsert(payload);
-
-            if (error) {
-                console.error('❌ [SAVE ERROR] Profile:', error.message);
-                if (error.code === '401' || error.code === '403' || error.message.includes('JWT')) {
-                    console.error('🛑 [SAVE] Auth error - pausing sync');
-                    setIsSyncPaused(true);
-                }
-            } else {
-                console.log('✅ [SAVE SUCCESS] Profile saved');
-                success = true;
-            }
         }
 
-        // Store for validation
-        lastSavedStateRef.current = JSON.parse(JSON.stringify(current));
-        console.log('💾 [SAVE END] Success:', success);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        try {
+            console.log(`💾 [SAVE] Calling RPC save_game_atomic (Ver: ${current.version || 1})`);
 
-        return success;
+            const { data, error } = await supabase.rpc('save_game_atomic', {
+                p_user_id: session.user.id,
+                p_profile_data: profilePayload,
+                p_planet_id: targetPlanetId,
+                p_planet_data: planetPayload,
+                p_expected_version: current.version || 1
+            });
+
+            if (error) {
+                console.error('❌ [SAVE RPC ERROR]', error);
+
+                if (error.message && error.message.includes('VERSION_MISMATCH')) {
+                    alert('⚠️ KONFLIKT DANYCH!\n\nSerwer posiada nowszą wersję zapisu (grałeś na innym urządzeniu?).\nStrona zostanie przeładowana, aby pobrać aktualny stan.');
+                    window.location.reload();
+                    return false;
+                }
+
+                throw error;
+            }
+
+            if (data && data.success) {
+                const newVersion = data.new_version;
+                console.log(`✅ [SAVE SUCCESS] Version bumped to ${newVersion}`);
+
+                // Update local version
+                setGameState(prev => ({
+                    ...prev,
+                    version: newVersion
+                }));
+
+                // Also update ref immediately so next save uses correct version
+                gameStateRef.current.version = newVersion;
+
+                // Store for validation
+                lastSavedStateRef.current = JSON.parse(JSON.stringify(current));
+                return true;
+            }
+
+        } catch (err: any) {
+            console.error('❌ [SAVE EXCEPTION]', err.message);
+            if (err.code === '401' || err.code === '403') {
+                setIsSyncPaused(true);
+            }
+            return false;
+        }
+
+        return false;
     };
 
     // ========== VALIDATION FUNCTION ==========
@@ -634,6 +655,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 planetType: data.production_settings?.planetType || 'terran',
                 missionLogs: data.mission_logs || [],
                 galaxyCoords: data.galaxy_coords,
+                version: data.version || 1 // Load version from DB
             };
 
             // Store main planet coords permanently (doesn't change when switching colonies)

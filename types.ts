@@ -226,4 +226,5 @@ export interface GameState {
   lastTick: number;
   xp: number;
   level: number;
+  version?: number;
 }
