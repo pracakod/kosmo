@@ -1,6 +1,9 @@
 -- 1. Add version column to profiles and planets
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
 ALTER TABLE planets ADD COLUMN IF NOT EXISTS version INT DEFAULT 1;
+-- Fix: Add updated_at column if missing (caused crash)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE planets ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
 
 -- 2. Create RPC function for atomic save
 CREATE OR REPLACE FUNCTION save_game_atomic(

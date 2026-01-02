@@ -464,10 +464,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         // Simple comparisons
         if (JSON.stringify(loaded.constructionQueue) !== JSON.stringify(saved.constructionQueue)) {
-            issues.push(`⚠️ [DESYNC] constructionQueue: SAVED=${saved.constructionQueue?.length} items, LOADED=${loaded.constructionQueue?.length} items`);
+            issues.push(`⚠️ [DESYNC] constructionQueue:\nSAVED=${JSON.stringify(saved.constructionQueue)}\nLOADED=${JSON.stringify(loaded.constructionQueue)}`);
         }
         if (JSON.stringify(loaded.shipyardQueue) !== JSON.stringify(saved.shipyardQueue)) {
-            issues.push(`⚠️ [DESYNC] shipyardQueue: SAVED=${saved.shipyardQueue?.length} items, LOADED=${loaded.shipyardQueue?.length} items`);
+            issues.push(`⚠️ [DESYNC] shipyardQueue:\nSAVED=${JSON.stringify(saved.shipyardQueue)}\nLOADED=${JSON.stringify(loaded.shipyardQueue)}`);
         }
 
         if (issues.length > 0) {
@@ -530,8 +530,48 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 result: m.result
             }));
 
+            const now = Date.now();
+            const rescueThreshold = now - 10000; // 10s grace period
+
+            // SILENT RESCUE: Identify missions that are "flying" but past arrival time (Zombies)
+            // We filter them OUT of state to prevent UI flicker, and trigger background fix.
+            const zombies = mappedMissions.filter(m =>
+                m.status === 'flying' &&
+                m.arrivalTime < rescueThreshold &&
+                !rescuedMissionIdsRef.current.has(m.id)
+            );
+
+            if (zombies.length > 0) {
+                console.log('🧟 [SILENT RESCUE] Zombies detected:', zombies.length);
+                zombies.forEach(z => {
+                    rescuedMissionIdsRef.current.add(z.id); // Block local re-entry
+                    // Background DB Fix
+                    supabase.from('missions').update({
+                        status: 'completed', // Force complete to stop loop
+                        result: { // Minimal result to satisfy constraints
+                            id: `${z.id}-rescue`,
+                            timestamp: Date.now(),
+                            outcome: 'neutral',
+                            title: 'Zaginiona Flota',
+                            message: 'Misja zakończona awaryjnie (Silent Rescue).'
+                        }
+                    }).eq('id', z.id).then(({ error }) => {
+                        if (error) console.error('Silent Rescue DB Error:', error);
+                        else console.log('🧟 [SILENT RESCUE] DB Updated for', z.id);
+                    });
+                });
+            }
+
             const myMissions = mappedMissions.filter(m => m.ownerId === session.user.id && m.status !== 'completed' && !rescuedMissionIdsRef.current.has(m.id));
-            let incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying' && !rescuedMissionIdsRef.current.has(m.id));
+
+            // Filter incoming: Must be flying, NOT my own, AND NOT A ZOMBIE (arrival > threshold)
+            let incoming = mappedMissions.filter(m =>
+                m.targetUserId === session.user.id &&
+                m.ownerId !== session.user.id &&
+                m.status === 'flying' &&
+                m.arrivalTime > rescueThreshold && // HIDE ZOMBIES FROM UI
+                !rescuedMissionIdsRef.current.has(m.id)
+            );
 
             if (incoming.length > 0) {
                 // Fetch attacker nicknames
