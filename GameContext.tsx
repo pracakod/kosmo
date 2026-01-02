@@ -4,25 +4,33 @@ import { calculateExpeditionOutcome } from './lib/gameLogic';
 import { GameState, BuildingId, ResearchId, ShipId, DefenseId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
 import { BUILDINGS, RESEARCH, SHIPS, DEFENSES } from './constants';
 
-const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderDefenses: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false) => {
-    let attackPower = 0;
-    let defensePower = 0;
+const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderDefenses: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false, attackerResearch: any = {}) => {
 
+    // Research Bonuses
+    const attackerWeaponMult = 1 + ((attackerResearch[ResearchId.WEAPON_TECH] || 0) * 0.1);
+    const attackerShieldMult = 1 + ((attackerResearch[ResearchId.SHIELDING_TECH] || 0) * 0.05) + ((attackerResearch[ResearchId.ARMOUR_TECH] || 0) * 0.05);
+
+    const defenderWeaponMult = 1 + ((defenderResearch[ResearchId.WEAPON_TECH] || 0) * 0.1);
+    const defenderShieldMult = 1 + ((defenderResearch[ResearchId.SHIELDING_TECH] || 0) * 0.05) + ((defenderResearch[ResearchId.ARMOUR_TECH] || 0) * 0.05);
+
+    let attackPower = 0;
+
+    // Calculate Attacker Power with Bonus
     Object.entries(attackerShips).forEach(([id, count]) => {
         const ship = SHIPS[id as ShipId];
-        if (ship) attackPower += (ship.attack * (count as number));
+        if (ship) attackPower += (ship.attack * (count as number) * attackerWeaponMult);
     });
 
-    // Defender Power (Ships + Defenses)
+    // Defender Power (Ships + Defenses) with Bonus
     let defenderDefense = 0;
-    let defenderAttack = 0;
+    let defenderAttack = 0; // Needed for attacker losses (if we were processing them fully properly)
 
     if (defenderShips) {
         Object.entries(defenderShips).forEach(([id, count]) => {
             const ship = SHIPS[id as ShipId];
             if (ship) {
-                defenderDefense += (ship.defense * (count as number));
-                defenderAttack += (ship.attack * (count as number));
+                defenderDefense += (ship.defense * (count as number) * defenderShieldMult);
+                defenderAttack += (ship.attack * (count as number) * defenderWeaponMult);
             }
         });
     }
@@ -31,16 +39,16 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         Object.entries(defenderDefenses).forEach(([id, count]) => {
             const defense = DEFENSES[id as DefenseId];
             if (defense) {
-                defenderDefense += (defense.defense * (count as number));
-                defenderAttack += (defense.attack * (count as number));
+                defenderDefense += (defense.defense * (count as number) * defenderShieldMult);
+                defenderAttack += (defense.attack * (count as number) * defenderWeaponMult);
             }
         });
     }
 
     // Bot Boost
     if (isBot) {
-        defenderDefense = Math.max(100, attackPower * 0.8);
-        defenderAttack = Math.max(100, attackPower * 0.5);
+        defenderDefense = Math.max(100, attackPower * 0.8 * defenderShieldMult); // Bots assume some base equivalence
+        // defenderAttack not used currently for bot losses calculation simplification
     }
 
     const attackerWin = attackPower > defenderDefense;
@@ -106,6 +114,9 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         });
     }
 
+    // Bonus Log Info
+    const bonusInfo = `Bonusy: Agresor +${Math.round((attackerWeaponMult - 1) * 100)}% Atak, +${Math.round((attackerShieldMult - 1) * 100)}% Obrona. Obrońca +${Math.round((defenderWeaponMult - 1) * 100)}% Atak, +${Math.round((defenderShieldMult - 1) * 100)}% Obrona.`;
+
     return {
         survivingAttackerShips,
         survivingDefenderShips,
@@ -113,7 +124,7 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
         attackerLosses,
         defenderLosses,
         defenderDefensesLost,
-        damagedBuildings, // New: buildings that lost levels
+        damagedBuildings,
         loot,
         result: attackerWin ? 'attacker_win' : 'defender_win',
         rounds: 6, // Simulation placeholder
@@ -121,7 +132,7 @@ const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defende
             id: Date.now().toString(),
             timestamp: Date.now(),
             title: attackerWin ? "Zwycięstwo!" : "Porażka!",
-            message: `Walka zakończona.Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}.Straty: ${totalAttackerLost} jednostek.Zrabowano: M:${loot.metal} C:${loot.crystal} `,
+            message: `Walka zakończona. Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}. ${bonusInfo} Straty: ${totalAttackerLost} jednostek. Zrabowano: M:${loot.metal} C:${loot.crystal} `,
             outcome: (attackerWin ? 'success' : 'failure') as 'success' | 'failure'
         },
         attackerWon: attackerWin
@@ -983,20 +994,30 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
 
                     if (targetProfile) {
+                        let attackerResearch = {};
+                        if (mission.ownerId === session.user.id) {
+                            attackerResearch = gameStateRef.current.research;
+                        } else {
+                            const { data: attProfile } = await supabase.from('profiles').select('research').eq('id', mission.ownerId).single();
+                            if (attProfile) attackerResearch = attProfile.research;
+                        }
+
                         const battle = generatePvPBattleResult(
                             mission.ships,
                             targetProfile.ships,
                             targetProfile.defenses || {}, // Pass defenses
                             targetProfile.buildings,
                             targetProfile.research,
-                            targetProfile.resources
+                            targetProfile.resources,
+                            false,
+                            attackerResearch
                         );
 
                         result = {
                             id: `${mission.id} -result`, // Deterministic ID to avoid duplicates
                             timestamp: Date.now(),
                             title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
-                            message: `Walka zakończona.Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}.Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek.Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)} `,
+                            message: `Walka zakończona. Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}. ${battle.log.message.split('. ')[2] || ''} Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)} `,
                             outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
                             rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
                             report: {
