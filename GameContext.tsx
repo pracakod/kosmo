@@ -948,13 +948,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             const capacity = recyclerCount * 20000;
 
                             let remainingCapacity = capacity;
-                            const metalToTake = Math.min(debris.metal, remainingCapacity);
+                            const metalToTake = Math.min(debris.metal || 0, remainingCapacity);
                             remainingCapacity -= metalToTake;
-                            const crystalToTake = Math.min(debris.crystal, remainingCapacity);
+                            const crystalToTake = Math.min(debris.crystal || 0, remainingCapacity);
 
                             const newDebris = {
-                                metal: debris.metal - metalToTake,
-                                crystal: debris.crystal - crystalToTake
+                                metal: (debris.metal || 0) - metalToTake,
+                                crystal: (debris.crystal || 0) - crystalToTake
                             };
 
                             const { error: upError } = await supabase.from(table).update({ debris: newDebris }).eq('id', targetObj.id);
@@ -998,17 +998,17 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             let collectedCrystal = 0;
                             let remainingCapacity = capacity;
 
-                            const metalToTake = Math.min(debris.metal, remainingCapacity);
+                            const metalToTake = Math.min(debris.metal || 0, remainingCapacity);
                             collectedMetal = metalToTake;
                             remainingCapacity -= metalToTake;
 
-                            const crystalToTake = Math.min(debris.crystal, remainingCapacity);
+                            const crystalToTake = Math.min(debris.crystal || 0, remainingCapacity);
                             collectedCrystal = crystalToTake;
 
                             // Update Debris in DB
                             const newDebris = {
-                                metal: debris.metal - collectedMetal,
-                                crystal: debris.crystal - collectedCrystal
+                                metal: (debris.metal || 0) - collectedMetal,
+                                crystal: (debris.crystal || 0) - collectedCrystal
                             };
 
                             const { error: upError } = await supabase.from(table).update({ debris: newDebris }).eq('id', targetObj.id);
