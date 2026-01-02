@@ -1663,7 +1663,25 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             }
         }
 
-        // Optimistic
+        // Calculate new ships
+        const newShips = { ...gameState.ships };
+        Object.entries(ships).forEach(([id, count]) => {
+            newShips[id as ShipId] = (newShips[id as ShipId] || 0) - count;
+        });
+
+        // STEP 1: Deduct ships from DB FIRST (anti-exploit)
+        const { error: profileError } = await supabase.from('profiles').update({
+            ships: newShips,
+            points: calculatePoints(gameState.resources, gameState.buildings, newShips, gameState.research, gameState.defenses)
+        }).eq('id', session.user.id);
+
+        if (profileError) {
+            console.error('❌ ATTACK PROFILE UPDATE ERROR:', profileError);
+            alert('Błąd odejmowania statków.');
+            return;
+        }
+
+        // STEP 2: Optimistic Update (safe now)
         const mission: FleetMission = {
             id: missionId,
             ownerId: session?.user.id,
@@ -1673,20 +1691,20 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             targetUserId: targetUserId,
             originCoords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             startTime: now,
-            arrivalTime: now + duration, // Duration is ONE WAY flight time
-            returnTime: now + (duration * 2), // Round trip = 2x one-way
+            arrivalTime: now + duration,
+            returnTime: now + (duration * 2),
             eventProcessed: false,
             status: 'flying'
         };
 
-        setGameState(prev => {
-            const newShips = { ...prev.ships };
-            Object.entries(ships).forEach(([id, count]) => { newShips[id as ShipId] -= count; });
-            return { ...prev, ships: newShips, activeMissions: [...prev.activeMissions, mission] };
-        });
+        setGameState(prev => ({
+            ...prev,
+            ships: newShips,
+            activeMissions: [...prev.activeMissions, mission]
+        }));
 
-        // DB Insert
-        const { data: insertedData, error: insertError } = await supabase.from('missions').insert({
+        // STEP 3: Insert mission to DB
+        const { error: insertError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
             target_user_id: targetUserId,
@@ -1695,43 +1713,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             target_coords: coords,
             origin_coords: gameState.galaxyCoords || { galaxy: 1, system: 1, position: 1 },
             start_time: now,
-            arrival_time: now + duration, // ONE WAY
-            return_time: now + (duration * 2), // Round trip
+            arrival_time: now + duration,
+            return_time: now + (duration * 2),
             status: 'flying'
-        }).select();
+        });
 
         if (insertError) {
             console.error('❌ ATTACK INSERT ERROR:', insertError);
-            alert("Błąd wysyłania ataku.");
-            // SAFE REVERT: Restore ships locally instead of refreshProfile
-            setGameState(prev => {
-                const revertedShips = { ...prev.ships };
-                Object.entries(ships).forEach(([id, count]) => {
-                    revertedShips[id as ShipId] = (revertedShips[id as ShipId] || 0) + count;
-                });
-                return {
-                    ...prev,
-                    ships: revertedShips,
-                    activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-                };
-            });
-            return;
-        }
-
-        if (insertError) {
-            console.error('❌ ATTACK INSERT ERROR:', insertError);
+            // Ships already deducted - safer than allowing duplication
         } else {
-            console.log('✅ ATTACK INSERTED:', insertedData);
-
-            // Update Profile (Deduct Ships)
-            const currentShips = { ...gameState.ships };
-            Object.entries(ships).forEach(([id, count]) => {
-                currentShips[id as ShipId] = (currentShips[id as ShipId] || 0) - count;
-            });
-            await supabase.from('profiles').update({
-                ships: currentShips,
-                points: calculatePoints(gameState.resources, gameState.buildings, currentShips, gameState.research, gameState.defenses)
-            }).eq('id', session.user.id);
+            console.log('✅ ATTACK INSERTED');
         }
     };
 
@@ -1744,7 +1735,23 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const missionId = crypto.randomUUID();
         const targetUserId = await findTargetUser(coords);
 
-        // Optimistic update
+        // Calculate new ships
+        const newShips = { ...gameState.ships };
+        newShips[ShipId.ESPIONAGE_PROBE] = (newShips[ShipId.ESPIONAGE_PROBE] || 0) - amount;
+
+        // STEP 1: Deduct probes from DB FIRST (anti-exploit)
+        const { error: profileError } = await supabase.from('profiles').update({
+            ships: newShips,
+            points: calculatePoints(gameState.resources, gameState.buildings, newShips, gameState.research, gameState.defenses)
+        }).eq('id', session.user.id);
+
+        if (profileError) {
+            console.error('❌ SPY PROFILE UPDATE ERROR:', profileError);
+            alert('Błąd odejmowania sond.');
+            return false;
+        }
+
+        // STEP 2: Optimistic update (safe now)
         const mission: FleetMission = {
             id: missionId,
             ownerId: session?.user.id,
@@ -1762,11 +1769,11 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         setGameState(prev => ({
             ...prev,
-            ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: prev.ships[ShipId.ESPIONAGE_PROBE] - amount },
+            ships: newShips,
             activeMissions: [...prev.activeMissions, mission]
         }));
 
-        // DB Insert
+        // STEP 3: Insert mission to DB
         const { error: insertError } = await supabase.from('missions').insert({
             id: missionId,
             owner_id: session.user.id,
@@ -1783,23 +1790,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
         if (insertError) {
             console.error("Failed to send spy probe:", insertError);
-            alert("Błąd wysyłania sondy.");
-            // SAFE REVERT: Restore probes locally
-            setGameState(prev => ({
-                ...prev,
-                ships: { ...prev.ships, [ShipId.ESPIONAGE_PROBE]: (prev.ships[ShipId.ESPIONAGE_PROBE] || 0) + amount },
-                activeMissions: prev.activeMissions.filter(m => m.id !== missionId)
-            }));
-            return false;
+            // Probes already deducted - safer than allowing duplication
         }
-
-        // Update Profile (Deduct Probes)
-        const currentShips = { ...gameState.ships };
-        currentShips[ShipId.ESPIONAGE_PROBE] = (currentShips[ShipId.ESPIONAGE_PROBE] || 0) - amount;
-        await supabase.from('profiles').update({
-            ships: currentShips,
-            points: calculatePoints(gameState.resources, gameState.buildings, currentShips, gameState.research, gameState.defenses)
-        }).eq('id', session.user.id);
 
         return true;
     };
