@@ -1,0 +1,15 @@
+{
+    "short_name": "Kosmo",
+    "name": "Kosmo 2.0",
+    "icons": [
+        {
+            "src": "/planets/planet_terran.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#101322",
+    "background_color": "#101322"
+}
