@@ -226,6 +226,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
     // Last saved state for validation
     const lastSavedStateRef = useRef<GameState | null>(null);
+    const rescuedMissionIdsRef = useRef<Set<string>>(new Set()); // Track rescued IDs to prevent re-fetching stale data
+
 
     // ========== CENTRALIZED SAVE FUNCTION ==========
     const saveGame = async (reason: string): Promise<boolean> => {
@@ -1334,8 +1336,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             for (const m of extremelyOverdue) {
                 console.warn(`🚨 AGGRESSIVE RESCUE: Force-completing stuck mission ${m.id}`);
                 rescuedIds.add(m.id);
+                rescuedMissionIdsRef.current.add(m.id); // Block re-fetch
 
                 // IMMEDIATELY remove from local state
+
                 setGameState(prev => ({
                     ...prev,
                     activeMissions: prev.activeMissions.filter(am => am.id !== m.id),
