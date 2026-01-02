@@ -1,4 +1,4 @@
-
+/// <reference types="vite/client" />
 import React from 'react';
 import { useGame } from '../GameContext';
 
@@ -104,7 +104,7 @@ const Shop: React.FC = () => {
             color: 'from-red-900 to-black',
             special: true,
             unavailable: true,
-            image: '/ships/Death.png'
+            image: `${import.meta.env.BASE_URL}ships/Death.png`
         }
     ];
 
