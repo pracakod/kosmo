@@ -103,7 +103,8 @@ const Shop: React.FC = () => {
             icon: 'public_off', // planetary destruction icon
             color: 'from-red-900 to-black',
             special: true,
-            unavailable: true
+            unavailable: true,
+            image: '/ships/death_star.png'
         }
     ];
 
@@ -179,16 +180,23 @@ const Shop: React.FC = () => {
                 {getItems().map(item => (
                     <div key={item.id} className={`bg-[#1c2136] rounded-xl border overflow-hidden group transition-all flex flex-col ${item.special ? 'border-red-500/50 shadow-[0_0_30px_rgba(220,38,38,0.2)]' : 'border-white/10 hover:border-yellow-500/50'}`}>
                         <div className={`h-24 bg-gradient-to-br ${item.color} relative flex items-center justify-center overflow-hidden`}>
-                            <div className="absolute inset-0 bg-black/30"></div>
+
+                            {(item as any).image ? (
+                                <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url("${(item as any).image}")` }}>
+                                    <div className="absolute inset-0 bg-black/40"></div>
+                                </div>
+                            ) : (
+                                <div className="absolute inset-0 bg-black/30"></div>
+                            )}
 
                             {/* Special Effect for Death Star */}
                             {item.special && (
-                                <div className="absolute inset-0 opacity-50 animate-pulse"
-                                    style={{ background: 'radial-gradient(circle at center, rgba(255,0,0,0.5) 0%, transparent 70%)' }}>
+                                <div className="absolute inset-0 opacity-30 animate-pulse pointer-events-none"
+                                    style={{ background: 'radial-gradient(circle at center, rgba(255,0,0,0.4) 0%, transparent 70%)' }}>
                                 </div>
                             )}
 
-                            <span className={`material-symbols-outlined text-5xl text-white drop-shadow-lg relative z-10 ${item.special ? 'animate-[pulse_4s_ease-in-out_infinite]' : ''}`}>{item.icon}</span>
+                            <span className={`material-symbols-outlined text-5xl text-white drop-shadow-lg relative z-10 ${item.special ? 'animate-[pulse_4s_ease-in-out_infinite] opacity-80' : ''}`}>{item.icon}</span>
 
                             <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded text-xs font-mono text-white border border-white/10">
                                 {item.cost.toLocaleString()} DM
