@@ -3,7 +3,7 @@
     "name": "Kosmo 2.0",
     "icons": [
         {
-            "src": "/planets/planet_terran.png",
+            "src": "https://raw.githubusercontent.com/Simuli/cosmos-assets/main/planets/terran.png",
             "type": "image/png",
             "sizes": "512x512"
         }

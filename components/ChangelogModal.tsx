@@ -46,14 +46,25 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ onClose }) => {
 
                     <div className="space-y-4">
                         <div className="bg-[#111422]/50 p-4 rounded-lg border border-white/5">
+                            <h3 className="font-bold text-yellow-400 mb-2 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                                Sklep Premium Nowości
+                            </h3>
+                            <ul className="list-disc list-inside text-sm text-[#929bc9] space-y-1">
+                                <li><strong>Nowe Pakiety:</strong> Dostępne nowe pakiety surowców i ulepszeń.</li>
+                                <li><strong>Gwiazda Śmierci:</strong> Teraz dostępna również w ofercie specjalnej.</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-[#111422]/50 p-4 rounded-lg border border-white/5">
                             <h3 className="font-bold text-primary mb-2 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">new_releases</span>
                                 System Poziomów i Ranking
                             </h3>
                             <ul className="list-disc list-inside text-sm text-[#929bc9] space-y-1">
-                                <li>Dodano <strong>System Poziomów</strong> - Twój poziom jest widoczny w menu bocznym.</li>
-                                <li><strong>Korona Lidera</strong> - Gracz #1 w rankingu otrzymuje złotą koronę przy nicku.</li>
-                                <li>Poziom zależy od zgromadzonego doświadczenia (XP) za flotę i budynki.</li>
+                                <li><strong>System Poziomów:</strong> Zbieraj XP za budowę i flotę, aby awansować!</li>
+                                <li><strong>Korona Lidera:</strong> Gracz #1 w rankingu otrzymuje złotą koronę przy nicku.</li>
+                                <li>Ranking jest teraz bardziej dynamiczny i przejrzysty.</li>
                             </ul>
                         </div>
 
@@ -64,19 +75,19 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ onClose }) => {
                             </h3>
                             <ul className="list-disc list-inside text-sm text-[#929bc9] space-y-1">
                                 <li>Dodano informację <strong>"Silny Przeciwko"</strong> w widoku Obrony i Stoczni.</li>
-                                <li>Teraz łatwo sprawdzisz, co najlepiej kontruje daną jednostkę (np. Działo Gaussa vs Krążowniki).</li>
+                                <li>Teraz łatwo sprawdzisz, co najlepiej kontruje daną jednostkę.</li>
                             </ul>
                         </div>
 
                         <div className="bg-[#111422]/50 p-4 rounded-lg border border-white/5">
                             <h3 className="font-bold text-green-400 mb-2 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">pest_control</span>
-                                Poprawki Błędów
+                                Inne Zmiany
                             </h3>
                             <ul className="list-disc list-inside text-sm text-[#929bc9] space-y-1">
-                                <li>Naprawiono brakujący obrazek planety "Terran".</li>
+                                <li><strong>Tryb Pełnoekranowy:</strong> Dostępny w menu bocznym (dla lepszej immersji).</li>
                                 <li>Usunięto przycisk debugowania (robaczka) na rzecz tego okna Info.</li>
-                                <li>Optymalizacja ładowania rankingów.</li>
+                                <li>Optymalizacja wydajności gry.</li>
                             </ul>
                         </div>
                     </div>
