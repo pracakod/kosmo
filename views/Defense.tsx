@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../GameContext';
 import { DEFENSES } from '../constants';
 import { DefenseId } from '../types';
@@ -9,6 +9,18 @@ const DEFENSE_LIST = Object.values(DEFENSES);
 const Defense: React.FC = () => {
     const { resources, buildings, buildDefense, defenses, shipyardQueue } = useGame();
     const shipyardLevel = buildings?.shipyard || 0;
+
+    // Local state for quantity inputs
+    const [inputs, setInputs] = useState<Record<string, number>>({});
+
+    const handleInputChange = (id: string, val: string) => {
+        const num = parseInt(val, 10);
+        if (!isNaN(num) && num >= 0) {
+            setInputs(prev => ({ ...prev, [id]: num }));
+        } else if (val === '') {
+            setInputs(prev => ({ ...prev, [id]: 0 }));
+        }
+    };
 
     const formatTime = (seconds: number) => {
         if (seconds < 60) return `${seconds}s`;
@@ -136,18 +148,68 @@ const Defense: React.FC = () => {
                                                 )}
                                             </div>
 
-                                            <button
-                                                onClick={() => buildDefense(def.id as any, 1)}
-                                                disabled={!canAfford}
-                                                className={`w-full py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${canAfford ? 'bg-primary hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-[#111422] text-[#555a7a] cursor-not-allowed'}`}
-                                            >
-                                                {canAfford ? (
-                                                    <>
-                                                        <span className="material-symbols-outlined text-sm">build</span>
-                                                        Buduj
-                                                    </>
-                                                ) : 'Brak zasobów'}
-                                            </button>
+                                            {(() => {
+                                                const amountToBuild = inputs[def.id] || 0;
+                                                const totalCost = {
+                                                    metal: def.cost.metal * (amountToBuild || 1),
+                                                    crystal: def.cost.crystal * (amountToBuild || 1),
+                                                    deuterium: def.cost.deuterium * (amountToBuild || 1)
+                                                };
+                                                const canAffordTotal = resources.metal >= totalCost.metal && resources.crystal >= totalCost.crystal && resources.deuterium >= totalCost.deuterium;
+
+                                                return (
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="flex items-center bg-[#111422] rounded border border-white/10 overflow-hidden">
+                                                            <button
+                                                                onClick={() => handleInputChange(def.id, Math.max(0, amountToBuild - 1).toString())}
+                                                                className="w-7 h-7 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5"
+                                                            >
+                                                                <span className="material-symbols-outlined text-xs">remove</span>
+                                                            </button>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                placeholder="0"
+                                                                value={inputs[def.id] > 0 ? inputs[def.id] : ''}
+                                                                onChange={(e) => handleInputChange(def.id, e.target.value)}
+                                                                onFocus={(e) => e.target.select()}
+                                                                className="w-10 bg-transparent text-white text-xs text-center focus:outline-none font-mono font-bold"
+                                                            />
+                                                            <button
+                                                                onClick={() => handleInputChange(def.id, (amountToBuild + 1).toString())}
+                                                                className="w-7 h-7 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5"
+                                                            >
+                                                                <span className="material-symbols-outlined text-xs">add</span>
+                                                            </button>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                const maxMetal = Math.floor(resources.metal / def.cost.metal);
+                                                                const maxCrystal = def.cost.crystal > 0 ? Math.floor(resources.crystal / def.cost.crystal) : Infinity;
+                                                                const maxDeuterium = def.cost.deuterium > 0 ? Math.floor(resources.deuterium / def.cost.deuterium) : Infinity;
+                                                                const max = Math.min(maxMetal, maxCrystal, maxDeuterium);
+                                                                handleInputChange(def.id, max.toString());
+                                                            }}
+                                                            className="h-7 px-2 rounded bg-[#232948] text-[#929bc9] text-[10px] font-bold uppercase border border-white/5 hover:bg-primary/20 hover:text-primary"
+                                                        >
+                                                            Max
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (amountToBuild > 0) {
+                                                                    buildDefense(def.id as any, amountToBuild);
+                                                                    setInputs(prev => ({ ...prev, [def.id]: 0 }));
+                                                                }
+                                                            }}
+                                                            disabled={amountToBuild <= 0 || !canAffordTotal}
+                                                            className={`flex-1 h-7 rounded font-bold text-[10px] uppercase transition-all flex items-center justify-center gap-1 ${amountToBuild > 0 && canAffordTotal ? 'bg-primary hover:bg-blue-600 text-white' : 'bg-[#111422] text-[#555a7a] cursor-not-allowed'}`}
+                                                        >
+                                                            <span className="material-symbols-outlined text-xs">build</span>
+                                                            Buduj
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>

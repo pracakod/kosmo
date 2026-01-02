@@ -33,17 +33,23 @@ const Buildings: React.FC = () => {
         if (buildingId === BuildingId.METAL_MINE) {
             const current = Math.floor(30 * currentLevel * Math.pow(1.1, currentLevel)) * 100; // 100 is GAME_SPEED
             const next = Math.floor(30 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 100;
-            return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, type: 'gain' };
+            const currentEnergy = Math.floor(20 * currentLevel * Math.pow(1.1, currentLevel));
+            const nextEnergy = Math.floor(20 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1));
+            return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, energyText: `Energia: -${(nextEnergy - currentEnergy).toLocaleString()}`, type: 'gain' };
         }
         if (buildingId === BuildingId.CRYSTAL_MINE) {
             const current = Math.floor(20 * currentLevel * Math.pow(1.1, currentLevel)) * 100;
             const next = Math.floor(20 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 100;
-            return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, type: 'gain' };
+            const currentEnergy = Math.floor(20 * currentLevel * Math.pow(1.1, currentLevel));
+            const nextEnergy = Math.floor(20 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1));
+            return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, energyText: `Energia: -${(nextEnergy - currentEnergy).toLocaleString()}`, type: 'gain' };
         }
         if (buildingId === BuildingId.DEUTERIUM_SYNTH) {
             const current = Math.floor(10 * currentLevel * Math.pow(1.1, currentLevel)) * 100;
             const next = Math.floor(10 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1)) * 100;
-            return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, type: 'gain' };
+            const currentEnergy = Math.floor(40 * currentLevel * Math.pow(1.1, currentLevel));
+            const nextEnergy = Math.floor(40 * (currentLevel + 1) * Math.pow(1.1, currentLevel + 1));
+            return { text: `Produkcja: +${(next - current).toLocaleString()}/h`, energyText: `Energia: -${(nextEnergy - currentEnergy).toLocaleString()}`, type: 'gain' };
         }
         if (buildingId === BuildingId.SOLAR_PLANT) {
             const current = Math.floor(20 * currentLevel * Math.pow(1.1, currentLevel));
@@ -184,8 +190,15 @@ const Buildings: React.FC = () => {
                                 <p className="text-xs text-[#929bc9] mb-4 line-clamp-2 min-h-[32px]">{building.description}</p>
 
                                 {prodInfo && (
-                                    <div className={`mb-3 text-xs font-bold ${prodInfo.type === 'energy' ? 'text-yellow-400' : 'text-green-400'}`}>
-                                        {prodInfo.text}
+                                    <div className="mb-3 flex flex-col gap-0.5">
+                                        <div className={`text-xs font-bold ${prodInfo.type === 'energy' ? 'text-yellow-400' : 'text-green-400'}`}>
+                                            {prodInfo.text}
+                                        </div>
+                                        {prodInfo.energyText && (
+                                            <div className="text-xs font-bold text-red-400">
+                                                {prodInfo.energyText}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
