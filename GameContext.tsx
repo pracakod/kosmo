@@ -1016,6 +1016,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         const survivingDefender = battle.survivingDefenderShips;
                         const survivingDefenses = battle.survivingDefenderDefenses;
 
+                        // Award Combat XP for victory
+                        if (battle.result === 'attacker_win') {
+                            const lootValue = (battle.loot.metal || 0) + (battle.loot.crystal || 0) + (battle.loot.deuterium || 0);
+                            const combatXP = Math.floor(lootValue / 5000) + 50; // Bonus XP based on loot + base 50 XP
+                            addXP(combatXP, 'PvP Victory');
+                        }
+
                         // Update Defender (Apply damage) only if timestamp check allows (idempotency check improved by DB constraint but here logic helps too)
                         // Note: For duplicate log prevention on defender side, we use a deterministic ID logic or check existing
                         const newTargetLogs = [
@@ -1083,6 +1090,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     };
                     loot = battle.loot;
                     survivingAttacker = battle.survivingAttackerShips;
+
+                    // PvE Combat XP
+                    addXP(30, 'Pirate Combat');
                 }
             } else if (mission.type === MissionType.SPY) {
                 if (mission.targetUserId) {
@@ -2359,21 +2369,26 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             return false;
         }
 
-        // Check resources
-        if (gameState.resources.metal < resources.metal ||
-            gameState.resources.crystal < resources.crystal ||
-            gameState.resources.deuterium < resources.deuterium) {
+        // Check resources (and cap at 15000 each for colonization)
+        const cappedResources = {
+            metal: Math.min(resources.metal, 15000),
+            crystal: Math.min(resources.crystal, 15000),
+            deuterium: Math.min(resources.deuterium, 15000)
+        };
+        if (gameState.resources.metal < cappedResources.metal ||
+            gameState.resources.crystal < cappedResources.crystal ||
+            gameState.resources.deuterium < cappedResources.deuterium) {
             alert('Brak wystarczających zasobów!');
             return false;
         }
 
-        // Deduct colony ship and resources
+        // Deduct colony ship and resources (use capped values)
         const newShips = { ...gameState.ships, [ShipId.COLONY_SHIP]: (gameState.ships[ShipId.COLONY_SHIP] || 0) - 1 };
         const newResources = {
             ...gameState.resources,
-            metal: gameState.resources.metal - resources.metal,
-            crystal: gameState.resources.crystal - resources.crystal,
-            deuterium: gameState.resources.deuterium - resources.deuterium
+            metal: gameState.resources.metal - cappedResources.metal,
+            crystal: gameState.resources.crystal - cappedResources.crystal,
+            deuterium: gameState.resources.deuterium - cappedResources.deuterium
         };
 
         const now = Date.now();
@@ -2402,10 +2417,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             originCoords: origin,
             startTime: now,
             arrivalTime: now + duration,
-            returnTime: now + (duration * 2), // Return if failed
+            // No returnTime for colonization - it's a one-way trip
             eventProcessed: false,
             status: 'flying',
-            resources: resources
+            resources: cappedResources
         };
 
         // Optimistic Update
@@ -2427,9 +2442,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             origin_coords: origin,
             start_time: now,
             arrival_time: now + duration,
-            return_time: now + (duration * 2),
+            // No return_time for colonization - one-way
             status: 'flying',
-            resources: resources
+            resources: cappedResources
         });
 
         if (missionError) {

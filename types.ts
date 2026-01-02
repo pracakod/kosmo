@@ -149,7 +149,7 @@ export interface FleetMission {
   originCoords?: { galaxy: number; system: number; position: number };
   startTime: number;
   arrivalTime: number; // Time when it reaches target (Event happens here)
-  returnTime: number; // Time when it returns home (Resources added here)
+  returnTime?: number; // Time when it returns home (Resources added here) - Optional for one-way
   eventProcessed: boolean; // Has the expedition event happened yet?
   status?: 'flying' | 'processing' | 'returning' | 'completed';
   pendingRewards?: MissionRewards; // Rewards carrying back home

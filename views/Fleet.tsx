@@ -6,13 +6,24 @@ import { ShipId, MissionType, FleetMission, DefenseId } from '../types';
 import Logbook from '../components/Logbook';
 
 const Fleet: React.FC = () => {
-    const { ships, sendExpedition, sendAttack, activeMissions, missionLogs, clearLogs, cancelMission } = useGame();
+    const { ships, sendExpedition, sendAttack, activeMissions, missionLogs, clearLogs, cancelMission, galaxyCoords } = useGame();
     // const [selectedReport, setSelectedReport] = useState<any>(null); // Moved to Logbook
 
     // Selection State
     const [selectedShips, setSelectedShips] = useState<Record<string, number>>({});
-    const [coords, setCoords] = useState({ galaxy: 1, system: 1, position: 2 }); // Default to Pirate Base
+    const [coords, setCoords] = useState({ galaxy: 1, system: 1, position: 2 }); // Will be updated by useEffect
     const [missionType, setMissionType] = useState<MissionType>(MissionType.ATTACK);
+
+    // Set default coords to current planet location on first load
+    useEffect(() => {
+        if (galaxyCoords) {
+            setCoords({
+                galaxy: galaxyCoords.galaxy || 1,
+                system: galaxyCoords.system || 1,
+                position: galaxyCoords.position || 1
+            });
+        }
+    }, [galaxyCoords]);
 
     // Helper to calculate total capacity/speed/etc if we wanted to show it
     const getSelectedCount = (id: string) => selectedShips[id] || 0;
