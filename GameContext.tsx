@@ -1107,10 +1107,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                         // Attacker Name Logic
                         let attackerName = mission.attackerName || 'Nieznany';
-                        if (mission.ownerId === session.user.id) attackerName = gameStateRef.current.nickname || 'Ty';
-                        else if (!mission.attackerName) {
-                            const { data: attProfile } = await supabase.from('profiles').select('nickname, research').eq('id', mission.ownerId).single();
-                            if (attProfile) attackerName = attProfile.nickname;
+                        if (mission.ownerId === session.user.id) {
+                            attackerName = gameStateRef.current.nickname || 'Ty';
+                        } else if (!mission.attackerName || mission.attackerName === 'Nieznany') {
+                            console.log(`🔍 Fetching attacker name for ID: ${mission.ownerId}`);
+                            const { data: attProfile, error: attError } = await supabase.from('profiles').select('nickname, research').eq('id', mission.ownerId).single();
+
+                            if (attError) {
+                                console.error('❌ Error fetching attacker profile:', attError);
+                            }
+
+                            if (attProfile && attProfile.nickname) {
+                                attackerName = attProfile.nickname;
+                                console.log(`✅ Attacker identified: ${attackerName}`);
+                            } else {
+                                console.warn(`⚠️ Attacker profile not found or no nickname for ID: ${mission.ownerId}`);
+                            }
                         }
 
                         // B. Calculate Outcome based on FRESH targetProfile
@@ -1203,8 +1215,16 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 // Checked file view: 1006: else if (!mission.attackerName) { const { data: attProfile }... } 
                                 // It is scoped. 
                                 // So we need to fetch research here if not current user.
-                                const { data: spyAttacker } = await supabase.from('profiles').select('research').eq('id', mission.ownerId).single();
+                            } else {
+                                // Fallback fetch for Spy Logic if not already available
+                                const { data: spyAttacker, error: spyError } = await supabase.from('profiles').select('nickname, research').eq('id', mission.ownerId).single();
                                 attackerResearch = spyAttacker?.research || {};
+
+                                // Failsafe: Update attackerName if previously missed
+                                if ((!attackerName || attackerName === 'Nieznany') && spyAttacker?.nickname) {
+                                    attackerName = spyAttacker.nickname;
+                                    console.log(`✅ Spy Attacker identified (Fallback): ${attackerName}`);
+                                }
                             }
 
                             const attackerSpyLevel = (attackerResearch as any)?.espionage_technology || 0;
@@ -1408,9 +1428,21 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     }
                 }
 
-                const title = mission.result?.title || `Powrót Floty`;
-                const message = mission.result?.message || `Flota wróciła z misji ${mission.type}.`;
-                const outcome = (mission.result?.outcome as any) || 'success';
+                const title = mission.result?.title || `Powrót Floty (Anulowana)`;
+
+                let shipsDetails = '';
+                Object.entries(mission.ships || {}).forEach(([id, count]) => {
+                    if (count > 0) shipsDetails += `${SHIPS[id as ShipId].name}: ${count}, `;
+                });
+                if (shipsDetails) shipsDetails = shipsDetails.slice(0, -2); // Remove trailing comma
+
+                const res = mission.resources;
+                const resStr = (res && (res.metal || res.crystal || res.deuterium))
+                    ? `Surowce: M:${Math.floor(res.metal || 0)} K:${Math.floor(res.crystal || 0)} D:${Math.floor(res.deuterium || 0)}`
+                    : '';
+
+                const message = mission.result?.message || `Flota wróciła z anulowanej misji ${mission.type}. \nFlota: ${shipsDetails}. \n${resStr}`;
+                const outcome = (mission.result?.outcome as any) || 'neutral';
 
                 // CRITICAL FIX: Preserve report from mission result locally
                 const report = (mission.result as any)?.report;
