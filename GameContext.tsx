@@ -1297,64 +1297,44 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 fetchMissions(); // Refresh both active and incoming missions
             }
 
-            // Check Arrivals (OWNER processes normally, TARGET processes if stuck > 10s)
-            const arriving = missions.filter(m =>
-                m.status === 'flying' &&
-                now >= m.arrivalTime &&
-                !m.eventProcessed &&
-                (m.ownerId === session.user.id || (m.targetUserId === session.user.id && now > m.arrivalTime + 10000))
-            );
+            // 1. Check & Rescue STUCK missions first (Priority High)
+            // If a mission is > 1 minutes overdue (was 5), consider it stuck and force rescue immediately.
+            // This prevents `processMissionArrival` from running endlessly on stuck missions (XP Loop).
+            const overdueThreshold = now - (60 * 1000); // 1 minute overdue
 
-            for (const m of arriving) {
-                // Mark processed locally to prevent race in loop
-                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.map(am => am.id === m.id ? { ...am, eventProcessed: true } : am) }));
-                await processMissionArrival(m);
-            }
-
-            // Check Returns
-            const returning = missions.filter(m => m.status === 'returning' && now >= m.returnTime && m.ownerId === session.user.id);
-            for (const m of returning) {
-                // Mark processed
-                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.filter(am => am.id !== m.id) })); // Optimistic remove
-                await processMissionReturn(m);
-            }
-
-            // AGGRESSIVE RESCUE: Force-complete missions that are EXTREMELY overdue (5+ min past arrival, still 'flying')
-            // This handles edge cases where processMissionArrival keeps crashing
             const extremelyOverdue = missions.filter(m =>
                 m.status === 'flying' &&
-                now > m.arrivalTime + (5 * 60 * 1000) // 5 minutes overdue
+                m.arrivalTime < overdueThreshold
             );
+
+            const rescuedIds = new Set<string>();
 
             for (const m of extremelyOverdue) {
                 console.warn(`🚨 AGGRESSIVE RESCUE: Force-completing stuck mission ${m.id}`);
+                rescuedIds.add(m.id);
 
-                // IMMEDIATELY remove from local state to clear UI alert (before DB call)
+                // IMMEDIATELY remove from local state
                 setGameState(prev => ({
                     ...prev,
                     activeMissions: prev.activeMissions.filter(am => am.id !== m.id),
                     incomingMissions: prev.incomingMissions.filter(im => im.id !== m.id)
                 }));
 
-                // Force complete in DB to clear up the stuck notification
                 const { error: updateError } = await supabase.from('missions').update({
                     status: 'completed',
                     result: {
                         id: now.toString(),
                         timestamp: now,
                         title: 'Misja Anulowana (System)',
-                        message: 'Misja utknęła i została automatycznie zakończona przez system. Statki wracają do bazy.',
+                        message: 'Misja utknęła i została automatycznie zakończona przez system.',
                         outcome: 'neutral'
                     }
                 }).eq('id', m.id);
 
-                if (updateError) {
-                    console.error('❌ AGGRESSIVE RESCUE DB UPDATE FAILED:', updateError);
-                } else {
-                    console.log('✅ AGGRESSIVE RESCUE: Mission marked completed in DB');
-                }
+                if (updateError) console.error('❌ AGGRESSIVE RESCUE DB ERROR:', updateError);
+                else console.log('✅ AGGRESSIVE RESCUE: Success');
 
-                // If this is my mission, return ships to my planet
+                // Return ships
                 if (m.ownerId === session.user.id) {
                     const { data: myProfile } = await supabase.from('profiles').select('ships').eq('id', session.user.id).single();
                     if (myProfile && m.ships) {
@@ -1365,9 +1345,32 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         await supabase.from('profiles').update({ ships: newShips }).eq('id', session.user.id);
                     }
                 }
-
-                fetchMissions();
             }
+
+            // 2. Check Normal Arrivals (Exclude rescued ones)
+            const arriving = missions.filter(m =>
+                !rescuedIds.has(m.id) && // Skip if just rescued
+                m.status === 'flying' &&
+                now >= m.arrivalTime &&
+                !m.eventProcessed &&
+                (m.ownerId === session.user.id || (m.targetUserId === session.user.id && now > m.arrivalTime + 10000))
+            );
+
+            for (const m of arriving) {
+                // Mark processed locally
+                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.map(am => am.id === m.id ? { ...am, eventProcessed: true } : am) }));
+                await processMissionArrival(m);
+            }
+
+            // 3. Check Returns
+            const returning = missions.filter(m => m.status === 'returning' && now >= m.returnTime && m.ownerId === session.user.id);
+            for (const m of returning) {
+                setGameState(prev => ({ ...prev, activeMissions: prev.activeMissions.filter(am => am.id !== m.id) }));
+                await processMissionReturn(m);
+            }
+
+            // Refresh if we rescued anything
+            if (rescuedIds.size > 0) fetchMissions();
         };
 
         // Also fetch immediately on load
