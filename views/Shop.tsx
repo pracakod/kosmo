@@ -179,11 +179,11 @@ const Shop: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {getItems().map(item => (
                     <div key={item.id} className={`bg-[#1c2136] rounded-xl border overflow-hidden group transition-all flex flex-col ${item.special ? 'border-red-500/50 shadow-[0_0_30px_rgba(220,38,38,0.2)]' : 'border-white/10 hover:border-yellow-500/50'}`}>
-                        <div className={`h-24 bg-gradient-to-br ${item.color} relative flex items-center justify-center overflow-hidden`}>
+                        <div className={`h-48 bg-gradient-to-br ${item.color} relative flex items-center justify-center overflow-hidden`}>
 
                             {(item as any).image ? (
                                 <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url("${(item as any).image}")` }}>
-                                    <div className="absolute inset-0 bg-black/40"></div>
+                                    <div className="absolute inset-0 bg-black/10"></div>
                                 </div>
                             ) : (
                                 <div className="absolute inset-0 bg-black/30"></div>
@@ -196,9 +196,11 @@ const Shop: React.FC = () => {
                                 </div>
                             )}
 
-                            <span className={`material-symbols-outlined text-5xl text-white drop-shadow-lg relative z-10 ${item.special ? 'animate-[pulse_4s_ease-in-out_infinite] opacity-80' : ''}`}>{item.icon}</span>
+                            {!(item as any).image && (
+                                <span className={`material-symbols-outlined text-5xl text-white drop-shadow-lg relative z-10 ${item.special ? 'animate-[pulse_4s_ease-in-out_infinite] opacity-80' : ''}`}>{item.icon}</span>
+                            )}
 
-                            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded text-xs font-mono text-white border border-white/10">
+                            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded text-xs font-mono text-white border border-white/10 z-20">
                                 {item.cost.toLocaleString()} DM
                             </div>
                         </div>
