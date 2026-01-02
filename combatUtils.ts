@@ -163,35 +163,27 @@ export const generatePvPBattleResult = (
         // Distribute damage proportionally to 'Health' (Hull + Shield)?
         // Simplified: Damage reduces total 'Structure Points' of fleet.
         // Calculate Total Hull+Shield for Defender
-        const getUnitHealth = (id: string, isShip: boolean, techShield: number) => {
-            const def = isShip ? SHIPS[id as ShipId] : DEFENSES[id as DefenseId];
-            if (!def) return 1;
-            // OGame style: Structure = Metal+Crystal. Shield = Defense.
-            // Here we have 'defense' in stats. Let's say Health = (Cost.M + Cost.C) / 10 + defense * 10?
-            // Simplified using stats we have: 'defense' * 10 * techShield + (baseCost.metal+crystal)/10
-            // Let's use simpler: (defense * techShield) * 10 (Shields) + (metal+crystal)/10 (Structure)
-            // FIX: Defenses use 'cost', Ships use 'baseCost'. Handle both.
-            const cost = def.baseCost || (def as any).cost || { metal: 0, crystal: 0 };
-            const structure = (cost.metal + cost.crystal) / 10;
-            const shield = def.defense * techShield;
-            // Effective Health
-            return (structure + shield);
+        // Helper to calculate total health
+        const calculateTotalHealth = (fleet: any, isDefender: boolean, shieldMult: number) => {
+            return Object.entries(fleet).reduce((acc: number, [id, count]) => {
+                const def = isDefender
+                    ? (DEFENSES[id as DefenseId] || SHIPS[id as ShipId])
+                    : SHIPS[id as ShipId];
+
+                if (!def) return acc;
+
+                const cost = (def as any).baseCost || (def as any).cost || { metal: 0, crystal: 0 };
+                const structure = (cost.metal + cost.crystal) / 10;
+                const shield = def.defense * shieldMult;
+
+                return acc + ((structure + shield) * (count as number));
+            }, 0);
         };
 
-        // Defender Totals
-        let defenderTotalHealth = 0;
-        Object.entries(currentDefenderShips).forEach(([id, count]) => {
-            defenderTotalHealth += getUnitHealth(id, true, defenderShieldMult) * (count as number);
-        });
-        Object.entries(currentDefenderDefenses).forEach(([id, count]) => {
-            defenderTotalHealth += getUnitHealth(id, false, defenderShieldMult) * (count as number);
-        });
+        const attackerTotalHealth = calculateTotalHealth(attackerShips, false, attackerShieldMult);
+        const defenderTotalHealth = calculateTotalHealth(currentDefenderShips, true, defenderShieldMult);
 
-        // Attacker Totals
-        let attackerTotalHealth = 0;
-        Object.entries(currentAttackerShips).forEach(([id, count]) => {
-            attackerTotalHealth += getUnitHealth(id, true, attackerShieldMult) * (count as number);
-        });
+        // Defender Totals & Attacker Totals calculated above via helper.
 
         // Apply Damage and Remove Units
         // Damage % = DamageDealt / TotalHealth (Max 100%)
@@ -241,8 +233,8 @@ export const generatePvPBattleResult = (
 
     // 4. Calculate Final Results
     const totalAttackerEnd = Object.values(currentAttackerShips).reduce((sum, c) => (sum as number) + (c as number), 0) as number;
-    const totalDefenderEnd = Object.values(currentDefenderShips).reduce((sum, c) => (sum as number) + (c as number), 0) as number +
-        Object.values(currentDefenderDefenses).reduce((sum, c) => (sum as number) + (c as number), 0) as number;
+    const totalDefenderEnd = Object.values(currentDefenderShips).reduce((sum, c) => (sum as number) + (c as number), 0) +
+        Object.values(currentDefenderDefenses).reduce((sum, c) => (sum as number) + (c as number), 0);
 
     const attackerWon = totalAttackerEnd > 0 && totalDefenderEnd <= 0;
 

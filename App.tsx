@@ -112,7 +112,7 @@ const App: React.FC = () => {
 
     const renderView = () => {
         switch (currentView) {
-            case 'overview': return <Overview onNavigate={setCurrentView} />;
+            case 'overview': return <Overview onNavigate={(v) => setCurrentView(v as ViewType)} />;
             case 'buildings': return <Buildings />;
             case 'research': return <Research />;
             case 'shipyard': return <Shipyard />;
@@ -124,13 +124,13 @@ const App: React.FC = () => {
             case 'defense': return <Defense />;
             case 'clans': return <Clans />;
             case 'admin': return <AdminPanel />;
-            default: return <Overview onNavigate={setCurrentView} />;
+            default: return <Overview onNavigate={(v) => setCurrentView(v as ViewType)} />;
         }
     };
 
     return (
         <GameProvider session={session}>
-            <Layout activeView={currentView} onNavigate={setCurrentView}>
+            <Layout activeView={currentView} onNavigate={(view) => setCurrentView(view as ViewType)}>
                 {renderView()}
             </Layout>
         </GameProvider>

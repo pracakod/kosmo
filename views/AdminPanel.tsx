@@ -75,13 +75,13 @@ export const AdminPanel: React.FC = () => {
         console.log(`[DEBUG] Found ${missionCount} missions (Error: ${countError?.message})`);
 
         // Step 1: Delete Missions
-        const d1 = await supabase.from('missions').delete().eq('owner_id', userId).select('*', { count: 'exact', head: true });
-        const d2 = await supabase.from('missions').delete().eq('target_user_id', userId).select('*', { count: 'exact', head: true });
+        const d1 = await supabase.from('missions').delete().eq('owner_id', userId).select();
+        const d2 = await supabase.from('missions').delete().eq('target_user_id', userId).select();
 
         console.log(`[DEBUG] Deleted ${d1.count} outgoing, ${d2.count} incoming.`);
 
         // Step 2: Delete Profile (Planet)
-        const response = await supabase.from('profiles').delete().eq('id', userId).select('*', { count: 'exact', head: true });
+        const response = await supabase.from('profiles').delete().eq('id', userId).select();
         const error = response.error;
         const count = response.count;
 

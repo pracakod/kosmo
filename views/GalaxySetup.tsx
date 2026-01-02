@@ -28,7 +28,7 @@ const GalaxySetup: React.FC<GalaxySetupProps> = ({ session, onComplete }) => {
             // 2. Fetch Colonies
             const { data: colonies, error: coloniesError } = await supabase
                 .from('planets')
-                .select('galaxy, system, position, name');
+                .select('*');
 
             if (!profilesError && !coloniesError) {
                 const occupied = new Map<string, string>();

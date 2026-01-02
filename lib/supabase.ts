@@ -8,13 +8,4 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // Helper to check if we have valid configuration
 export const isSupabaseConfigured = true;
 
-// Create client with explicit headers to fix 406 error
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-        }
-    }
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
