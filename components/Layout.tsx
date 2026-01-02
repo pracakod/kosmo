@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import ResourceHeader from './ResourceHeader';
 import { useGame } from '../GameContext';
-import { formatTime, SHIPS, ShipId } from '../constants';
+import { formatTime, SHIPS } from '../constants';
+import { ShipId } from '../types';
 import ErrorConsole, { DebugButton } from './ErrorConsole';
 import { initGlobalErrorHandlers } from '../lib/errorLogger';
 
@@ -132,15 +133,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                     <div className="p-6 flex items-center justify-between border-b border-white/10">
                         <div className="flex items-center gap-3">
                             <div className="bg-center bg-no-repeat bg-cover rounded-full size-12 border-2 border-primary"
-                                style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDYHcygFrQVgyEfnHZ8wIGz0YtsJRZH8J9zYcrzzH9eXprxH5v2no1xcJkgvkqVhynJWlxa4LNUEGsGOr9XVV2pBeecZ9GP1zQHxmBJgARSLSqPgsvxzsQyAaWSeIArMD2QcX8cO_6SOHiNWVH_kg93Xx9QNja_l9jDs1S-lgoSSNvgSbN8UACPK7AKeuS_ncsK-vz67c6whIajlG7hgrbZKLgORRGCUd3eQ6yEkLwyhkmyZPp3YKbcArSwNn-VcSbOlNMpz85EjFU")' }}></div>
+                                style={{ backgroundImage: `url("${game?.avatarUrl || '/kosmo/avatars/avatar_default.png'}")` }}></div>
                             <div className="flex flex-col">
-                                <h1 className="text-white text-lg font-bold tracking-tight uppercase">Centrum Dowodzenia</h1>
-                                <p className="text-[#929bc9] text-sm font-normal">Kmdr. DareG</p>
+                                <h1 className="text-white text-lg font-bold tracking-tight uppercase">Centrum</h1>
+                                <p className="text-[#929bc9] text-sm font-normal">Kmdr. {game?.nickname || 'Gracz'}</p>
                             </div>
                         </div>
-                        <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-white/5 rounded-full text-white">
-                            <span className="material-symbols-outlined">close</span>
-                        </button>
+                        <div className="flex gap-2">
+                            <button onClick={() => {
+                                if (!document.fullscreenElement) {
+                                    document.documentElement.requestFullscreen().catch(err => console.log(err));
+                                } else {
+                                    document.exitFullscreen();
+                                }
+                            }} className="p-2 bg-white/5 rounded-full text-white hover:bg-white/10 transition-colors" title="Pełny ekran">
+                                <span className="material-symbols-outlined">fullscreen</span>
+                            </button>
+                            <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-white/5 rounded-full text-white hover:bg-white/10 transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 overscroll-y-contain touch-action-manipulation pb-24">
