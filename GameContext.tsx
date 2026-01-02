@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { supabase } from './lib/supabase';
+import { requestNotificationPermission, sendNotification } from './lib/notifications';
 import { calculateExpeditionOutcome } from './lib/gameLogic';
 import { GameState, BuildingId, ResearchId, ShipId, DefenseId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
 import { BUILDINGS, RESEARCH, SHIPS, DEFENSES } from './constants';
@@ -208,6 +209,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
     const [loaded, setLoaded] = useState(false);
     const [isSyncPaused, setIsSyncPaused] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine); // NEW: Track network status
+
+    // Notifications
+    useEffect(() => {
+        requestNotificationPermission();
+    }, []);
+    const notifiedMissionIdsRef = useRef<Set<string>>(new Set());
 
     // Network Status Listeners
     useEffect(() => {
@@ -601,6 +608,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 !rescuedMissionIdsRef.current.has(m.id)
             );
 
+
+
             if (incoming.length > 0) {
                 // Fetch attacker nicknames
                 const attackerIds = Array.from(new Set(incoming.map(m => m.ownerId)));
@@ -613,8 +622,26 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         attackerName: attackerMap.get(m.ownerId!) || 'Nieznany'
                     }));
                 }
+
+                // Check for NEW incoming missions to notify
+                incoming.forEach(mission => {
+                    if (!notifiedMissionIdsRef.current.has(mission.id)) {
+                        notifiedMissionIdsRef.current.add(mission.id);
+                        const originStr = mission.originCoords ? `[${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}]` : '[?:?:?]';
+                        sendNotification(
+                            "⚠️ WYKRYTO ZAGROŻENIE!",
+                            `Gracz ${mission.attackerName || 'Nieznany'} ${originStr} zbliża się do Twojej planety!`,
+                            "/kosmo/icons/warning.png"
+                        );
+                    }
+                });
+
                 console.log('Incoming Attacks Detected:', incoming);
+            } else {
+                // Clear cache if no missions (optional, to keep memory low)
+                // notifiedMissionIdsRef.current.clear(); // Actually don't clear, or we re-notify if they reappear. Let them expire naturally or just keep set (UUIDs are small).
             }
+
 
             setGameState(prev => ({
                 ...prev,
@@ -1134,6 +1161,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                             // 3. Logs & Result
                             const originStr = mission.originCoords ? `[${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}]` : '[?:?:?]';
+
+                            // NOTIFICATION: Spy Scan
+                            sendNotification(
+                                "👁️ WYKRYTO SKANOWANIE",
+                                `Gracz ${attackerName} ${originStr} przeskanował Twoją planetę.`,
+                                "/kosmo/icons/spy.png"
+                            );
+
                             newLogs.unshift({
                                 id: `${mission.id}-def-log`,
                                 timestamp: Date.now(),
