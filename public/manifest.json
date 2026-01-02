@@ -3,7 +3,7 @@
     "name": "Kosmo 2.0",
     "icons": [
         {
-            "src": "/planets/planet_terran.png",
+            "src": "./planets/planet_terran.png",
             "type": "image/png",
             "sizes": "512x512"
         }
