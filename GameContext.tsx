@@ -1110,6 +1110,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             // Level >= Target + 5: Buildings
 
                             const spyReport: any = {
+                                targetName: targetProfile.nickname || "Nieznany Cel",
+                                attackerSpyLevel,
+                                defenderSpyLevel,
                                 resources: targetProfile.resources, // Always visible if successful? Or require equal level? OGame style: Equal Level.
                                 // Let's be generous: Always show Resources if probe survives (simulated by arrival).
                             };

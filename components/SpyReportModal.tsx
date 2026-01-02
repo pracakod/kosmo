@@ -7,6 +7,10 @@ interface SpyReportModalProps {
 }
 
 const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
+    const attackerLevel = report.attackerSpyLevel || 0;
+    const defenderLevel = report.defenderSpyLevel || 0;
+    const levelDiff = attackerLevel - defenderLevel;
+
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-[#1c2136] w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
@@ -19,12 +23,26 @@ const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-white uppercase tracking-wider">Raport Szpiegowski</h2>
-                            <p className="text-xs text-[#929bc9]">Dane Wywiadowcze</p>
+                            <p className="text-sm text-[#929bc9]">
+                                Cel: <span className="text-white font-bold">{report.targetName}</span>
+                            </p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-[#929bc9] hover:text-white p-2 hover:bg-white/5 rounded-lg transition-colors">
                         <span className="material-symbols-outlined">close</span>
                     </button>
+                </div>
+
+                {/* Tech Comparison Bar */}
+                <div className="bg-[#15192b] px-6 py-3 border-b border-white/5 flex justify-between items-center text-sm">
+                    <div className="flex flex-col">
+                        <span className="text-[#555a7a] text-xs font-bold uppercase">Twoja Technologia</span>
+                        <span className="text-blue-400 font-mono font-bold text-lg">Poziom {attackerLevel}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-[#555a7a] text-xs font-bold uppercase">Technologia Celu</span>
+                        <span className="text-red-400 font-mono font-bold text-lg">Poziom {defenderLevel}</span>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -52,9 +70,12 @@ const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
                     )}
 
                     {/* Fleet */}
-                    {report.ships && (
-                        <div>
-                            <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1">Flota</h3>
+                    <div>
+                        <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1 flex justify-between">
+                            Flota
+                            {!report.ships && <span className="text-red-500 text-[10px]">Wymagana różnica poziomów: +2</span>}
+                        </h3>
+                        {report.ships ? (
                             <div className="grid grid-cols-2 gap-2">
                                 {Object.entries(report.ships).map(([id, count]) => (
                                     <div key={id} className="flex justify-between p-2 bg-[#111422] rounded border border-white/5 text-sm">
@@ -64,13 +85,20 @@ const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
                                 ))}
                                 {Object.keys(report.ships).length === 0 && <span className="text-white/30 italic text-sm">Brak stacjonującej floty.</span>}
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="p-4 bg-red-900/10 border border-red-500/20 rounded text-center text-red-400 text-sm">
+                                🔒 Dane niedostępne. Zbadaj wyższy poziom Technologii Szpiegowskiej.
+                            </div>
+                        )}
+                    </div>
 
                     {/* Defense */}
-                    {report.defenses && (
-                        <div>
-                            <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1">Obrona</h3>
+                    <div>
+                        <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1 flex justify-between">
+                            Obrona
+                            {!report.defenses && <span className="text-red-500 text-[10px]">Wymagana różnica poziomów: +3</span>}
+                        </h3>
+                        {report.defenses ? (
                             <div className="grid grid-cols-2 gap-2">
                                 {Object.entries(report.defenses).map(([id, count]) => (
                                     <div key={id} className="flex justify-between p-2 bg-[#111422] rounded border border-white/5 text-sm">
@@ -80,13 +108,20 @@ const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
                                 ))}
                                 {Object.keys(report.defenses).length === 0 && <span className="text-white/30 italic text-sm">Brak systemów obronnych.</span>}
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="p-4 bg-red-900/10 border border-red-500/20 rounded text-center text-red-400 text-sm">
+                                🔒 Dane niedostępne.
+                            </div>
+                        )}
+                    </div>
 
                     {/* Buildings */}
-                    {report.buildings && (
-                        <div>
-                            <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1">Budynki</h3>
+                    <div>
+                        <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1 flex justify-between">
+                            Budynki
+                            {!report.buildings && <span className="text-red-500 text-[10px]">Wymagana różnica poziomów: +5</span>}
+                        </h3>
+                        {report.buildings ? (
                             <div className="grid grid-cols-2 gap-2">
                                 {Object.entries(report.buildings).map(([id, level]) => (
                                     <div key={id} className="flex justify-between p-2 bg-[#111422] rounded border border-white/5 text-sm">
@@ -95,8 +130,12 @@ const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="p-4 bg-red-900/10 border border-red-500/20 rounded text-center text-red-400 text-sm">
+                                🔒 Dane niedostępne.
+                            </div>
+                        )}
+                    </div>
 
                 </div>
             </div>
