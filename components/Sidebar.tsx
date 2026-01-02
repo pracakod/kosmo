@@ -134,11 +134,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate }) => {
 
             <div className="p-4 border-t border-white/10">
                 <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span className="text-[#929bc9] text-xs font-bold uppercase tracking-wider">Status: Online</span>
+                    <div className={`w-2 h-2 rounded-full ${game.isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'} `}></div>
+                    <span className={`text-xs font-bold uppercase tracking-wider ${game.isOnline ? 'text-[#929bc9]' : 'text-red-500'}`}>
+                        {game.isOnline ? 'Status: Online' : 'Status: Offline'}
+                    </span>
                 </div>
                 <div className="text-white text-sm font-medium mb-1">{userName}</div>
-                <div className="text-[#555a7a] text-xs font-mono">v1.2.7</div>
+                <div className="text-[#555a7a] text-xs font-mono">v1.2.8</div>
             </div>
         </aside >
     );

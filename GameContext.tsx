@@ -50,6 +50,7 @@ interface GameContextType extends GameState {
     sendColonize: (coords: { galaxy: number, system: number, position: number }, resources: { metal: number, crystal: number, deuterium: number }) => Promise<boolean>;
     switchPlanet: (planetId: string) => void;
     fetchPlanets: () => Promise<void>;
+    isOnline: boolean; // NEW: Expose network status
 }
 
 const initialState: GameState = {
@@ -204,7 +205,29 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ children, session }) => {
     const [gameState, setGameState] = useState<GameState>({ ...initialState, userId: session?.user.id });
     const [loaded, setLoaded] = useState(false);
-    const [isSyncPaused, setIsSyncPaused] = useState(false); // Circuit breaker for Auth errors
+    const [isSyncPaused, setIsSyncPaused] = useState(false);
+    const [isOnline, setIsOnline] = useState(navigator.onLine); // NEW: Track network status
+
+    // Network Status Listeners
+    useEffect(() => {
+        const handleOnline = () => {
+            console.log('🌐 Status: ONLINE');
+            setIsOnline(true);
+            setIsSyncPaused(false); // Try to resume sync
+        };
+        const handleOffline = () => {
+            console.log('🔌 Status: OFFLINE');
+            setIsOnline(false);
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []); // Circuit breaker for Auth errors
     const [planets, setPlanets] = useState<any[]>([]);
     const [currentPlanetId, setCurrentPlanetId] = useState<string | null>(null);
     const [mainPlanetName, setMainPlanetName] = useState<string>('Główna');
@@ -386,9 +409,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 return true;
             }
 
-        } catch (err: any) {
-            console.error('❌ [SAVE EXCEPTION]', err.message);
-            if (err.code === '401' || err.code === '403') {
+        } catch (error: any) {
+            console.error('❌ [SAVE EXCEPTION]', error);
+            // Detect network error
+            if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
+                setIsOnline(false);
+            }
+            if (error.code === '401' || error.code === '403') {
                 setIsSyncPaused(true);
             }
             return false;
@@ -3235,6 +3262,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         renamePlanet,
         updateProductionSetting,
         resetGame,
+        isOnline, // NEW
         clearLogs,
         logout,
         deleteAccount,
