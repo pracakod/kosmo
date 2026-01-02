@@ -104,7 +104,7 @@ const Shop: React.FC = () => {
             color: 'from-red-900 to-black',
             special: true,
             unavailable: true,
-            image: '/ships/death_star.png'
+            image: '/ships/Death.png'
         }
     ];
 
