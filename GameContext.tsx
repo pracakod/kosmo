@@ -1046,11 +1046,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             const battle = generatePvPBattleResult(mission.ships, targetProfile.ships, targetProfile.defenses || {}, targetProfile.buildings, targetProfile.research, targetProfile.resources, false, attackerResearch);
                             pvpBattleResults = battle; // Store for later usage
 
+                            const myCoordsStr = `[${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}]`;
+                            const targetCoordsStr = `[${mission.targetCoords.galaxy}:${mission.targetCoords.system}:${mission.targetCoords.position}]`;
+
                             result = {
                                 id: `${mission.id}-result`,
                                 timestamp: Date.now(),
                                 title: pvpBattleResults.attackerWon ? 'Zwycięstwo!' : 'Porażka',
-                                message: `Wynik: ${pvpBattleResults.attackerWon ? 'Wygrana' : 'Przegrana'}. Zrabowano: M:${Math.floor(pvpBattleResults.loot.metal)} C:${Math.floor(pvpBattleResults.loot.crystal)}.`,
+                                message: `Atak na ${targetProfile.nickname || 'Gracza'} ${targetCoordsStr} zakończony. Wynik: ${pvpBattleResults.attackerWon ? 'Wygrana' : 'Przegrana'}. Zrabowano: M:${Math.floor(pvpBattleResults.loot.metal)} C:${Math.floor(pvpBattleResults.loot.crystal)}.`,
                                 outcome: pvpBattleResults.attackerWon ? 'success' : 'failure',
                                 rewards: pvpBattleResults.loot,
                                 report: pvpBattleResults.report
@@ -1088,10 +1091,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 crystal: (existingDebris.crystal || 0) + (addedDebris.crystal || 0)
                             };
 
-                            // Target Log
+                            // Target Log (DEFENDER)
                             newLogs.unshift({
                                 id: `${mission.id}-def-log`, timestamp: Date.now(), title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${attackerName} zaatakował Cię. Wynik: ${battle.attackerWon ? 'PRZEGRANA' : 'OBRONA'}.`,
+                                message: `Gracz ${attackerName} ${myCoordsStr} zaatakował Twoją planetę ${targetCoordsStr}. Wynik: ${battle.attackerWon ? 'PRZEGRANA' : 'OBRONA'}.`,
                                 outcome: 'danger',
                                 report: battle.report // Nested Report for UI
                             });
@@ -3179,7 +3182,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 // Only alert if it's a small jump (live gameplay)
                 const levelsGained = calcLevel - currentLevel;
                 if (levelsGained === 1) {
-                    alert(`⭐ AWANS! Poziom ${calcLevel}!\nOtrzymujesz ${totalDM} Antymaterii.`);
+                    // alert(`⭐ AWANS! Poziom ${calcLevel}!\nOtrzymujesz ${totalDM} Antymaterii.`);
                 }
 
                 return {

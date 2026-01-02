@@ -197,6 +197,16 @@ const LogCard: React.FC<{ log: MissionLog, type: string, onDetail: () => void }>
                     ))}
                 </div>
             )}
+
+            {log.report && (
+                <button
+                    onClick={onDetail}
+                    className="w-full mt-3 py-2 bg-white/5 hover:bg-white/10 text-xs text-blue-200 border-t border-white/10 transition-colors flex items-center justify-center gap-2 rounded"
+                >
+                    <span className="material-symbols-outlined text-sm">assignment</span>
+                    Zobacz Raport Bitewny
+                </button>
+            )}
         </div>
     );
 }
