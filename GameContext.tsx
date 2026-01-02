@@ -530,8 +530,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 result: m.result
             }));
 
-            const myMissions = mappedMissions.filter(m => m.ownerId === session.user.id && m.status !== 'completed');
-            let incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying');
+            const myMissions = mappedMissions.filter(m => m.ownerId === session.user.id && m.status !== 'completed' && !rescuedMissionIdsRef.current.has(m.id));
+            let incoming = mappedMissions.filter(m => m.targetUserId === session.user.id && m.ownerId !== session.user.id && m.status === 'flying' && !rescuedMissionIdsRef.current.has(m.id));
 
             if (incoming.length > 0) {
                 // Fetch attacker nicknames
