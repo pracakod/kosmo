@@ -1,5 +1,5 @@
 
-import { BuildingDef, BuildingId, ResearchDef, ResearchId, ShipDef, ShipId } from './types';
+import { BuildingDef, BuildingId, ResearchDef, ResearchId, ShipDef, ShipId, DefenseId } from './types';
 
 export const formatTime = (seconds: number): string => {
   if (seconds < 0) return "00:00";
@@ -43,8 +43,6 @@ export const IMAGES = {
   techEspionage: "https://lh3.googleusercontent.com/aida-public/AB6AXuAuzcKCcqW_Uwb_MHjDE4UnIS9iufqeQRG-ox9HOxWuvVuHaPFUOrPzlXsVC7PfwZ7MI1K-xoYXSIRYGuCSJskYUnvKDvMxqvSe3Gia4Hb2MB3OLyt_tMwvU9qvxgjTrPmM6wQypgXYMFoiUUJMXWeDDfXxHDYHBm1mxGIFog5PovvrH7Zb2U4gFbh_HAslZUcihLWiSiQi2WAG8mGqDZzKh4eaLLLitm105RayEmmJXCGVObylA3o_oKyx4bVz44Os-zM8jsZ59ng",
   techComputer: "https://lh3.googleusercontent.com/aida-public/AB6AXuCWhn2HXSCm5RHKMuQUw21Hw6EWLXbJVTX6WMPGH0zSgbJ5FrOtwFl3GoA7TburBE1sfekcUVJknBOryC06NelUAT8HKLx_GxRk7p7zy_6yTCsUIteUJ1P-m68zJ-LqyQZ_hz53P1KnKtNVNIoJZvor1YyzW2ZN49ItxXjuLoIAl6Run1afN28jy6tc9scmfRtvAzO2Ixv0SIek4-r4SWglDDGR-aZYAweEP3K9zyWk8ez2EY6n6s7_UCU10S04j1dHEXCQ6GDjpDc",
   techAstro: "https://lh3.googleusercontent.com/aida-public/AB6AXuBSOTflDav4MFvu_Yvg-9qCDKqpS6BwAJDvSFmXbaK1M4mBatMw8wpRPT_bROfe2lelYtoxtN-ew041hcpd7KHjnZTbZ7Ov1q8gvcDdQ-zV7WCHlysly8ohvQJqhXRh1J3QUSfnu95xoFJX3O50BjiNefxhrFKws1eSBVnIPiB0iOWl_S8NDWo5mwLU-rA0pT6VOakhtRCgKUZrJmDumK6NIAyB0H60AK5EdDlixy4qsNd1SagA7z0AUEAqWHF43uun44RCqVq1hOY",
-
-  // Specific Visuals for Techs
   techWeapon: "https://lh3.googleusercontent.com/aida-public/AB6AXuCd2dUTqjUsAcUPQOTk2ukYe3jO6XM4-sDHF10X83-XP8vidQdYFHgCjpeNNuxHLjWuIETBVc4-tF48QBg635FXHK3OHl3XJtyBIkYhbuNKjm1gi-w5E5JBsKMfFkYYudLiRVf917sQBCIkRdhPmSnjKNUpHDiqn1OUmKVHK1oFpUAXDHKoc7NOKDMZCKLxm4p1GZhpnvu-GP9sZFnbzedCWMEBtk7KlYd6EiN0uuYs9gi5y-_MDWTKKT4NE1bSe52hWWJuZidIru8", // Aggressive red ship
   techShield: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUSEKlHxUvCzxVOgj1Y6MtxX1VhQuac5X-CQBCwdETPQW0ynuAd-uEVEWMCGnx7FyX7vOxy4epq_CKJImgHYAUcz04j5B4DL1cjdUqVefFWq4dFoTwzLUivuBxpd4Q1i7dnsLEZAlkOwXPiYSMTau5dTr7XWhZMcXfDAG4bloSSPGJYItXueBQ_uivo-IdPPh5ad4npHg32fLsQj__8JNmEc7rzx0kjjz3wz_upv0MPt66tV9BzNqd29cwpdNqoUhnRVHjteACKYU", // Blue shield/aura
   techArmour: "https://lh3.googleusercontent.com/aida-public/AB6AXuDKFYodx8aYkS3L0_aZKv8NQVKCFFLEp_aIojke7fVSBUGfftz5yRPvF1fuXX4vvvHwtId36V6DzP398lKo5i9fDlbC3dgYH7qP5VhLyKyyn_n9D4fSyvnoiPHulQLtl5Do1YYRpVvhVcfGOS4IyPuY7dVya1qor3vSjhE-KsxkO9Nr0rKccvd0lp1OQYWa4fOwAJKWnx24KLrcu70jfMTpcUW-Fb5dXiBJkD9UFjV4B07Jr5EhFLNsjASa8zQIzRaxg3XKdJnmvFs", // Industrial structure
@@ -66,13 +64,208 @@ export const IMAGES = {
   pioneer: "/kosmo/ships/pioneer.png" // Research ship look
 };
 
+export const PLANET_IMAGES: Record<string, string> = {
+  terran: "/kosmo/planets/planet_terran.png",
+  desert: "/kosmo/planets/planet_desert.png",
+  ice: "/kosmo/planets/planet_ice.png",
+  default: IMAGES.planet
+};
+
+export const SHIPS: Record<ShipId, ShipDef> = {
+  [ShipId.LIGHT_FIGHTER]: {
+    id: ShipId.LIGHT_FIGHTER,
+    name: "Myśliwiec Lekki",
+    description: "Szybki i zwrotny statek myśliwski, podstawa każdej floty.",
+    baseCost: { metal: 1000, crystal: 300, deuterium: 0 },
+    image: IMAGES.lightFighter,
+    buildTime: 5,
+    attack: 80,
+    defense: 10,
+    capacity: 50,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 1 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 1 }],
+    bonuses: {
+      [ShipId.DEATH_STAR]: 2.0, // +200%
+      [ShipId.ESPIONAGE_PROBE]: 0.5 // +50%
+    }
+  },
+  [ShipId.HEAVY_FIGHTER]: {
+    id: ShipId.HEAVY_FIGHTER,
+    name: "Myśliwiec Ciężki",
+    description: "Ciężej opancerzona wersja myśliwca z silniejszym uzbrojeniem.",
+    baseCost: { metal: 2000, crystal: 1500, deuterium: 0 },
+    image: IMAGES.heavyFighter,
+    buildTime: 10,
+    attack: 150,
+    defense: 25,
+    capacity: 100,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 3 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 2 }],
+    bonuses: {
+      [ShipId.LIGHT_FIGHTER]: 0.5,
+      [ShipId.SMALL_CARGO]: 0.5
+    }
+  },
+  [ShipId.CRUISER]: {
+    id: ShipId.CRUISER,
+    name: "Krążownik",
+    description: "Szybki okręt bojowy skuteczny przeciwko lekkim myśliwcom.",
+    baseCost: { metal: 6000, crystal: 2500, deuterium: 500 },
+    image: IMAGES.cruiser,
+    buildTime: 30,
+    attack: 400,
+    defense: 50,
+    capacity: 800,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 5 }, { type: 'research', id: ResearchId.ION_TECH, level: 2 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 4 }],
+    bonuses: {
+      [ShipId.LIGHT_FIGHTER]: 1.0, // +100%
+      [ShipId.HEAVY_FIGHTER]: 0.5,
+      [ShipId.ESPIONAGE_PROBE]: 1.0
+    }
+  },
+  [ShipId.BATTLESHIP]: {
+    id: ShipId.BATTLESHIP,
+    name: "Okręt Wojenny",
+    description: "Potężna jednostka bojowa o ogromnej sile ognia.",
+    baseCost: { metal: 15000, crystal: 5000, deuterium: 0 },
+    image: IMAGES.battleship,
+    buildTime: 60,
+    attack: 1000,
+    defense: 200,
+    capacity: 1500,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 7 }, { type: 'research', id: ResearchId.HYPERSPACE_DRIVE, level: 4 }],
+    bonuses: {
+      [ShipId.CRUISER]: 0.5,
+      [ShipId.HEAVY_FIGHTER]: 0.3,
+      [ShipId.SMALL_CARGO]: 0.5,
+      [ShipId.MEDIUM_CARGO]: 0.5,
+      [ShipId.HUGE_CARGO]: 0.5
+    }
+  },
+  [ShipId.DESTROYER]: {
+    id: ShipId.DESTROYER,
+    name: "Niszczyciel",
+    description: "Król pola bitwy. Niszczy lekkie statki w mgnieniu oka.",
+    baseCost: { metal: 20000, crystal: 17000, deuterium: 5000 },
+    image: IMAGES.destroyer,
+    buildTime: 90,
+    attack: 2000,
+    defense: 500,
+    capacity: 2000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 9 }, { type: 'research', id: ResearchId.HYPERSPACE_DRIVE, level: 6 }, { type: 'research', id: ResearchId.HYPERSPACE_TECH, level: 5 }],
+    bonuses: {
+      [ShipId.BATTLESHIP]: 0.5,
+      [ShipId.CRUISER]: 0.5,
+      [ShipId.LIGHT_FIGHTER]: 0.5,
+      [DefenseId.LIGHT_LASER]: 1.0,
+      [DefenseId.ROCKET_LAUNCHER]: 1.0
+    }
+  },
+  [ShipId.DEATH_STAR]: {
+    id: ShipId.DEATH_STAR,
+    name: "Pogromca Planet",
+    description: "Ostateczna broń zdolna niszczyć całe księżyce.",
+    baseCost: { metal: 5000000, crystal: 4000000, deuterium: 1000000 },
+    image: IMAGES.deathStar,
+    buildTime: 1000,
+    attack: 200000,
+    defense: 100000,
+    capacity: 1000000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 12 }, { type: 'research', id: ResearchId.HYPERSPACE_DRIVE, level: 7 }, { type: 'research', id: ResearchId.ASTROPHYSICS, level: 5 }],
+    bonuses: {
+      [ShipId.DESTROYER]: 1.0,
+      [ShipId.BATTLESHIP]: 1.0,
+      [ShipId.HUGE_CARGO]: 1.0,
+      [ShipId.ESPIONAGE_PROBE]: 10.0,
+      [DefenseId.GAUSS_CANNON]: 1.0,
+      [DefenseId.ION_CANNON]: 1.0,
+      [DefenseId.PLASMA_TURRET]: 1.0,
+      [DefenseId.LARGE_SHIELD]: 1.0,
+      [DefenseId.SMALL_SHIELD]: 1.0,
+      [DefenseId.HEAVY_LASER]: 1.0,
+      [DefenseId.LIGHT_LASER]: 1.0,
+      [DefenseId.ROCKET_LAUNCHER]: 1.0
+    }
+  },
+  [ShipId.SMALL_CARGO]: {
+    id: ShipId.SMALL_CARGO,
+    name: "Mały Transporter",
+    description: "Podstawowa jednostka do transportu surowców na inne planety.",
+    baseCost: { metal: 500, crystal: 500, deuterium: 0 },
+    image: IMAGES.smallCargo,
+    buildTime: 5,
+    attack: 5,
+    defense: 10,
+    capacity: 5000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 2 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 2 }]
+  },
+  [ShipId.MEDIUM_CARGO]: {
+    id: ShipId.MEDIUM_CARGO,
+    name: "Średni Transporter",
+    description: "Zbalansowany statek transportowy o większej pojemności.",
+    baseCost: { metal: 1500, crystal: 1500, deuterium: 0 },
+    image: IMAGES.mediumCargo,
+    buildTime: 10,
+    attack: 10,
+    defense: 25,
+    capacity: 12000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 4 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 4 }]
+  },
+  [ShipId.HUGE_CARGO]: {
+    id: ShipId.HUGE_CARGO,
+    name: "Ogromny Transporter",
+    description: "Kolos transportowy zdolny przewieźć zasoby całej kolonii.",
+    baseCost: { metal: 7000, crystal: 7000, deuterium: 500 },
+    image: IMAGES.hugeCargo,
+    buildTime: 25,
+    attack: 25,
+    defense: 100,
+    capacity: 50000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 8 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 6 }]
+  },
+  [ShipId.COLONY_SHIP]: {
+    id: ShipId.COLONY_SHIP,
+    name: "Statek Kolonizacyjny",
+    description: "Umożliwia zasiedlanie nowych planet w niezbadanych układach.",
+    baseCost: { metal: 3000, crystal: 6000, deuterium: 3000 },
+    image: IMAGES.colonyShip,
+    buildTime: 150,
+    attack: 50,
+    defense: 100,
+    capacity: 7500,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 4 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 3 }]
+  },
+  [ShipId.ESPIONAGE_PROBE]: {
+    id: ShipId.ESPIONAGE_PROBE,
+    name: "Sonda Szpiegowska",
+    description: "Mała sonda do zdobywania informacji o innych planetach.",
+    baseCost: { metal: 0, crystal: 1000, deuterium: 0 },
+    image: IMAGES.espionageProbe,
+    buildTime: 2,
+    attack: 0,
+    defense: 0,
+    capacity: 5,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 3 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 3 }]
+  },
+  [ShipId.PIONEER]: {
+    id: ShipId.PIONEER,
+    name: "Pionier",
+    description: "Zaawansowany statek ekspedycyjny. Zwiększa szansę na sukces i chroni flotę przed zagrożeniami.",
+    baseCost: { metal: 3000, crystal: 1500, deuterium: 500 },
+    image: IMAGES.pioneer,
+    buildTime: 45,
+    attack: 200,
+    defense: 200,
+    capacity: 2000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 6 }, { type: 'research', id: ResearchId.ESPIONAGE_TECH, level: 4 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 4 }]
+  }
+};
+
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   [BuildingId.METAL_MINE]: {
     id: BuildingId.METAL_MINE,
     name: "Kopalnia Metalu",
     description: "Pozyskuje rudę metalu z głębi planety.",
     baseCost: { metal: 60, crystal: 15, deuterium: 0 },
-    baseProduction: { metal: 30, crystal: 0, deuterium: 0, energy: -20 }, // Increased energy cost
+    baseProduction: { metal: 30, crystal: 0, deuterium: 0, energy: -20 },
     image: IMAGES.metalMine,
     buildTimeBase: 10
   },
@@ -81,7 +274,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Kopalnia Kryształu",
     description: "Wydobywa kryształ niezbędny do elektroniki.",
     baseCost: { metal: 48, crystal: 24, deuterium: 0 },
-    baseProduction: { metal: 0, crystal: 20, deuterium: 0, energy: -15 }, // Reduced energy cost
+    baseProduction: { metal: 0, crystal: 20, deuterium: 0, energy: -15 },
     image: IMAGES.crystalMine,
     buildTimeBase: 15
   },
@@ -90,7 +283,7 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
     name: "Syntezator Deuteru",
     description: "Przetwarza ciężki wodór na paliwo.",
     baseCost: { metal: 225, crystal: 75, deuterium: 0 },
-    baseProduction: { metal: 0, crystal: 0, deuterium: 10, energy: -30 }, // Reduced energy cost
+    baseProduction: { metal: 0, crystal: 0, deuterium: 10, energy: -30 },
     image: IMAGES.deuteriumSynth,
     buildTimeBase: 20
   },
@@ -242,160 +435,6 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
   [ResearchId.WEAPON_TECH]: { id: ResearchId.WEAPON_TECH, name: "Technologia Bojowa", description: "", baseCost: { metal: 800, crystal: 200, deuterium: 0 }, image: IMAGES.techWeapon, buildTimeBase: 60, maxLevel: 50 },
   [ResearchId.SHIELDING_TECH]: { id: ResearchId.SHIELDING_TECH, name: "Technologia Ochronna", description: "", baseCost: { metal: 200, crystal: 600, deuterium: 0 }, image: IMAGES.techShield, buildTimeBase: 60, maxLevel: 50 },
   [ResearchId.ARMOUR_TECH]: { id: ResearchId.ARMOUR_TECH, name: "Opancerzenie", description: "", baseCost: { metal: 1000, crystal: 0, deuterium: 0 }, image: IMAGES.techArmour, buildTimeBase: 60, maxLevel: 50 },
-};
-
-export const SHIPS: Record<ShipId, ShipDef> = {
-  [ShipId.LIGHT_FIGHTER]: {
-    id: ShipId.LIGHT_FIGHTER,
-    name: "Myśliwiec Lekki",
-    description: "Szybki i zwrotny statek myśliwski, podstawa każdej floty.",
-    baseCost: { metal: 1000, crystal: 300, deuterium: 0 },
-    image: IMAGES.lightFighter,
-    buildTime: 5,
-    attack: 80,
-    defense: 10,
-    capacity: 50,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 1 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 1 }]
-  },
-  [ShipId.HEAVY_FIGHTER]: {
-    id: ShipId.HEAVY_FIGHTER,
-    name: "Myśliwiec Ciężki",
-    description: "Ciężej opancerzona wersja myśliwca z silniejszym uzbrojeniem.",
-    baseCost: { metal: 2000, crystal: 1500, deuterium: 0 },
-    image: IMAGES.heavyFighter,
-    buildTime: 10,
-    attack: 150,
-    defense: 25,
-    capacity: 100,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 3 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 2 }]
-  },
-  [ShipId.CRUISER]: {
-    id: ShipId.CRUISER,
-    name: "Krążownik",
-    description: "Szybki okręt bojowy skuteczny przeciwko lekkim myśliwcom.",
-    baseCost: { metal: 6000, crystal: 2500, deuterium: 500 },
-    image: IMAGES.cruiser,
-    buildTime: 30,
-    attack: 400,
-    defense: 50,
-    capacity: 800,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 5 }, { type: 'research', id: ResearchId.ION_TECH, level: 2 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 4 }]
-  },
-  [ShipId.BATTLESHIP]: {
-    id: ShipId.BATTLESHIP,
-    name: "Okręt Wojenny",
-    description: "Potężna jednostka bojowa o ogromnej sile ognia.",
-    baseCost: { metal: 15000, crystal: 5000, deuterium: 0 },
-    image: IMAGES.battleship,
-    buildTime: 60,
-    attack: 1000,
-    defense: 200,
-    capacity: 1500,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 7 }, { type: 'research', id: ResearchId.HYPERSPACE_DRIVE, level: 4 }]
-  },
-  [ShipId.DESTROYER]: {
-    id: ShipId.DESTROYER,
-    name: "Niszczyciel",
-    description: "Król pola bitwy. Niszczy lekkie statki w mgnieniu oka.",
-    baseCost: { metal: 20000, crystal: 17000, deuterium: 5000 },
-    image: IMAGES.destroyer,
-    buildTime: 90,
-    attack: 2000,
-    defense: 500,
-    capacity: 2000,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 9 }, { type: 'research', id: ResearchId.HYPERSPACE_DRIVE, level: 6 }, { type: 'research', id: ResearchId.HYPERSPACE_TECH, level: 5 }]
-  },
-  [ShipId.DEATH_STAR]: {
-    id: ShipId.DEATH_STAR,
-    name: "Pogromca Planet",
-    description: "Ostateczna broń zdolna niszczyć całe księżyce.",
-    baseCost: { metal: 5000000, crystal: 4000000, deuterium: 1000000 },
-    image: IMAGES.deathStar,
-    buildTime: 1000,
-    attack: 200000,
-    defense: 100000,
-    capacity: 1000000,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 12 }, { type: 'research', id: ResearchId.HYPERSPACE_DRIVE, level: 7 }, { type: 'research', id: ResearchId.ASTROPHYSICS, level: 5 }]
-  },
-  [ShipId.SMALL_CARGO]: {
-    id: ShipId.SMALL_CARGO,
-    name: "Mały Transporter",
-    description: "Podstawowa jednostka do transportu surowców na inne planety.",
-    baseCost: { metal: 500, crystal: 500, deuterium: 0 },
-    image: IMAGES.smallCargo,
-    buildTime: 5,
-    attack: 5,
-    defense: 10,
-    capacity: 5000,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 2 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 2 }]
-  },
-  [ShipId.MEDIUM_CARGO]: {
-    id: ShipId.MEDIUM_CARGO,
-    name: "Średni Transporter",
-    description: "Zbalansowany statek transportowy o większej pojemności.",
-    baseCost: { metal: 1500, crystal: 1500, deuterium: 0 },
-    image: IMAGES.mediumCargo,
-    buildTime: 10,
-    attack: 10,
-    defense: 25,
-    capacity: 12000,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 4 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 4 }]
-  },
-  [ShipId.HUGE_CARGO]: {
-    id: ShipId.HUGE_CARGO,
-    name: "Ogromny Transporter",
-    description: "Kolos transportowy zdolny przewieźć zasoby całej kolonii.",
-    baseCost: { metal: 7000, crystal: 7000, deuterium: 500 },
-    image: IMAGES.hugeCargo,
-    buildTime: 25,
-    attack: 25,
-    defense: 100,
-    capacity: 50000,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 8 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 6 }]
-  },
-  [ShipId.COLONY_SHIP]: {
-    id: ShipId.COLONY_SHIP,
-    name: "Statek Kolonizacyjny",
-    description: "Umożliwia zasiedlanie nowych planet w niezbadanych układach.",
-    baseCost: { metal: 3000, crystal: 6000, deuterium: 3000 },
-    image: IMAGES.colonyShip,
-    buildTime: 150,
-    attack: 50,
-    defense: 100,
-    capacity: 7500,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 4 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 3 }]
-  },
-  [ShipId.ESPIONAGE_PROBE]: {
-    id: ShipId.ESPIONAGE_PROBE,
-    name: "Sonda Szpiegowska",
-    description: "Mała sonda do zdobywania informacji o innych planetach.",
-    baseCost: { metal: 0, crystal: 1000, deuterium: 0 },
-    image: IMAGES.espionageProbe,
-    buildTime: 2,
-    attack: 0,
-    defense: 0,
-    capacity: 5,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 3 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 3 }]
-  },
-  [ShipId.PIONEER]: {
-    id: ShipId.PIONEER,
-    name: "Pionier",
-    description: "Zaawansowany statek ekspedycyjny. Zwiększa szansę na sukces i chroni flotę przed zagrożeniami.",
-    baseCost: { metal: 3000, crystal: 1500, deuterium: 500 },
-    image: IMAGES.pioneer,
-    buildTime: 45,
-    attack: 200,
-    defense: 200,
-    capacity: 2000,
-    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 6 }, { type: 'research', id: ResearchId.ESPIONAGE_TECH, level: 4 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 4 }]
-  }
-};
-
-export const PLANET_IMAGES: Record<string, string> = {
-  terran: "/kosmo/planets/planet_terran.png",
-  desert: "/kosmo/planets/planet_desert.png",
-  ice: "/kosmo/planets/planet_ice.png",
-  default: IMAGES.planet
 };
 
 export const DEFENSES = {

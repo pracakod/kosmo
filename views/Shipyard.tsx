@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../GameContext';
-import { SHIPS, BUILDINGS, RESEARCH, formatTime } from '../constants';
-import { BuildingId, ResearchId, ShipId } from '../types';
+import { SHIPS, BUILDINGS, RESEARCH, DEFENSES, formatTime } from '../constants';
+import { BuildingId, ResearchId, ShipId, DefenseId } from '../types';
 
 const Shipyard: React.FC = () => {
     const { ships, resources, buildShip, checkRequirements, buildings, research, shipyardQueue } = useGame();
@@ -141,6 +141,19 @@ const Shipyard: React.FC = () => {
                                     </div>
                                 </div>
                                 <p className="text-[#929bc9] text-xs mb-4 line-clamp-2 h-8">{ship.description}</p>
+
+                                {ship.bonuses && Object.keys(ship.bonuses).length > 0 && (
+                                    <div className="mb-3 text-[10px] text-[#929bc9]">
+                                        <span className="font-bold text-white uppercase block mb-1">Silny przeciwko:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {Object.keys(ship.bonuses).map(targetId => (
+                                                <span key={targetId} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                    {SHIPS[targetId as ShipId]?.name || DEFENSES[targetId as DefenseId]?.name || targetId}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {isUnlocked ? (
                                     <>

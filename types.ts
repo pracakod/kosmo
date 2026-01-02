@@ -109,6 +109,7 @@ export interface ShipDef {
   defense: number;
   capacity: number;
   requirements?: Requirement[];
+  bonuses?: Partial<Record<ShipId | DefenseId, number>>;
 }
 
 export interface ConstructionItem {
@@ -164,16 +165,27 @@ export interface MissionLog {
   message: string;
   outcome: 'success' | 'neutral' | 'failure' | 'danger';
   rewards?: MissionRewards;
-  report?: {
-    rounds: number;
-    attackerLosses: Record<string, number>;
-    defenderLosses: Record<string, number>;
-    defenderDefensesLost: Record<string, number>;
-    finalAttackerShips: Record<string, number>;
-    finalDefenderShips: Record<string, number>;
-    finalDefenderDefenses: Record<string, number>;
-    loot: Cost;
+  report?: BattleReport;
+}
+
+export interface BattleReport {
+  rounds: number;
+  initialAttackerShips: Record<string, number>;
+  initialDefenderShips: Record<string, number>;
+  initialDefenderDefenses: Record<string, number>;
+  finalAttackerShips: Record<string, number>;
+  finalDefenderShips: Record<string, number>;
+  finalDefenderDefenses: Record<string, number>;
+  attackerLosses: Record<string, number>;
+  defenderLosses: Record<string, number>;
+  defenderDefensesLost: Record<string, number>;
+  loot: Cost;
+  bonuses: {
+    attacker: { weapon: number; shield: number; armour: number };
+    defender: { weapon: number; shield: number; armour: number };
   };
+  logMessages: string[];
+  result: 'attacker_win' | 'defender_win' | 'draw';
 }
 
 export interface GameState {

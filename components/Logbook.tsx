@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useGame } from '../GameContext';
 import { MissionLog, MissionType, ShipId, DefenseId } from '../types';
 import { SHIPS, DEFENSES, formatTime } from '../constants';
+import BattleReportModal from './BattleReportModal';
 
 const Logbook: React.FC = () => {
     const { missionLogs, clearLogs } = useGame();
@@ -88,7 +89,11 @@ const Logbook: React.FC = () => {
 
             {/* Modal for Details (Battle Reports etc) */}
             {selectedDetail && (
-                <DetailModal log={selectedDetail} onClose={() => setSelectedDetail(null)} />
+                selectedDetail.report ? (
+                    <BattleReportModal report={selectedDetail.report} onClose={() => setSelectedDetail(null)} />
+                ) : (
+                    <DetailModal log={selectedDetail} onClose={() => setSelectedDetail(null)} />
+                )
             )}
         </div>
     );

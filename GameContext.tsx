@@ -3,141 +3,8 @@ import { supabase } from './lib/supabase';
 import { calculateExpeditionOutcome } from './lib/gameLogic';
 import { GameState, BuildingId, ResearchId, ShipId, DefenseId, ConstructionItem, Requirement, FleetMission, MissionType, MissionLog, MissionRewards } from './types';
 import { BUILDINGS, RESEARCH, SHIPS, DEFENSES } from './constants';
+import { generatePvPBattleResult } from './combatUtils';
 
-const generatePvPBattleResult = (attackerShips: any, defenderShips: any, defenderDefenses: any, defenderBuildings: any, defenderResearch: any, defenderResources: any, isBot = false, attackerResearch: any = {}) => {
-
-    // Research Bonuses
-    const attackerWeaponMult = 1 + ((attackerResearch[ResearchId.WEAPON_TECH] || 0) * 0.1);
-    const attackerShieldMult = 1 + ((attackerResearch[ResearchId.SHIELDING_TECH] || 0) * 0.05) + ((attackerResearch[ResearchId.ARMOUR_TECH] || 0) * 0.05);
-
-    const defenderWeaponMult = 1 + ((defenderResearch[ResearchId.WEAPON_TECH] || 0) * 0.1);
-    const defenderShieldMult = 1 + ((defenderResearch[ResearchId.SHIELDING_TECH] || 0) * 0.05) + ((defenderResearch[ResearchId.ARMOUR_TECH] || 0) * 0.05);
-
-    let attackPower = 0;
-
-    // Calculate Attacker Power with Bonus
-    Object.entries(attackerShips).forEach(([id, count]) => {
-        const ship = SHIPS[id as ShipId];
-        if (ship) attackPower += (ship.attack * (count as number) * attackerWeaponMult);
-    });
-
-    // Defender Power (Ships + Defenses) with Bonus
-    let defenderDefense = 0;
-    let defenderAttack = 0; // Needed for attacker losses (if we were processing them fully properly)
-
-    if (defenderShips) {
-        Object.entries(defenderShips).forEach(([id, count]) => {
-            const ship = SHIPS[id as ShipId];
-            if (ship) {
-                defenderDefense += (ship.defense * (count as number) * defenderShieldMult);
-                defenderAttack += (ship.attack * (count as number) * defenderWeaponMult);
-            }
-        });
-    }
-
-    if (defenderDefenses) {
-        Object.entries(defenderDefenses).forEach(([id, count]) => {
-            const defense = DEFENSES[id as DefenseId];
-            if (defense) {
-                defenderDefense += (defense.defense * (count as number) * defenderShieldMult);
-                defenderAttack += (defense.attack * (count as number) * defenderWeaponMult);
-            }
-        });
-    }
-
-    // Bot Boost
-    if (isBot) {
-        defenderDefense = Math.max(100, attackPower * 0.8 * defenderShieldMult); // Bots assume some base equivalence
-        // defenderAttack not used currently for bot losses calculation simplification
-    }
-
-    const attackerWin = attackPower > defenderDefense;
-
-    // Calculate Losses
-    // Simplified: Loser loses 50-100% of fleet, Winner loses 10-30%
-    const attackerLossRatio = attackerWin ? 0.2 : 0.8;
-    const defenderLossRatio = attackerWin ? 0.8 : 0.1;
-
-    const survivingAttackerShips: any = {};
-    const attackerLosses: any = {};
-    let totalAttackerLost = 0;
-    Object.entries(attackerShips).forEach(([id, count]) => {
-        const lost = Math.floor((count as number) * (attackerLossRatio + (Math.random() * 0.2)));
-        const survived = (count as number) - lost;
-        if (survived > 0) survivingAttackerShips[id] = survived;
-        attackerLosses[id] = lost;
-        totalAttackerLost += lost;
-    });
-
-    const survivingDefenderShips: any = {};
-    const defenderLosses: any = {};
-    if (defenderShips) {
-        Object.entries(defenderShips).forEach(([id, count]) => {
-            const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
-            const survived = (count as number) - lost;
-            if (survived > 0) survivingDefenderShips[id] = survived;
-            defenderLosses[id] = lost;
-        });
-    }
-
-    const survivingDefenderDefenses: any = {};
-    const defenderDefensesLost: any = {};
-    if (defenderDefenses) {
-        Object.entries(defenderDefenses).forEach(([id, count]) => {
-            const lost = Math.floor((count as number) * (defenderLossRatio + (Math.random() * 0.2)));
-            const repaired = Math.floor(lost * 0.7);
-            const actuallyLost = lost - repaired;
-
-            const survived = (count as number) - actuallyLost;
-            if (survived > 0) survivingDefenderDefenses[id] = survived;
-            defenderDefensesLost[id] = actuallyLost;
-        });
-    }
-
-    // Loot
-    let loot = { metal: 0, crystal: 0, deuterium: 0 };
-    if (attackerWin) {
-        // Take 50% of available resources
-        loot.metal = Math.floor((defenderResources.metal || 0) * 0.5);
-        loot.crystal = Math.floor((defenderResources.crystal || 0) * 0.5);
-        loot.deuterium = Math.floor((defenderResources.deuterium || 0) * 0.5);
-    }
-
-    // Building Damage (only if attacker wins - 10% chance per building to lose 1 level)
-    const damagedBuildings: Record<string, number> = {};
-    if (attackerWin && defenderBuildings) {
-        Object.entries(defenderBuildings).forEach(([id, level]) => {
-            const lvl = level as number;
-            if (lvl > 0 && Math.random() < 0.10) { // 10% chance
-                damagedBuildings[id] = 1; // Lose 1 level
-            }
-        });
-    }
-
-    // Bonus Log Info
-    const bonusInfo = `Bonusy: Agresor +${Math.round((attackerWeaponMult - 1) * 100)}% Atak, +${Math.round((attackerShieldMult - 1) * 100)}% Obrona. Obrońca +${Math.round((defenderWeaponMult - 1) * 100)}% Atak, +${Math.round((defenderShieldMult - 1) * 100)}% Obrona.`;
-
-    return {
-        survivingAttackerShips,
-        survivingDefenderShips,
-        survivingDefenderDefenses,
-        attackerLosses,
-        defenderLosses,
-        defenderDefensesLost,
-        damagedBuildings,
-        loot,
-        result: attackerWin ? 'attacker_win' : 'defender_win',
-        rounds: 6, // Simulation placeholder
-        log: {
-            id: Date.now().toString(),
-            timestamp: Date.now(),
-            title: attackerWin ? "Zwycięstwo!" : "Porażka!",
-            message: `Walka zakończona. Wynik: ${attackerWin ? 'Wygrana' : 'Przegrana'}. ${bonusInfo} Straty: ${totalAttackerLost} jednostek. Zrabowano: M:${loot.metal} C:${loot.crystal} `,
-            outcome: (attackerWin ? 'success' : 'failure') as 'success' | 'failure'
-        },
-        attackerWon: attackerWin
-    };
-};
 
 const TICK_RATE = 1000;
 const GAME_SPEED = 100;
@@ -1014,31 +881,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         );
 
                         result = {
-                            id: `${mission.id} -result`, // Deterministic ID to avoid duplicates
+                            id: `${mission.id} -result`,
                             timestamp: Date.now(),
-                            title: battle.result === 'attacker_win' ? 'Zwycięstwo!' : 'Porażka',
-                            message: `Walka zakończona. Wynik: ${battle.result === 'attacker_win' ? 'Wygrana' : 'Przegrana'}. ${battle.log.message.split('. ')[2] || ''} Straty: ${Object.values(battle.attackerLosses).reduce((a: number, b: number) => a + b, 0)} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)} `,
-                            outcome: battle.result === 'attacker_win' ? 'success' : 'failure',
+                            title: battle.attackerWon ? 'Zwycięstwo!' : 'Porażka',
+                            message: `Walka zakończona. Wynik: ${battle.attackerWon ? 'Wygrana' : 'Przegrana'}. Straty agresora: ${battle.totalAttackerLost} jednostek. Zrabowano: M:${Math.floor(battle.loot.metal)} C:${Math.floor(battle.loot.crystal)} `,
+                            outcome: battle.attackerWon ? 'success' : 'failure',
                             rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
-                            report: {
-                                rounds: battle.rounds,
-                                attackerLosses: battle.attackerLosses,
-                                defenderLosses: battle.defenderLosses,
-                                defenderDefensesLost: battle.defenderDefensesLost,
-                                finalAttackerShips: battle.survivingAttackerShips,
-                                finalDefenderShips: battle.survivingDefenderShips,
-                                finalDefenderDefenses: battle.survivingDefenderDefenses,
-                                loot: battle.loot
-                            }
+                            report: battle.report
                         };
 
                         loot = battle.loot;
-                        survivingAttacker = battle.survivingAttackerShips;
+                        survivingAttacker = battle.survivingAttackerShips as any;
                         const survivingDefender = battle.survivingDefenderShips;
                         const survivingDefenses = battle.survivingDefenderDefenses;
 
                         // Award Combat XP for victory
-                        if (battle.result === 'attacker_win') {
+                        if (battle.report.result === 'attacker_win') {
                             const lootValue = (battle.loot.metal || 0) + (battle.loot.crystal || 0) + (battle.loot.deuterium || 0);
                             const combatXP = Math.floor(lootValue / 5000) + 50; // Bonus XP based on loot + base 50 XP
                             addXP(combatXP, 'PvP Victory');
@@ -1051,18 +909,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: `${mission.id} -def - log`, // Deterministic ID
                                 timestamp: Date.now(),
                                 title: "ZOSTAŁEŚ ZAATAKOWANY!",
-                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nUszkodzone Budynki: ${Object.entries(battle.damagedBuildings || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${BUILDINGS[id as BuildingId]?.name || id}: -${n} lvl`).join(', ') || 'Brak'}.`,
+                                message: `Gracz ${gameStateRef.current.nickname || 'Nieznany'} [${mission.originCoords.galaxy}: ${mission.originCoords.system}: ${mission.originCoords.position}] zaatakował Cię.\nFlota: ${Object.entries(mission.ships).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ')}.\nWynik: ${battle.report.result === 'attacker_win' ? 'PORAŻKA (Planeta splądrowana)' : 'ZWYCIĘSTWO (Atak odparty)'}.\nZrabowano: M:${Math.floor(battle.loot.metal).toLocaleString()} C:${Math.floor(battle.loot.crystal).toLocaleString()} D:${Math.floor(battle.loot.deuterium).toLocaleString()}.\nStraty Agresora: ${Object.entries(battle.report.attackerLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Flota): ${Object.entries(battle.report.defenderLosses || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${SHIPS[id as ShipId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nTwoje Straty (Obrona): ${Object.entries(battle.report.defenderDefensesLost || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${DEFENSES[id as DefenseId]?.name || id}: ${n}`).join(', ') || 'Brak'}.\nUszkodzone Budynki: ${Object.entries(battle.damagedBuildings || {}).filter(([, v]) => (v as number) > 0).map(([id, n]) => `${BUILDINGS[id as BuildingId]?.name || id}: -${n} lvl`).join(', ') || 'Brak'}.`,
                                 outcome: 'danger' as 'danger',
-                                report: {
-                                    rounds: battle.rounds,
-                                    attackerLosses: battle.attackerLosses,
-                                    defenderLosses: battle.defenderLosses,
-                                    defenderDefensesLost: battle.defenderDefensesLost,
-                                    finalAttackerShips: battle.survivingAttackerShips,
-                                    finalDefenderShips: battle.survivingDefenderShips,
-                                    finalDefenderDefenses: battle.survivingDefenderDefenses,
-                                    loot: battle.loot
-                                }
+                                rounds: battle.report.rounds,
+                                attackerLosses: battle.report.attackerLosses,
+                                defenderLosses: battle.report.defenderLosses,
+                                defenderDefensesLost: battle.report.defenderDefensesLost,
+                                finalAttackerShips: battle.survivingAttackerShips,
+                                finalDefenderShips: battle.survivingDefenderShips,
+                                finalDefenderDefenses: battle.survivingDefenderDefenses,
+                                loot: battle.report.loot,
+                                bonuses: battle.report.bonuses,
+                                result: battle.report.result,
+                                initialAttackerShips: battle.report.initialAttackerShips,
+                                initialDefenderShips: battle.report.initialDefenderShips,
+                                initialDefenderDefenses: battle.report.initialDefenderDefenses,
+                                logMessages: battle.report.logMessages
                             },
                             ...(targetProfile.mission_logs || [])
                         ].filter((log, index, self) => index === self.findIndex(t => t.id === log.id)).slice(0, 50);
@@ -1095,22 +957,13 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         id: `${mission.id} -pve - result`,
                         timestamp: Date.now(),
                         title: 'Bitwa z Piratami',
-                        message: battle.log.message,
+                        message: `Walka z Piratami. Wynik: ${battle.attackerWon ? 'Wygrana' : 'Przegrana'}. Zrabowano: M:${battle.loot.metal} C:${battle.loot.crystal}.`,
                         outcome: 'success',
                         rewards: { metal: battle.loot.metal, crystal: battle.loot.crystal, deuterium: battle.loot.deuterium },
-                        report: {
-                            rounds: battle.rounds,
-                            attackerLosses: battle.attackerLosses,
-                            defenderLosses: battle.defenderLosses,
-                            defenderDefensesLost: battle.defenderDefensesLost,
-                            finalAttackerShips: battle.survivingAttackerShips,
-                            finalDefenderShips: battle.survivingDefenderShips,
-                            finalDefenderDefenses: battle.survivingDefenderDefenses,
-                            loot: battle.loot
-                        }
+                        report: battle.report
                     };
                     loot = battle.loot;
-                    survivingAttacker = battle.survivingAttackerShips;
+                    survivingAttacker = battle.survivingAttackerShips as any;
 
                     // PvE Combat XP
                     addXP(30, 'Pirate Combat');
