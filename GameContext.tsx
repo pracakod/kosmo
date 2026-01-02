@@ -2528,10 +2528,12 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
             if (mainPlanetCache) {
                 // Restore from cache
                 setGameState(mainPlanetCache);
+                // FIX: Update lastSavedStateRef to prevent false DESYNC warnings
+                lastSavedStateRef.current = JSON.parse(JSON.stringify(mainPlanetCache));
                 setMainPlanetCache(null);
-                console.log('🪐 Restored main planet from cache');
+                console.log('🪐 Restored main planet from cache (ref updated)');
             } else {
-                // Fallback: reload from DB
+                // Fallback: reload from DB (refreshProfile updates ref internally)
                 await refreshProfile();
                 console.log('🪐 Reloaded main planet from DB (no cache)');
             }
