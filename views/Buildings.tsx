@@ -77,6 +77,13 @@ const Buildings: React.FC = () => {
             const next = 10000 + 5000 * Math.floor(Math.pow(2.5, currentLevel + 1));
             return { text: `Pojemność: ${(current / 1000).toFixed(0)}k -> ${(next / 1000).toFixed(0)}k`, type: 'capacity' };
         }
+        if (buildingId === BuildingId.ROBOT_FACTORY) {
+            const currentSpeed = 100 / (currentLevel + 1); // 100% time / (level + 1) -> 50%, 33% etc.
+            const nextSpeed = 100 / (currentLevel + 2);
+            // Invert to show "Speed": x1, x2... OR "Time reduction"
+            // Showing "Czas budowy: 100% -> 50%" is clear.
+            return { text: `Czas budowy: ${currentSpeed.toFixed(0)}% -> ${nextSpeed.toFixed(0)}%`, type: 'capacity' };
+        }
         return null;
     }
 

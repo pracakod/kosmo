@@ -73,44 +73,38 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                 <ResourceHeader />
 
                 {/* Global Attack Alert - visible on ALL pages */}
+                {/* Global Attack Alert - visible on ALL pages */}
                 {incomingMissions && incomingMissions.length > 0 && (
-                    <div className={`mx-2 md:mx-6 lg:mx-8 mt-2 transition-all duration-300 ${isAlertCollapsed ? 'bg-red-900/40 border-red-900/50' : 'bg-red-900/80 border-red-500 animate-pulse'} border-2 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.2)]`}>
+                    <div className={`mx-2 md:mx-6 lg:mx-8 mt-2 transition-all duration-300 ${isAlertCollapsed ? 'bg-red-900/40 border-red-900/30' : 'bg-red-900/80 border-red-500 animate-pulse'} border-2 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.2)]`}>
                         <div
-                            className="p-2 px-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                            className={`p-2 px-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors ${isAlertCollapsed ? 'py-1' : 'py-2'}`}
                             onClick={() => setIsAlertCollapsed(!isAlertCollapsed)}
                         >
                             <div className="flex items-center gap-3">
+                                {/* Flashing Icon always visible */}
                                 <span className={`material-symbols-outlined text-red-500 ${!isAlertCollapsed && 'animate-bounce'}`}>warning</span>
-                                <div>
-                                    <h3 className="text-red-400 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-                                        ⚠️ WYKRYTO ZAGROŻENIE!
-                                        <span className="text-xs font-normal text-red-300 normal-case hidden sm:inline">
+
+                                <div className="flex items-center gap-2">
+                                    <h3 className={`text-red-400 font-bold uppercase tracking-wider flex items-center gap-2 ${isAlertCollapsed ? 'text-xs' : 'text-sm'}`}>
+                                        {isAlertCollapsed ? 'Wykryto Zagrożenie' : '⚠️ WYKRYTO ZAGROŻENIE!'}
+                                        <span className={`font-normal text-red-300 normal-case hidden sm:inline ${isAlertCollapsed ? 'text-[10px]' : 'text-xs'}`}>
                                             ({incomingMissions.length} {incomingMissions.length === 1 ? 'flota' : 'floty'})
                                         </span>
                                     </h3>
-                                    {!isAlertCollapsed && (
-                                        <div className="mt-2 text-red-100/80 space-y-2">
-                                            {incomingMissions.map((mission) => (
-                                                <div key={mission.id} className="text-xs border-t border-red-500/30 pt-2">
-                                                    <p className="font-bold text-red-200 mb-1">
-                                                        {mission.attackerName ? `Atakuje: ${mission.attackerName}` : 'Nadciąga wroga flota!'}
-                                                    </p>
-                                                    <p className="opacity-80">
-                                                        Flota: {Object.entries(mission.ships || {}).map(([id, n]) =>
-                                                            `${SHIPS[id as ShipId]?.name || id}: ${n}`
-                                                        ).join(', ')}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
+                            {/* Collapsed/Expanded Content */}
+                            {!isAlertCollapsed && (
+                                <div className="mt-2 text-red-100/80 space-y-2 w-full hidden md:block">
+                                    {/* Details shown only when expanded */}
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <div className="text-red-300 text-[10px] uppercase">Kontakt za:</div>
-                                    <div className="text-red-400 font-bold text-lg font-mono leading-none">
+                                    <div className={`text-red-300 uppercase ${isAlertCollapsed ? 'text-[8px] hidden sm:block' : 'text-[10px]'}`}>Kontakt za:</div>
+                                    <div className={`text-red-400 font-bold font-mono leading-none ${isAlertCollapsed ? 'text-sm' : 'text-lg'}`}>
                                         {formatTime(Math.max(0, (incomingMissions[0].arrivalTime - Date.now()) / 1000))}
                                     </div>
                                 </div>
@@ -119,6 +113,27 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onNavigate }) => 
                                 </span>
                             </div>
                         </div>
+
+                        {/* Expanded Details Section */}
+                        {!isAlertCollapsed && (
+                            <div className="px-4 pb-2 text-red-100/80 space-y-2">
+                                {incomingMissions.map((mission) => (
+                                    <div key={mission.id} className="text-xs border-t border-red-500/30 pt-2">
+                                        <p className="font-bold text-red-200 mb-1">
+                                            {mission.attackerName ? `Atakuje: ${mission.attackerName}` : 'Nadciąga wroga flota!'}
+                                        </p>
+                                        <p className="opacity-80">
+                                            Flota: {Object.entries(mission.ships || {}).map(([id, n]) =>
+                                                `${SHIPS[id as ShipId]?.name || id}: ${n}`
+                                            ).join(', ')}
+                                        </p>
+                                    </div>
+                                ))}
+                                <div className="text-center pt-2">
+                                    <span className="text-[10px] text-red-400 opacity-70">(Kliknij, aby zminimalizować pasek)</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

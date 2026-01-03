@@ -29,7 +29,7 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
     // Base chance depends on Pioneer (Pathfinder)
     // Pioneer increases chance of finding SOMETHING (Good or Bad)
     // Spy probe slightly increases chance of avoiding total emptiness
-    const baseChance = hasPioneer ? 0.9 : 0.65;
+    const baseChance = hasPioneer ? 0.98 : 0.85; // BUFFED: 85% base success, 98% with Pioneer
 
     // Timestamp for log ID
     const timestamp = Date.now();
@@ -61,17 +61,17 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
     // Determine Event Type
     const eventRoll = Math.random();
 
-    // 50% Resources
-    // 30% Ships
-    // 18% Artifacts (Common flavor)
-    // 2% Dark Matter (Very Rare)
+    // 40% Resources
+    // 35% Ships
+    // 15% Artifacts
+    // 10% Dark Matter (BUFFED from 2%)
 
-    if (eventRoll < 0.50) {
+    if (eventRoll < 0.40) {
         // RESOURCES
         // Calculate potential find amount (independent of capacity first)
-        let metal = Math.floor(Math.random() * 50000) + 2000;
-        let crystal = Math.floor(Math.random() * 30000) + 1000;
-        let deuterium = Math.floor(Math.random() * 10000) + 500;
+        let metal = Math.floor(Math.random() * 50000) + 12000; // Buffed min
+        let crystal = Math.floor(Math.random() * 30000) + 6000;
+        let deuterium = Math.floor(Math.random() * 10000) + 2000;
 
         // Determine type variation
         const typeRoll = Math.random();
@@ -115,7 +115,7 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
             rewards
         };
 
-    } else if (eventRoll < 0.80) {
+    } else if (eventRoll < 0.75) {
         // SHIPS (Derelicts)
         // Can find small ships usually.
         // Weighted probability for ship types
@@ -123,18 +123,18 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
         let possibleShips: ShipId[];
         let amountMultiplier = 1;
 
-        if (shipRoll < 0.70) {
-            // Common (70%)
+        if (shipRoll < 0.60) {
+            // Common
             possibleShips = [ShipId.LIGHT_FIGHTER, ShipId.HEAVY_FIGHTER, ShipId.SMALL_CARGO, ShipId.ESPIONAGE_PROBE];
-            amountMultiplier = 5; // Can find up to 5+1
-        } else if (shipRoll < 0.95) {
-            // Rare (25%)
+            amountMultiplier = 8; // Buffed: up to 8+1
+        } else if (shipRoll < 0.90) {
+            // Rare
             possibleShips = [ShipId.MEDIUM_CARGO, ShipId.PIONEER, ShipId.CRUISER];
-            amountMultiplier = 3; // Can find up to 3+1
+            amountMultiplier = 4; // Buffed: up to 4+1
         } else {
-            // Epic (5%) - Very rare
+            // Epic (10%)
             possibleShips = [ShipId.BATTLESHIP, ShipId.DESTROYER, ShipId.HUGE_CARGO];
-            amountMultiplier = 1; // Can find usually 1, rarely 2
+            amountMultiplier = 2; // Buffed: up to 2+1
         }
 
         const foundShip = possibleShips[Math.floor(Math.random() * possibleShips.length)];
@@ -153,9 +153,9 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
             rewards: { ships: { [foundShip]: amount } }
         };
 
-    } else if (eventRoll < 0.98) {
+    } else if (eventRoll < 0.90) {
         // Flavor / Artifacts (Common bonus)
-        const metal = Math.floor(Math.random() * 5000) + 500;
+        const metal = Math.floor(Math.random() * 10000) + 2000;
         return {
             log: {
                 ...logBase,
@@ -168,13 +168,13 @@ export const calculateExpeditionOutcome = (mission: FleetMission): ExpeditionRes
         };
 
     } else {
-        // DARK MATTER (Very Rare)
-        const dm = Math.floor(Math.random() * 50) + 10;
+        // DARK MATTER (10% Chance now!)
+        const dm = Math.floor(Math.random() * 150) + 50; // Buffed: 50-200
         return {
             log: {
                 ...logBase,
-                title: "Czarna Materia",
-                message: `Eksperymentalne skanery chwyciły ślad rzadkiej anomalii. Skondensowano ${dm} jednostek Czarnej Materii!`,
+                title: "Czarna Materia (Rzadkie!)",
+                message: `Eksperymentalne skanery wykryły anomalię czasoprzestrzenną. Skondensowano aż ${dm} jednostek Czarnej Materii!`,
                 outcome: 'success'
             },
             rewards: { darkMatter: dm }
