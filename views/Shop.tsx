@@ -96,8 +96,8 @@ const Shop: React.FC = () => {
     const shipPackages = [
         {
             id: 'death_star',
-            name: 'Gwiazda Śmierci',
-            description: 'Ostateczna broń imperium. Posiada superlaser zdolny do natychmiastowego zniszczenia wybranej planety wroga.',
+            name: 'Projekt Leviathan',
+            description: 'Schematy mobilnej stacji bojowej zdolnej do niszczenia planet. (Prototyp)',
             cost: 10000000,
             reward: { custom: 'death_star' },
             icon: 'public_off', // planetary destruction icon

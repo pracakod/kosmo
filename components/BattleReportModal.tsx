@@ -70,15 +70,15 @@ const BattleReportModal: React.FC<BattleReportModalProps> = ({ report, onClose }
                             {/* Loot */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-[#111422] rounded-xl p-4 border border-white/5 flex flex-col items-center">
-                                    <span className="text-xs uppercase text-[#555a7a] font-bold mb-2">Zrabowany Metal</span>
+                                    <span className="text-xs uppercase text-[#555a7a] font-bold mb-2">Zrabowany Tytan</span>
                                     <span className="text-2xl font-mono text-blue-400">{Math.floor(report.loot.metal).toLocaleString()}</span>
                                 </div>
                                 <div className="bg-[#111422] rounded-xl p-4 border border-white/5 flex flex-col items-center">
-                                    <span className="text-xs uppercase text-[#555a7a] font-bold mb-2">Zrabowany Kryształ</span>
+                                    <span className="text-xs uppercase text-[#555a7a] font-bold mb-2">Zrabowany Krzem</span>
                                     <span className="text-2xl font-mono text-purple-400">{Math.floor(report.loot.crystal).toLocaleString()}</span>
                                 </div>
                                 <div className="bg-[#111422] rounded-xl p-4 border border-white/5 flex flex-col items-center">
-                                    <span className="text-xs uppercase text-[#555a7a] font-bold mb-2">Zrabowany Deuter</span>
+                                    <span className="text-xs uppercase text-[#555a7a] font-bold mb-2">Zrabowana Plazma</span>
                                     <span className="text-2xl font-mono text-green-400">{Math.floor(report.loot.deuterium).toLocaleString()}</span>
                                 </div>
                             </div>

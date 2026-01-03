@@ -91,7 +91,7 @@ const ResourceHeader: React.FC = () => {
 
                 <div className="flex gap-2 md:gap-3 flex-1 overflow-x-auto pb-2 items-center">
                     <ResourceItem
-                        name="Metal"
+                        name="Tytan"
                         value={resources.metal}
                         production={productionRates?.metal}
                         icon="handyman"
@@ -99,7 +99,7 @@ const ResourceHeader: React.FC = () => {
                         bgClass="bg-[#1c2136]"
                     />
                     <ResourceItem
-                        name="Kryształ"
+                        name="Krzem"
                         value={resources.crystal}
                         production={productionRates?.crystal}
                         icon="diamond"
@@ -107,7 +107,7 @@ const ResourceHeader: React.FC = () => {
                         bgClass="bg-[#1c2136]"
                     />
                     <ResourceItem
-                        name="Deuter"
+                        name="Plazma"
                         value={resources.deuterium}
                         production={productionRates?.deuterium}
                         icon="propane"
@@ -123,7 +123,7 @@ const ResourceHeader: React.FC = () => {
                         bgClass="bg-[#1c2136]"
                     />
                     <ResourceItem
-                        name="Antymateria"
+                        name="Nanity"
                         value={resources.darkMatter || 0}
                         icon="all_inclusive"
                         colorClass="bg-gradient-to-br from-purple-500 to-indigo-600"

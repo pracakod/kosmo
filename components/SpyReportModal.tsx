@@ -54,15 +54,15 @@ const SpyReportModal: React.FC<SpyReportModalProps> = ({ report, onClose }) => {
                             <h3 className="text-[#929bc9] font-bold uppercase text-xs mb-3 border-b border-white/5 pb-1">Zasoby</h3>
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="bg-[#111422] rounded p-3 text-center border border-white/5">
-                                    <div className="text-xs text-[#555a7a] font-bold mb-1">Metal</div>
+                                    <div className="text-xs text-[#555a7a] font-bold mb-1">Tytan</div>
                                     <div className="font-mono text-blue-400">{Math.floor(report.resources.metal).toLocaleString()}</div>
                                 </div>
                                 <div className="bg-[#111422] rounded p-3 text-center border border-white/5">
-                                    <div className="text-xs text-[#555a7a] font-bold mb-1">Kryształ</div>
+                                    <div className="text-xs text-[#555a7a] font-bold mb-1">Krzem</div>
                                     <div className="font-mono text-purple-400">{Math.floor(report.resources.crystal).toLocaleString()}</div>
                                 </div>
                                 <div className="bg-[#111422] rounded p-3 text-center border border-white/5">
-                                    <div className="text-xs text-[#555a7a] font-bold mb-1">Deuter</div>
+                                    <div className="text-xs text-[#555a7a] font-bold mb-1">Plazma</div>
                                     <div className="font-mono text-green-400">{Math.floor(report.resources.deuterium).toLocaleString()}</div>
                                 </div>
                             </div>

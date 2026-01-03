@@ -61,7 +61,8 @@ export const IMAGES = {
   hugeCargo: "/kosmo/ships/huge_cargo.png",
   colonyShip: "/kosmo/ships/colony_ship.png",
   espionageProbe: "/kosmo/ships/espionage_probe.png",
-  pioneer: "/kosmo/ships/pioneer.png" // Research ship look
+  recycler: "/kosmo/ships/recycler.png",
+  pioneer: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg" // Pioneer ship
 };
 
 export const PLANET_IMAGES: Record<string, string> = {
@@ -74,8 +75,8 @@ export const PLANET_IMAGES: Record<string, string> = {
 export const SHIPS: Record<ShipId, ShipDef> = {
   [ShipId.LIGHT_FIGHTER]: {
     id: ShipId.LIGHT_FIGHTER,
-    name: "Myśliwiec Lekki",
-    description: "Szybki i zwrotny statek myśliwski, podstawa każdej floty.",
+    name: "Myśliwiec Przechwytujący",
+    description: "Szybki i zwrotny myśliwiec przechwytujący, podstawa każdej floty.",
     baseCost: { metal: 1000, crystal: 300, deuterium: 0 },
     image: IMAGES.lightFighter,
     buildTime: 5,
@@ -90,7 +91,7 @@ export const SHIPS: Record<ShipId, ShipDef> = {
   },
   [ShipId.HEAVY_FIGHTER]: {
     id: ShipId.HEAVY_FIGHTER,
-    name: "Myśliwiec Ciężki",
+    name: "Myśliwiec Szturmowy",
     description: "Ciężej opancerzona wersja myśliwca z silniejszym uzbrojeniem.",
     baseCost: { metal: 2000, crystal: 1500, deuterium: 0 },
     image: IMAGES.heavyFighter,
@@ -106,7 +107,7 @@ export const SHIPS: Record<ShipId, ShipDef> = {
   },
   [ShipId.CRUISER]: {
     id: ShipId.CRUISER,
-    name: "Krążownik",
+    name: "Kanonierka",
     description: "Szybki okręt bojowy skuteczny przeciwko lekkim myśliwcom.",
     baseCost: { metal: 6000, crystal: 2500, deuterium: 500 },
     image: IMAGES.cruiser,
@@ -123,7 +124,7 @@ export const SHIPS: Record<ShipId, ShipDef> = {
   },
   [ShipId.BATTLESHIP]: {
     id: ShipId.BATTLESHIP,
-    name: "Okręt Wojenny",
+    name: "Niszczyciel Klasy A",
     description: "Potężna jednostka bojowa o ogromnej sile ognia.",
     baseCost: { metal: 15000, crystal: 5000, deuterium: 0 },
     image: IMAGES.battleship,
@@ -142,7 +143,7 @@ export const SHIPS: Record<ShipId, ShipDef> = {
   },
   [ShipId.DESTROYER]: {
     id: ShipId.DESTROYER,
-    name: "Niszczyciel",
+    name: "Drednot",
     description: "Król pola bitwy. Niszczy lekkie statki w mgnieniu oka.",
     baseCost: { metal: 20000, crystal: 17000, deuterium: 5000 },
     image: IMAGES.destroyer,
@@ -161,8 +162,8 @@ export const SHIPS: Record<ShipId, ShipDef> = {
   },
   [ShipId.DEATH_STAR]: {
     id: ShipId.DEATH_STAR,
-    name: "Pogromca Planet",
-    description: "Ostateczna broń zdolna niszczyć całe księżyce.",
+    name: "Leviathan",
+    description: "Mobilna stacja bojowa klasy Leviathan. Zdolna niszczyć całe księżyce.",
     baseCost: { metal: 5000000, crystal: 4000000, deuterium: 1000000 },
     image: IMAGES.deathStar,
     buildTime: 1000,
@@ -233,10 +234,22 @@ export const SHIPS: Record<ShipId, ShipDef> = {
     capacity: 7500,
     requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 4 }, { type: 'research', id: ResearchId.IMPULSE_DRIVE, level: 3 }]
   },
+  [ShipId.RECYCLER]: {
+    id: ShipId.RECYCLER,
+    name: "Statek Odzysku",
+    description: "Specjalistyczna jednostka do zbierania szczątków z pól bitew.",
+    baseCost: { metal: 30000, crystal: 15000, deuterium: 5000 },
+    image: IMAGES.recycler,
+    buildTime: 60,
+    attack: 10,
+    defense: 30,
+    capacity: 20000,
+    requirements: [{ type: 'building', id: BuildingId.SHIPYARD, level: 4 }, { type: 'research', id: ResearchId.COMBUSTION_DRIVE, level: 6 }, { type: 'research', id: ResearchId.SHIELDING_TECH, level: 2 }]
+  },
   [ShipId.ESPIONAGE_PROBE]: {
     id: ShipId.ESPIONAGE_PROBE,
-    name: "Sonda Szpiegowska",
-    description: "Mała sonda do zdobywania informacji o innych planetach.",
+    name: "Dron Zwiadowczy",
+    description: "Mały dron do zdobywania informacji o innych planetach.",
     baseCost: { metal: 0, crystal: 1000, deuterium: 0 },
     image: IMAGES.espionageProbe,
     buildTime: 2,
@@ -262,8 +275,8 @@ export const SHIPS: Record<ShipId, ShipDef> = {
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   [BuildingId.METAL_MINE]: {
     id: BuildingId.METAL_MINE,
-    name: "Kopalnia Metalu",
-    description: "Pozyskuje rudę metalu z głębi planety.",
+    name: "Wiertnia Tytanu",
+    description: "Pozyskuje rudę tytanu z głębi planety.",
     baseCost: { metal: 60, crystal: 15, deuterium: 0 },
     baseProduction: { metal: 30, crystal: 0, deuterium: 0, energy: -20 },
     image: IMAGES.metalMine,
@@ -271,8 +284,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
   [BuildingId.CRYSTAL_MINE]: {
     id: BuildingId.CRYSTAL_MINE,
-    name: "Kopalnia Kryształu",
-    description: "Wydobywa kryształ niezbędny do elektroniki.",
+    name: "Ekstraktor Krzemu",
+    description: "Wydobywa krzem niezbędny do elektroniki.",
     baseCost: { metal: 48, crystal: 24, deuterium: 0 },
     baseProduction: { metal: 0, crystal: 20, deuterium: 0, energy: -15 },
     image: IMAGES.crystalMine,
@@ -280,8 +293,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
   [BuildingId.DEUTERIUM_SYNTH]: {
     id: BuildingId.DEUTERIUM_SYNTH,
-    name: "Syntezator Deuteru",
-    description: "Przetwarza ciężki wodór na paliwo.",
+    name: "Syntezator Plazmy",
+    description: "Generuje stabilną plazmę.",
     baseCost: { metal: 225, crystal: 75, deuterium: 0 },
     baseProduction: { metal: 0, crystal: 0, deuterium: 10, energy: -30 },
     image: IMAGES.deuteriumSynth,
@@ -298,8 +311,8 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
   [BuildingId.FUSION_REACTOR]: {
     id: BuildingId.FUSION_REACTOR,
-    name: "Elektrownia Fuzyjna",
-    description: "Wydajna elektrownia zużywająca deuter.",
+    name: "Reaktor Plazmowy",
+    description: "Wydajna elektrownia zużywająca plazmę.",
     baseCost: { metal: 900, crystal: 360, deuterium: 180 },
     baseProduction: { metal: 0, crystal: 0, deuterium: -5, energy: 60 },
     image: IMAGES.fusionReactor,
@@ -308,24 +321,24 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   },
   [BuildingId.METAL_STORAGE]: {
     id: BuildingId.METAL_STORAGE,
-    name: "Magazyn Metalu",
-    description: "Zwiększa limit przechowywania metalu.",
+    name: "Magazyn Tytanu",
+    description: "Zwiększa limit przechowywania tytanu.",
     baseCost: { metal: 1000, crystal: 0, deuterium: 0 },
     image: IMAGES.metalStorage,
     buildTimeBase: 25
   },
   [BuildingId.CRYSTAL_STORAGE]: {
     id: BuildingId.CRYSTAL_STORAGE,
-    name: "Magazyn Kryształu",
-    description: "Zwiększa limit przechowywania kryształu.",
+    name: "Magazyn Krzemu",
+    description: "Zwiększa limit przechowywania krzemu.",
     baseCost: { metal: 1000, crystal: 500, deuterium: 0 },
     image: IMAGES.crystalStorage,
     buildTimeBase: 25
   },
   [BuildingId.DEUTERIUM_TANK]: {
     id: BuildingId.DEUTERIUM_TANK,
-    name: "Zbiornik Deuteru",
-    description: "Zwiększa limit przechowywania deuteru.",
+    name: "Zbiornik Plazmy",
+    description: "Zwiększa limit przechowywania plazmy.",
     baseCost: { metal: 1000, crystal: 1000, deuterium: 0 },
     image: IMAGES.deuteriumTank,
     buildTimeBase: 25
@@ -381,7 +394,7 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
   [ResearchId.ION_TECH]: {
     id: ResearchId.ION_TECH,
     name: "Technologia Jonowa",
-    description: "Wymagana dla krążowników i broni jonowej.",
+    description: "Wymagana dla kanonierek i broni jonowej.",
     baseCost: { metal: 1000, crystal: 300, deuterium: 100 },
     image: IMAGES.techIon,
     buildTimeBase: 60,
@@ -391,7 +404,7 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
   [ResearchId.HYPERSPACE_TECH]: {
     id: ResearchId.HYPERSPACE_TECH,
     name: "Technologia Nadprzestrzenna",
-    description: "Wymagana dla pancerników i zaawansowanych napędów.",
+    description: "Wymagana dla drednotów i zaawansowanych napędów.",
     baseCost: { metal: 0, crystal: 4000, deuterium: 2000 },
     image: IMAGES.techHyper,
     buildTimeBase: 120,
@@ -400,7 +413,7 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
   },
   [ResearchId.COMBUSTION_DRIVE]: {
     id: ResearchId.COMBUSTION_DRIVE,
-    name: "Napęd Spalinowy",
+    name: "Napęd Rakietowy",
     description: "Podstawowy napęd dla lekkich statków.",
     baseCost: { metal: 400, crystal: 0, deuterium: 600 },
     image: IMAGES.techCombustion,
@@ -410,8 +423,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
   },
   [ResearchId.IMPULSE_DRIVE]: {
     id: ResearchId.IMPULSE_DRIVE,
-    name: "Napęd Impulsowy",
-    description: "Dla cięższych myśliwców i krążowników.",
+    name: "Napęd Jonowy",
+    description: "Dla cięższych myśliwców i okrętów.",
     baseCost: { metal: 2000, crystal: 4000, deuterium: 600 },
     image: IMAGES.techImpulse,
     buildTimeBase: 80,
@@ -420,8 +433,8 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
   },
   [ResearchId.HYPERSPACE_DRIVE]: {
     id: ResearchId.HYPERSPACE_DRIVE,
-    name: "Napęd Nadprzestrzenny",
-    description: "Umożliwia podróże międzygalaktyczne pancerników.",
+    name: "Napęd Warp",
+    description: "Umożliwia podróże międzygalaktyczne drednotów.",
     baseCost: { metal: 10000, crystal: 20000, deuterium: 6000 },
     image: IMAGES.techHyperDrive,
     buildTimeBase: 200,
@@ -429,9 +442,9 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
     maxLevel: 20
   },
   [ResearchId.PLASMA_TECH]: { id: ResearchId.PLASMA_TECH, name: "Technologia Plazmowa", description: "", baseCost: { metal: 2000, crystal: 4000, deuterium: 1000 }, image: IMAGES.techPlasma, buildTimeBase: 100, maxLevel: 20 },
-  [ResearchId.ESPIONAGE_TECH]: { id: ResearchId.ESPIONAGE_TECH, name: "Technologia Szpiegowska", description: "", baseCost: { metal: 200, crystal: 1000, deuterium: 200 }, image: IMAGES.techEspionage, buildTimeBase: 40, maxLevel: 20 },
+  [ResearchId.ESPIONAGE_TECH]: { id: ResearchId.ESPIONAGE_TECH, name: "Sensoryka", description: "", baseCost: { metal: 200, crystal: 1000, deuterium: 200 }, image: IMAGES.techEspionage, buildTimeBase: 40, maxLevel: 20 },
   [ResearchId.COMPUTER_TECH]: { id: ResearchId.COMPUTER_TECH, name: "Technologia Komputerowa", description: "", baseCost: { metal: 0, crystal: 400, deuterium: 600 }, image: IMAGES.techComputer, buildTimeBase: 50, maxLevel: 25 },
-  [ResearchId.ASTROPHYSICS]: { id: ResearchId.ASTROPHYSICS, name: "Astrofizyka", description: "", baseCost: { metal: 4000, crystal: 8000, deuterium: 4000 }, image: IMAGES.techAstro, buildTimeBase: 100, maxLevel: 30 },
+  [ResearchId.ASTROPHYSICS]: { id: ResearchId.ASTROPHYSICS, name: "Eksploracja Kosmosu", description: "", baseCost: { metal: 4000, crystal: 8000, deuterium: 4000 }, image: IMAGES.techAstro, buildTimeBase: 100, maxLevel: 30 },
   [ResearchId.WEAPON_TECH]: { id: ResearchId.WEAPON_TECH, name: "Technologia Bojowa", description: "", baseCost: { metal: 800, crystal: 200, deuterium: 0 }, image: IMAGES.techWeapon, buildTimeBase: 60, maxLevel: 50 },
   [ResearchId.SHIELDING_TECH]: { id: ResearchId.SHIELDING_TECH, name: "Technologia Ochronna", description: "", baseCost: { metal: 200, crystal: 600, deuterium: 0 }, image: IMAGES.techShield, buildTimeBase: 60, maxLevel: 50 },
   [ResearchId.ARMOUR_TECH]: { id: ResearchId.ARMOUR_TECH, name: "Opancerzenie", description: "", baseCost: { metal: 1000, crystal: 0, deuterium: 0 }, image: IMAGES.techArmour, buildTimeBase: 60, maxLevel: 50 },
@@ -439,11 +452,11 @@ export const RESEARCH: Record<ResearchId, ResearchDef> = {
 
 export const DEFENSES = {
   rocketLauncher: {
-    id: 'rocketLauncher', name: 'Wyrzutnia Rakiet', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko lekkim celom.', attack: 40, defense: 10, cost: { metal: 500, crystal: 0, deuterium: 0 }, buildTime: 20, icon: 'rocket_launch',
+    id: 'rocketLauncher', name: 'Bateria Rakietowa', desc: 'Podstawowa obrona planetarna. Skuteczna przeciwko lekkim celom.', attack: 40, defense: 10, cost: { metal: 500, crystal: 0, deuterium: 0 }, buildTime: 20, icon: 'rocket_launch',
     bonuses: { [ShipId.ESPIONAGE_PROBE]: 2.0 }
   },
   lightLaser: {
-    id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców.', attack: 50, defense: 12, cost: { metal: 400, crystal: 100, deuterium: 0 }, buildTime: 30, icon: 'electric_bolt',
+    id: 'lightLaser', name: 'Lekkie Działko Laserowe', desc: 'Szybkostrzelna wieżyczka laserowa. Idealna do zwalczania myśliwców. Skuteczna przeciwko myśliwcom przechwytującym.', attack: 50, defense: 12, cost: { metal: 400, crystal: 100, deuterium: 0 }, buildTime: 30, icon: 'electric_bolt',
     bonuses: { [ShipId.LIGHT_FIGHTER]: 1.5, [ShipId.ESPIONAGE_PROBE]: 2.0 }
   },
   heavyLaser: {
@@ -451,15 +464,15 @@ export const DEFENSES = {
     bonuses: { [ShipId.HEAVY_FIGHTER]: 1.5, [ShipId.CRUISER]: 1.0 }
   },
   gaussCannon: {
-    id: 'gaussCannon', name: 'Działo Gaussa', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 550, defense: 100, cost: { metal: 5000, crystal: 3500, deuterium: 500 }, buildTime: 150, icon: 'target',
+    id: 'gaussCannon', name: 'Działo Kinetyczne', desc: 'Elektromagnetyczne działo wystrzeliwujące pociski z ogromną prędkością.', attack: 550, defense: 100, cost: { metal: 5000, crystal: 3500, deuterium: 500 }, buildTime: 150, icon: 'target',
     bonuses: { [ShipId.CRUISER]: 2.0, [ShipId.BATTLESHIP]: 1.0, [DefenseId.SMALL_SHIELD]: 2.0 }
   },
   ionCannon: {
-    id: 'ionCannon', name: 'Działo Jonowe', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 75, defense: 250, cost: { metal: 1200, crystal: 700, deuterium: 250 }, buildTime: 120, icon: 'storm',
+    id: 'ionCannon', name: 'Emitery EMP', desc: 'Zaawansowana technologia jonowa dezaktywująca systemy wroga.', attack: 75, defense: 250, cost: { metal: 1200, crystal: 700, deuterium: 250 }, buildTime: 120, icon: 'storm',
     bonuses: { [ShipId.BATTLESHIP]: 1.5, [ShipId.DESTROYER]: 0.5, [DefenseId.LARGE_SHIELD]: 2.0 }
   },
   plasmaTurret: {
-    id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć niszczyciele jednym strzałem.', attack: 1500, defense: 150, cost: { metal: 12000, crystal: 12000, deuterium: 7500 }, buildTime: 300, icon: 'whatshot',
+    id: 'plasmaTurret', name: 'Wieżyczka Plazmowa', desc: 'Najpotężniejsza broń obronna. Zdolna zniszczyć drednoty jednym strzałem.', attack: 1500, defense: 150, cost: { metal: 12000, crystal: 12000, deuterium: 7500 }, buildTime: 300, icon: 'whatshot',
     bonuses: { [ShipId.DESTROYER]: 1.5, [ShipId.DEATH_STAR]: 0.1, [ShipId.BATTLESHIP]: 1.5 }
   },
   smallShield: {
