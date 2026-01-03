@@ -17,6 +17,7 @@ interface GameContextType extends GameState {
     upgradeBuilding: (buildingId: BuildingId) => void;
     upgradeResearch: (researchId: ResearchId) => void;
     buildShip: (shipId: ShipId, amount: number) => void;
+    scrapShip: (shipId: ShipId, amount: number) => void;
     buildDefense: (defenseId: DefenseId, amount: number) => void;
     sendExpedition: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
     sendAttack: (ships: Record<ShipId, number>, coords: { galaxy: number, system: number, position: number }) => void;
@@ -2308,6 +2309,57 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     constructionQueue: filteredQueue
                 };
             });
+            alert("Błąd budowy.");
+        }
+    };
+
+    const scrapShip = async (shipId: ShipId, amount: number) => {
+        const currentCount = gameState.ships[shipId] || 0;
+        if (amount <= 0 || amount > currentCount) return;
+
+        const ship = SHIPS[shipId];
+        if (!ship) return;
+
+        // Refund 50% of Base Cost
+        const refundMetal = Math.floor(ship.baseCost.metal * amount * 0.5);
+        const refundCrystal = Math.floor(ship.baseCost.crystal * amount * 0.5);
+        const refundDeut = Math.floor(ship.baseCost.deuterium * amount * 0.5);
+
+        const newShips = {
+            ...gameState.ships,
+            [shipId]: currentCount - amount
+        };
+
+        const newResources = {
+            ...gameState.resources,
+            metal: gameState.resources.metal + refundMetal,
+            crystal: gameState.resources.crystal + refundCrystal,
+            deuterium: gameState.resources.deuterium + refundDeut
+        };
+
+        // Optimistic Update
+        setGameState(prev => ({
+            ...prev,
+            ships: newShips,
+            resources: newResources
+        }));
+
+        // DB Update
+        const { error } = await supabase.from('profiles').update({
+            ships: newShips,
+            resources: newResources,
+            points: calculatePoints(newResources, gameState.buildings, newShips, gameState.research, gameState.defenses)
+        }).eq('id', session.user.id);
+
+        if (error) {
+            console.error("Scrap failed:", error);
+            alert("Błąd złomowania.");
+            // Revert
+            setGameState(prev => ({
+                ...prev,
+                ships: { ...prev.ships, [shipId]: currentCount },
+                resources: gameState.resources
+            }));
         }
     };
 
@@ -3430,6 +3482,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         upgradeResearch,
         buildShip,
         buildDefense,
+        scrapShip, // Added to context
         sendExpedition,
         sendAttack,
         sendSpyProbe,

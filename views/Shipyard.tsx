@@ -4,7 +4,7 @@ import { SHIPS, BUILDINGS, RESEARCH, DEFENSES, formatTime } from '../constants';
 import { BuildingId, ResearchId, ShipId, DefenseId } from '../types';
 
 const Shipyard: React.FC = () => {
-    const { ships, resources, buildShip, checkRequirements, buildings, research, shipyardQueue } = useGame();
+    const { ships, resources, buildShip, scrapShip, checkRequirements, buildings, research, shipyardQueue } = useGame();
     const shipList = Object.values(SHIPS).sort((a, b) => {
         const costA = a.baseCost.metal + a.baseCost.crystal + a.baseCost.deuterium;
         const costB = b.baseCost.metal + b.baseCost.crystal + b.baseCost.deuterium;
@@ -15,6 +15,7 @@ const Shipyard: React.FC = () => {
     // Local state for input values
     const [inputs, setInputs] = useState<Record<string, number>>({});
     const [timeLeft, setTimeLeft] = useState('');
+    const [isScrapMode, setIsScrapMode] = useState(false); // Toggle for Scrap Mode
 
     const activeJob = shipyardQueue[0];
 
@@ -50,6 +51,16 @@ const Shipyard: React.FC = () => {
         }
     };
 
+    const handleScrap = (ship: typeof shipList[0]) => {
+        const amount = inputs[ship.id] || 0;
+        if (amount > 0) {
+            if (confirm(`Czy na pewno chcesz zezłomować ${amount}x ${ship.name}? Odzyskasz 50% metalu i kryształu.`)) {
+                scrapShip(ship.id, amount);
+                setInputs(prev => ({ ...prev, [ship.id]: 0 }));
+            }
+        }
+    };
+
     if (shipyardLevel === 0) {
         return (
             <div className="bg-[#1c2136] border border-red-500/20 rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 mt-8">
@@ -68,6 +79,12 @@ const Shipyard: React.FC = () => {
                     Stocznia
                 </h2>
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setIsScrapMode(!isScrapMode)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition-colors border ${isScrapMode ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-white/5 text-[#929bc9] border-white/10 hover:bg-white/10'}`}
+                    >
+                        {isScrapMode ? 'Tryb Złomowania' : 'Zarządzaj'}
+                    </button>
                     {activeJob ? (
                         <div className="bg-primary/20 border border-primary/30 px-3 py-1 rounded text-xs text-primary flex items-center gap-2">
                             <span className="material-symbols-outlined text-sm animate-spin">settings</span>
@@ -103,7 +120,7 @@ const Shipyard: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {shipList.map((ship) => {
-                    const count = ships[ship.id];
+                    const count = ships[ship.id] || 0;
                     const amountToBuild = inputs[ship.id] || 0;
                     const isUnlocked = checkRequirements(ship.requirements);
 
@@ -122,13 +139,18 @@ const Shipyard: React.FC = () => {
                     const totalBuildTimeSeconds = Math.max(1, Math.floor((singleBuildTimeMs * (amountToBuild || 1)) / 1000));
 
                     return (
-                        <div key={ship.id} className={`bg-[#1c2136] border border-white/10 rounded-xl overflow-hidden group hover:border-primary/50 transition-all duration-300 relative ${!isUnlocked ? 'opacity-50' : ''}`}>
+                        <div key={ship.id} className={`bg-[#1c2136] border border-white/10 rounded-xl overflow-hidden group hover:border-primary/50 transition-all duration-300 relative ${!isUnlocked ? 'opacity-50' : ''} ${isScrapMode ? 'border-red-500/20' : ''}`}>
                             <div className="absolute top-3 right-3 z-10 bg-black/60 backdrop-blur px-2 py-0.5 rounded text-xs text-[#929bc9] border border-white/10">
                                 Posiadasz: <span className="text-white font-bold">{count}</span>
                             </div>
                             <div className="h-40 lg:h-32 bg-cover bg-center relative" style={{ backgroundImage: `url("${ship.image}")` }}>
                                 <div className="absolute inset-0 bg-gradient-to-t from-[#1c2136] to-transparent"></div>
                                 {!isUnlocked && <div className="absolute inset-0 bg-black/50 backdrop-grayscale"></div>}
+                                {isScrapMode && (
+                                    <div className="absolute inset-0 bg-red-900/40 backdrop-grayscale flex items-center justify-center">
+                                        <span className="text-red-400 font-bold uppercase tracking-widest border-2 border-red-400 px-2 py-1 rotate-[-15deg] opacity-80">Złomowanie</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="p-5 lg:p-3 relative">
@@ -142,52 +164,28 @@ const Shipyard: React.FC = () => {
                                 </div>
                                 <p className="text-[#929bc9] text-xs mb-4 line-clamp-2 h-8">{ship.description}</p>
 
-                                {ship.bonuses && Object.keys(ship.bonuses).length > 0 && (
-                                    <div className="mb-3 text-[10px] text-[#929bc9]">
-                                        <span className="font-bold text-white uppercase block mb-1">Silny przeciwko:</span>
-                                        <div className="flex flex-wrap gap-1">
-                                            {Object.keys(ship.bonuses).map(targetId => (
-                                                <span key={targetId} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    {SHIPS[targetId as ShipId]?.name || DEFENSES[targetId as DefenseId]?.name || targetId}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {isUnlocked ? (
+                                {isScrapMode ? (
                                     <>
-                                        <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-[#111422] rounded-lg border border-white/5">
-                                            <div className={`flex flex-col text-xs ${resources.metal < ship.baseCost.metal ? 'text-red-400' : 'text-[#929bc9]'}`}>
-                                                <span className="uppercase text-[10px] tracking-wider">Metal</span>
-                                                <span className="font-mono text-white">{ship.baseCost.metal.toLocaleString()}</span>
-                                            </div>
-                                            <div className={`flex flex-col text-xs ${resources.crystal < ship.baseCost.crystal ? 'text-red-400' : 'text-[#929bc9]'}`}>
-                                                <span className="uppercase text-[10px] tracking-wider">Kryształ</span>
-                                                <span className="font-mono text-white">{ship.baseCost.crystal.toLocaleString()}</span>
-                                            </div>
-                                            <div className={`flex flex-col text-xs ${resources.deuterium < ship.baseCost.deuterium ? 'text-red-400' : 'text-[#929bc9]'}`}>
-                                                <span className="uppercase text-[10px] tracking-wider">Deuter</span>
-                                                <span className="font-mono text-white">{ship.baseCost.deuterium.toLocaleString()}</span>
+                                        <div className="p-3 bg-red-900/20 border border-red-500/20 rounded-lg mb-4">
+                                            <p className="text-red-300 text-xs mb-2">Odzyskasz za sztukę:</p>
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                <div className="text-blue-200">Metal: <span className="text-white font-mono">{Math.floor(ship.baseCost.metal * 0.5)}</span></div>
+                                                <div className="text-purple-200">Kryształ: <span className="text-white font-mono">{Math.floor(ship.baseCost.crystal * 0.5)}</span></div>
                                             </div>
                                         </div>
-
-                                        <div className="flex items-center justify-between mb-3 text-xs text-[#929bc9]">
-                                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span> {formatTime(totalBuildTimeSeconds)} (x{amountToBuild || 1})</span>
-                                        </div>
-
                                         <div className="flex items-center gap-2 mt-4">
                                             {/* Input Controls */}
-                                            <div className="flex items-center bg-[#111422] rounded-lg border border-white/10 overflow-hidden shadow-sm">
+                                            <div className="flex items-center bg-[#111422] rounded-lg border border-red-500/20 overflow-hidden shadow-sm">
                                                 <button
                                                     onClick={() => handleInputChange(ship.id, Math.max(0, amountToBuild - 1).toString())}
-                                                    className="w-10 h-10 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors border-r border-white/5"
+                                                    className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500/20 transition-colors border-r border-red-500/10"
                                                 >
                                                     <span className="material-symbols-outlined text-base">remove</span>
                                                 </button>
                                                 <input
                                                     type="number"
                                                     min="0"
+                                                    max={count}
                                                     placeholder="0"
                                                     value={inputs[ship.id] > 0 ? inputs[ship.id] : ''}
                                                     onChange={(e) => handleInputChange(ship.id, e.target.value)}
@@ -195,57 +193,141 @@ const Shipyard: React.FC = () => {
                                                 />
                                                 <button
                                                     onClick={() => handleInputChange(ship.id, (amountToBuild + 1).toString())}
-                                                    className="w-10 h-10 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors border-l border-white/5"
+                                                    className="w-10 h-10 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500/20 transition-colors border-l border-red-500/10"
                                                 >
                                                     <span className="material-symbols-outlined text-base">add</span>
                                                 </button>
                                             </div>
 
-                                            {/* Max Button */}
                                             <button
-                                                onClick={() => {
-                                                    const maxMetal = Math.floor(resources.metal / ship.baseCost.metal);
-                                                    const maxCrystal = ship.baseCost.crystal > 0 ? Math.floor(resources.crystal / ship.baseCost.crystal) : Infinity;
-                                                    const maxDeuterium = ship.baseCost.deuterium > 0 ? Math.floor(resources.deuterium / ship.baseCost.deuterium) : Infinity;
-                                                    const max = Math.min(maxMetal, maxCrystal, maxDeuterium);
-                                                    handleInputChange(ship.id, max.toString());
-                                                }}
-                                                className="h-10 px-3 rounded-lg bg-[#232948] text-[#929bc9] text-xs font-bold uppercase border border-white/5 hover:bg-primary/20 hover:text-primary hover:border-primary/30 transition-all active:scale-95"
+                                                onClick={() => handleInputChange(ship.id, count.toString())}
+                                                className="h-10 px-3 rounded-lg bg-red-900/20 text-red-400 text-xs font-bold uppercase border border-red-500/20 hover:bg-red-500/30 transition-all"
                                             >
                                                 Max
                                             </button>
 
-                                            {/* Build Button */}
                                             <button
-                                                onClick={() => handleBuild(ship)}
-                                                disabled={amountToBuild <= 0 || !canAffordTotal}
+                                                onClick={() => handleScrap(ship)}
+                                                disabled={amountToBuild <= 0 || amountToBuild > count}
                                                 className={`flex-1 h-10 rounded-lg text-sm font-bold uppercase transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95
-                                                ${amountToBuild > 0 && canAffordTotal
-                                                        ? 'bg-primary hover:bg-blue-600 text-white shadow-primary/20'
+                                                ${amountToBuild > 0 && amountToBuild <= count
+                                                        ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/20'
                                                         : 'bg-[#232948] text-[#929bc9] cursor-not-allowed opacity-50'
                                                     }
                                             `}
                                             >
-                                                <span className="material-symbols-outlined text-lg">precision_manufacturing</span>
-                                                <span>Produkuj</span>
+                                                <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                        <p className="text-red-400 text-xs font-bold mb-1">Wymagane technologie:</p>
-                                        <div className="flex flex-col gap-1">
-                                            {ship.requirements?.map((req, i) => {
-                                                const name = req.type === 'building' ? BUILDINGS[req.id as BuildingId].name : RESEARCH[req.id as ResearchId].name;
-                                                const current = req.type === 'building' ? buildings[req.id as BuildingId] : research[req.id as ResearchId];
-                                                return (
-                                                    <div key={i} className={`text-xs ${current >= req.level ? 'text-green-400' : 'text-red-400/70'}`}>
-                                                        - {name} (Lvl {req.level})
+                                    <>
+                                        {ship.bonuses && Object.keys(ship.bonuses).length > 0 && (
+                                            <div className="mb-3 text-[10px] text-[#929bc9]">
+                                                <span className="font-bold text-white uppercase block mb-1">Silny przeciwko:</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Object.keys(ship.bonuses).map(targetId => (
+                                                        <span key={targetId} className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                            {SHIPS[targetId as ShipId]?.name || DEFENSES[targetId as DefenseId]?.name || targetId}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isUnlocked ? (
+                                            <>
+                                                <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-[#111422] rounded-lg border border-white/5">
+                                                    <div className={`flex flex-col text-xs ${resources.metal < ship.baseCost.metal ? 'text-red-400' : 'text-[#929bc9]'}`}>
+                                                        <span className="uppercase text-[10px] tracking-wider">Metal</span>
+                                                        <span className="font-mono text-white">{ship.baseCost.metal.toLocaleString()}</span>
                                                     </div>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
+                                                    <div className={`flex flex-col text-xs ${resources.crystal < ship.baseCost.crystal ? 'text-red-400' : 'text-[#929bc9]'}`}>
+                                                        <span className="uppercase text-[10px] tracking-wider">Kryształ</span>
+                                                        <span className="font-mono text-white">{ship.baseCost.crystal.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className={`flex flex-col text-xs ${resources.deuterium < ship.baseCost.deuterium ? 'text-red-400' : 'text-[#929bc9]'}`}>
+                                                        <span className="uppercase text-[10px] tracking-wider">Deuter</span>
+                                                        <span className="font-mono text-white">{ship.baseCost.deuterium.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between mb-3 text-xs text-[#929bc9]">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm">schedule</span> {formatTime(totalBuildTimeSeconds)} (x{amountToBuild || 1})</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 mt-4">
+                                                    {/* Input Controls */}
+                                                    <div className="flex items-center bg-[#111422] rounded-lg border border-white/10 overflow-hidden shadow-sm">
+                                                        <button
+                                                            onClick={() => handleInputChange(ship.id, Math.max(0, amountToBuild - 1).toString())}
+                                                            className="w-10 h-10 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors border-r border-white/5"
+                                                        >
+                                                            <span className="material-symbols-outlined text-base">remove</span>
+                                                        </button>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            placeholder="0"
+                                                            value={inputs[ship.id] > 0 ? inputs[ship.id] : ''}
+                                                            onChange={(e) => handleInputChange(ship.id, e.target.value)}
+                                                            className="w-16 bg-transparent text-white text-sm text-center focus:outline-none appearance-none font-mono font-bold"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleInputChange(ship.id, (amountToBuild + 1).toString())}
+                                                            className="w-10 h-10 flex items-center justify-center text-[#929bc9] hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors border-l border-white/5"
+                                                        >
+                                                            <span className="material-symbols-outlined text-base">add</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Max Button */}
+                                                    <button
+                                                        onClick={() => {
+                                                            const maxMetal = Math.floor(resources.metal / ship.baseCost.metal);
+                                                            const maxCrystal = ship.baseCost.crystal > 0 ? Math.floor(resources.crystal / ship.baseCost.crystal) : Infinity;
+                                                            const maxDeuterium = ship.baseCost.deuterium > 0 ? Math.floor(resources.deuterium / ship.baseCost.deuterium) : Infinity;
+                                                            const max = Math.min(maxMetal, maxCrystal, maxDeuterium);
+                                                            handleInputChange(ship.id, max.toString());
+                                                        }}
+                                                        className="h-10 px-3 rounded-lg bg-[#232948] text-[#929bc9] text-xs font-bold uppercase border border-white/5 hover:bg-primary/20 hover:text-primary hover:border-primary/30 transition-all active:scale-95"
+                                                    >
+                                                        Max
+                                                    </button>
+
+                                                    {/* Build Button */}
+                                                    <button
+                                                        onClick={() => handleBuild(ship)}
+                                                        disabled={amountToBuild <= 0 || !canAffordTotal}
+                                                        className={`flex-1 h-10 rounded-lg text-sm font-bold uppercase transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95
+                                                        ${amountToBuild > 0 && canAffordTotal
+                                                                ? 'bg-primary hover:bg-blue-600 text-white shadow-primary/20'
+                                                                : 'bg-[#232948] text-[#929bc9] cursor-not-allowed opacity-50'
+                                                            }
+                                                    `}
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">precision_manufacturing</span>
+                                                        <span>Produkuj</span>
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                                <p className="text-red-400 text-xs font-bold mb-1">Wymagane technologie:</p>
+                                                <div className="flex flex-col gap-1">
+                                                    {ship.requirements?.map((req, i) => {
+                                                        const name = req.type === 'building' ? BUILDINGS[req.id as BuildingId].name : RESEARCH[req.id as ResearchId].name;
+                                                        const current = req.type === 'building' ? buildings[req.id as BuildingId] : research[req.id as ResearchId];
+                                                        return (
+                                                            <div key={i} className={`text-xs ${current >= req.level ? 'text-green-400' : 'text-red-400/70'}`}>
+                                                                - {name} (Lvl {req.level})
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
