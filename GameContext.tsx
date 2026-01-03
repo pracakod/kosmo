@@ -787,8 +787,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                         totalStructure += (ship.baseCost.metal + ship.baseCost.crystal) * (count as number);
                     }
                 });
-                // Upkeep per second (same formula)
-                upkeepDeut = ((totalStructure / 1000) * GAME_SPEED) / 3600;
+                // Upkeep per second (Reduced by 90% as per request)
+                upkeepDeut = (((totalStructure / 1000) * GAME_SPEED) * 0.1) / 3600;
 
                 const deutNet = deutProd - upkeepDeut;
 
@@ -1733,9 +1733,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 totalStructure += structure * (count as number);
             }
         });
-        // Upkeep = Total Structure / 1000 per hour * GAME_SPEED
+        // Upkeep = Total Structure / 1000 per hour * GAME_SPEED * 0.1 (90% reduction)
         // Returns per second
-        const upkeepPerHour = (totalStructure / 1000) * GAME_SPEED;
+        const upkeepPerHour = (totalStructure / 1000) * GAME_SPEED * 0.1;
         return upkeepPerHour / 3600;
     };
 

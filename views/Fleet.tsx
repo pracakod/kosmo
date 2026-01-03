@@ -129,8 +129,8 @@ const Fleet: React.FC = () => {
                                 // Let's try to import GAME_SPEED from GameContext or assume 100 for display if private.
                                 // Actually, let's just calculate based on "Per Hour" and maybe imply speed.
                                 // Or better: accessible via context? No. 
-                                // Formula matches GameContext: (Structure / 1000) * GAME_SPEED
-                                const upkeep = Math.floor((totalStructure / 1000) * GAME_SPEED);
+                                // Formula matches GameContext: (Structure / 1000) * GAME_SPEED * 0.1
+                                const upkeep = Math.floor((totalStructure / 1000) * GAME_SPEED * 0.1);
                                 return upkeep.toLocaleString();
                             })()} <span className="text-sm font-normal text-orange-400">Deuter / h</span>
                         </div>
