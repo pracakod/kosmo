@@ -82,7 +82,11 @@ const Buildings: React.FC = () => {
             const nextSpeed = 100 / (currentLevel + 2);
             // Invert to show "Speed": x1, x2... OR "Time reduction"
             // Showing "Czas budowy: 100% -> 50%" is clear.
-            return { text: `Czas budowy: ${currentSpeed.toFixed(0)}% -> ${nextSpeed.toFixed(0)}%`, type: 'capacity' };
+            if (currentLevel >= 20) {
+                // High precision for high levels
+                return { text: `Czas budowy: ${currentSpeed.toFixed(2)}% -> ${nextSpeed.toFixed(2)}%`, type: 'capacity' };
+            }
+            return { text: `Czas budowy: ${currentSpeed.toFixed(1)}% -> ${nextSpeed.toFixed(1)}%`, type: 'capacity' };
         }
         return null;
     }
