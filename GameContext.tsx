@@ -8,7 +8,7 @@ import { generatePvPBattleResult } from './combatUtils';
 
 
 const TICK_RATE = 1000;
-const GAME_SPEED = 100;
+export const GAME_SPEED = 100;
 const STORAGE_KEY = 'cosmos_conquest_save_v1';
 
 type TransactionStatus = 'success' | 'no_funds' | 'storage_full';
@@ -776,15 +776,30 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                 const crystalProd = (20 * crystalLevel * Math.pow(1.1, crystalLevel)) * efficiency * (s[BuildingId.CRYSTAL_MINE] ?? 100) / 100;
                 const deutProd = (10 * deuteriumLevel * Math.pow(1.1, deuteriumLevel) * 1.0) * efficiency * (s[BuildingId.DEUTERIUM_SYNTH] ?? 100) / 100;
 
+                // Calculate Upkeep for Offline Time
+                let upkeepDeut = 0;
+                // Calculate fleet structure
+                let totalStructure = 0;
+                Object.entries(data.ships || {}).forEach(([id, count]) => {
+                    const ship = SHIPS[id as ShipId];
+                    if (ship) {
+                        totalStructure += (ship.baseCost.metal + ship.baseCost.crystal) * (count as number);
+                    }
+                });
+                // Upkeep per second (same formula)
+                upkeepDeut = ((totalStructure / 1000) * GAME_SPEED) / 3600;
+
+                const deutNet = deutProd - upkeepDeut;
+
                 // Safety: Ensure storage structure exists
                 if (!loadedResources.storage) {
                     loadedResources.storage = JSON.parse(JSON.stringify(initialState.resources.storage));
                 }
 
                 // Apply to resources
-                loadedResources.metal = Math.min(loadedResources.storage.metal, loadedResources.metal + (metalProd * timeDiff));
-                loadedResources.crystal = Math.min(loadedResources.storage.crystal, loadedResources.crystal + (crystalProd * timeDiff));
-                loadedResources.deuterium = Math.min(loadedResources.storage.deuterium, loadedResources.deuterium + (deutProd * timeDiff));
+                loadedResources.metal = Math.max(0, Math.min(loadedResources.storage.metal, loadedResources.metal + (metalProd * timeDiff)));
+                loadedResources.crystal = Math.max(0, Math.min(loadedResources.storage.crystal, loadedResources.crystal + (crystalProd * timeDiff)));
+                loadedResources.deuterium = Math.max(0, Math.min(loadedResources.storage.deuterium, loadedResources.deuterium + (deutNet * timeDiff)));
             }
 
             // Merge loaded data
@@ -1707,6 +1722,22 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         return true;
     };
 
+    const calculateUpkeep = (ships: Record<string, number>) => {
+        let totalStructure = 0;
+        Object.entries(ships).forEach(([id, count]) => {
+            const ship = SHIPS[id as ShipId];
+            if (ship) {
+                // Structure = Metal + Crystal
+                const structure = ship.baseCost.metal + ship.baseCost.crystal;
+                totalStructure += structure * (count as number);
+            }
+        });
+        // Upkeep = Total Structure / 1000 per hour * GAME_SPEED
+        // Returns per second
+        const upkeepPerHour = (totalStructure / 1000) * GAME_SPEED;
+        return upkeepPerHour / 3600;
+    };
+
     const calculateProduction = (state: GameState) => {
         const settings = state.productionSettings;
         const getPct = (id: BuildingId) => (settings[id] !== undefined ? settings[id]! : 100) / 100;
@@ -1739,13 +1770,18 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
         const maxMetal = 10000 + 5000 * Math.floor(Math.pow(2.5, metalStorageLvl));
         const maxCrystal = 10000 + 5000 * Math.floor(Math.pow(2.5, crystalStorageLvl));
         const maxDeuterium = 10000 + 5000 * Math.floor(Math.pow(2.5, deutStorageLvl));
+
+        // Upkeep Calculation
+        const upkeep = calculateUpkeep(state.ships);
+
         return {
             metal: (metalProd * productionFactor) / 3600,
             crystal: (crystalProd * productionFactor) / 3600,
-            deuterium: ((deuteriumProd - fusionDeutCons) * productionFactor) / 3600,
+            deuterium: (((deuteriumProd - fusionDeutCons) * productionFactor) / 3600) - upkeep,
             energy: netEnergy,
             maxEnergy: energyProd,
-            storage: { metal: maxMetal, crystal: maxCrystal, deuterium: maxDeuterium }
+            storage: { metal: maxMetal, crystal: maxCrystal, deuterium: maxDeuterium },
+            upkeep: upkeep // Expose for UI
         };
     };
 
@@ -3222,9 +3258,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     defenses: newDefenses,
                     resources: { // Updated with Production
                         ...prev.resources,
-                        metal: Math.min(production.storage.metal, (prev.resources.metal || 0) + metalGain),
-                        crystal: Math.min(production.storage.crystal, (prev.resources.crystal || 0) + crystalGain),
-                        deuterium: Math.min(production.storage.deuterium, (prev.resources.deuterium || 0) + deuteriumGain),
+                        metal: Math.max(0, Math.min(production.storage.metal, (prev.resources.metal || 0) + metalGain)),
+                        crystal: Math.max(0, Math.min(production.storage.crystal, (prev.resources.crystal || 0) + crystalGain)),
+                        deuterium: Math.max(0, Math.min(production.storage.deuterium, (prev.resources.deuterium || 0) + deuteriumGain)),
                         darkMatter: (prev.resources.darkMatter || 0) + refDMReward
                     },
                     constructionQueue: newQueue,
@@ -3251,9 +3287,9 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                     resources: {
                         ...current.resources, // BASE State
                         // Apply DELTA (Production & Rewards)
-                        metal: Math.min(production.storage.metal, (current.resources.metal || 0) + metalGain),
-                        crystal: Math.min(production.storage.crystal, (current.resources.crystal || 0) + crystalGain),
-                        deuterium: Math.min(production.storage.deuterium, (current.resources.deuterium || 0) + deuteriumGain),
+                        metal: Math.max(0, Math.min(production.storage.metal, (current.resources.metal || 0) + metalGain)),
+                        crystal: Math.max(0, Math.min(production.storage.crystal, (current.resources.crystal || 0) + crystalGain)),
+                        deuterium: Math.max(0, Math.min(production.storage.deuterium, (current.resources.deuterium || 0) + deuteriumGain)),
                         energy: production.energy,
                         maxEnergy: production.maxEnergy,
                         storage: production.storage,

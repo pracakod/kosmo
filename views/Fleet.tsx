@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useGame } from '../GameContext';
+import { useGame, GAME_SPEED } from '../GameContext';
 import { SHIPS, DEFENSES, formatTime } from '../constants';
 import { ShipId, MissionType, FleetMission, DefenseId } from '../types';
 import Logbook from '../components/Logbook';
@@ -98,7 +98,52 @@ const Fleet: React.FC = () => {
                     Centrum Floty
                 </h2>
                 <div className="flex gap-4 text-sm text-[#929bc9]">
-                    <span>Misje: {activeMissions.length} / 2</span>
+                    <div className="px-3 py-1 bg-white/5 rounded-lg border border-white/10">
+                        Flota: <span className="text-white font-medium">{Object.values(ships).reduce((a, b) => a + (b as number), 0)}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Fleet Status / Upkeep */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="bg-[#1a1d2e] border border-white/5 rounded-xl p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-orange-400">local_gas_station</span>
+                    </div>
+                    <div>
+                        <div className="text-xs text-[#929bc9] uppercase tracking-wider">Koszt Utrzymania</div>
+                        <div className="text-xl font-bold text-white">
+                            {(() => {
+                                let totalStructure = 0;
+                                Object.entries(ships).forEach(([id, count]) => {
+                                    const ship = SHIPS[id as ShipId];
+                                    if (ship) {
+                                        totalStructure += (ship.baseCost.metal + ship.baseCost.crystal) * (count as number);
+                                    }
+                                });
+                                // 100 GAME_SPEED is standard, so we normalize message? 
+                                // Actually show RAW hourly consumption
+                                // Formula matches GameContext: (Structure / 1000) * GAME_SPEED
+                                // We assume GAME_SPEED is available or we import it? 
+                                // Easier: Hardcode 100 or import if exported. 
+                                // Let's try to import GAME_SPEED from GameContext or assume 100 for display if private.
+                                // Actually, let's just calculate based on "Per Hour" and maybe imply speed.
+                                // Or better: accessible via context? No. 
+                                // Formula matches GameContext: (Structure / 1000) * GAME_SPEED
+                                const upkeep = Math.floor((totalStructure / 1000) * GAME_SPEED);
+                                return upkeep.toLocaleString();
+                            })()} <span className="text-sm font-normal text-orange-400">Deuter / h</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-[#1a1d2e] border border-white/5 rounded-xl p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-blue-400">flight</span>
+                    </div>
+                    <div>
+                        <div className="text-xs text-[#929bc9] uppercase tracking-wider">Gotowość Bojowa</div>
+                        <div className="text-xl font-bold text-white">100%</div>
+                    </div>
                 </div>
             </div>
 
