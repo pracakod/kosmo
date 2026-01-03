@@ -1104,12 +1104,34 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                     } else {
                         // PvP - ATOMIC UPDATE REQUIRED
-                        // A. Fetch Target (Fresh)
-                        const { data: targetProfile, error: targetError } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
-                        if (targetError) throw new Error(`Target fetch error`);
+                        // A. Fetch Target (Fresh) - Check if Colony or Main Planet
+                        let targetData: any = null;
+                        let isPlanet = false;
+                        let targetId = mission.targetUserId;
+
+                        // 1. Check for Colony at coordinates
+                        const { data: colony, error: colonyError } = await supabase.from('planets')
+                            .select('*')
+                            .eq('galaxy', mission.targetCoords.galaxy)
+                            .eq('system', mission.targetCoords.system)
+                            .eq('position', mission.targetCoords.position)
+                            .single();
+
+                        if (colony) {
+                            targetData = colony;
+                            isPlanet = true;
+                            targetId = colony.id;
+                        } else {
+                            // 2. Fallback to Main Planet (Profile)
+                            const { data: profile, error: targetError } = await supabase.from('profiles').select('*').eq('id', mission.targetUserId).single();
+                            if (targetError) throw new Error(`Target fetch error`);
+                            targetData = profile;
+                            isPlanet = false;
+                            targetId = profile.id; // User ID is the Profile ID
+                        }
 
                         let newTargetData: any = {};
-                        let newLogs = [...(targetProfile.mission_logs || [])];
+                        let newLogs = [...(targetData.mission_logs || [])];
 
                         // Attacker Name Logic
                         let attackerName = mission.attackerName || 'Nieznany';
@@ -1139,7 +1161,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             let attackerResearch = {};
                             if (mission.ownerId === session.user.id) attackerResearch = gameStateRef.current.research;
 
-                            const battle = generatePvPBattleResult(mission.ships, targetProfile.ships, targetProfile.defenses || {}, targetProfile.buildings, targetProfile.research, targetProfile.resources, false, attackerResearch);
+                            const battle = generatePvPBattleResult(mission.ships, targetData.ships, targetData.defenses || {}, targetData.buildings, targetData.research, targetData.resources, false, attackerResearch);
                             pvpBattleResults = battle; // Store for later usage
 
                             const myCoordsStr = `[${mission.originCoords.galaxy}:${mission.originCoords.system}:${mission.originCoords.position}]`;
@@ -1149,7 +1171,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                                 id: `${mission.id}-result`,
                                 timestamp: Date.now(),
                                 title: pvpBattleResults.attackerWon ? 'Zwycięstwo!' : 'Porażka',
-                                message: `Atak na ${targetProfile.nickname || 'Gracza'} ${targetCoordsStr} zakończony. Wynik: ${pvpBattleResults.attackerWon ? 'Wygrana' : 'Przegrana'}. Zrabowano: M:${Math.floor(pvpBattleResults.loot.metal)} C:${Math.floor(pvpBattleResults.loot.crystal)}.`,
+                                message: `Atak na ${targetData.nickname || 'Gracza'} ${targetCoordsStr} zakończony. Wynik: ${pvpBattleResults.attackerWon ? 'Wygrana' : 'Przegrana'}. Zrabowano: M:${Math.floor(pvpBattleResults.loot.metal)} C:${Math.floor(pvpBattleResults.loot.crystal)}.`,
                                 outcome: pvpBattleResults.attackerWon ? 'success' : 'failure',
                                 rewards: pvpBattleResults.loot,
                                 report: pvpBattleResults.report
@@ -1165,7 +1187,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             newTargetData.defenses = battle.survivingDefenderDefenses;
 
                             // Buildings Damage
-                            const newBuildings = { ...targetProfile.buildings };
+                            const newBuildings = { ...targetData.buildings };
                             Object.entries(battle.damagedBuildings || {}).forEach(([bid, dmg]) => {
                                 if (newBuildings[bid]) newBuildings[bid] = Math.max(0, newBuildings[bid] - (dmg as number));
                             });
@@ -1173,14 +1195,14 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                             // Resources Update (Loot)
                             newTargetData.resources = {
-                                ...targetProfile.resources,
-                                metal: Math.max(0, targetProfile.resources.metal - (loot.metal || 0)),
-                                crystal: Math.max(0, targetProfile.resources.crystal - (loot.crystal || 0)),
-                                deuterium: Math.max(0, targetProfile.resources.deuterium - (loot.deuterium || 0))
+                                ...targetData.resources,
+                                metal: Math.max(0, targetData.resources.metal - (loot.metal || 0)),
+                                crystal: Math.max(0, targetData.resources.crystal - (loot.crystal || 0)),
+                                deuterium: Math.max(0, targetData.resources.deuterium - (loot.deuterium || 0))
                             };
 
                             // Debris Update
-                            const existingDebris = targetProfile.debris || { metal: 0, crystal: 0 };
+                            const existingDebris = targetData.debris || { metal: 0, crystal: 0 };
                             const addedDebris = (battle as any).debris || { metal: 0, crystal: 0 };
                             newTargetData.debris = {
                                 metal: (existingDebris.metal || 0) + (addedDebris.metal || 0),
@@ -1197,10 +1219,10 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                         } else if (mission.type === MissionType.TRANSPORT) {
                             newTargetData.resources = {
-                                ...(targetProfile.resources || {}), // PRESERVE STORAGE & DARK MATTER
-                                metal: (targetProfile.resources?.metal || 0) + (mission.resources?.metal || 0),
-                                crystal: (targetProfile.resources?.crystal || 0) + (mission.resources?.crystal || 0),
-                                deuterium: (targetProfile.resources?.deuterium || 0) + (mission.resources?.deuterium || 0),
+                                ...(targetData.resources || {}), // PRESERVE STORAGE & DARK MATTER
+                                metal: (targetData.resources?.metal || 0) + (mission.resources?.metal || 0),
+                                crystal: (targetData.resources?.crystal || 0) + (mission.resources?.crystal || 0),
+                                deuterium: (targetData.resources?.deuterium || 0) + (mission.resources?.deuterium || 0),
                             };
                             newLogs.unshift({ id: Date.now().toString(), timestamp: Date.now(), title: "Dostawa Surowców", message: `Otrzymano surowce od ${attackerName}.`, outcome: 'success' });
                             result = { id: Date.now().toString(), timestamp: Date.now(), outcome: 'success', title: 'Transport', message: `Surowce dostarczone.` };
@@ -1223,7 +1245,7 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             }
 
                             const attackerSpyLevel = (attackerResearch as any)?.espionageTech || 0;
-                            const defenderSpyLevel = (targetProfile.research as any)?.espionageTech || 0;
+                            const defenderSpyLevel = (targetData.research as any)?.espionageTech || 0;
                             const levelDiff = attackerSpyLevel - defenderSpyLevel;
 
                             // 2. Build Report based on Difference
@@ -1233,26 +1255,26 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
                             // Level >= Target + 5: Buildings
 
                             const spyReport: any = {
-                                targetName: targetProfile.nickname || "Nieznany Cel",
+                                targetName: targetData.nickname || "Nieznany Cel",
                                 attackerSpyLevel,
                                 defenderSpyLevel,
-                                resources: targetProfile.resources, // Always visible if successful? Or require equal level? OGame style: Equal Level.
+                                resources: targetData.resources, // Always visible if successful? Or require equal level? OGame style: Equal Level.
                                 // Let's be generous: Always show Resources if probe survives (simulated by arrival).
                             };
 
-                            let details = [`Surowce: M:${Math.floor(targetProfile.resources.metal)} K:${Math.floor(targetProfile.resources.crystal)} D:${Math.floor(targetProfile.resources.deuterium)}`];
+                            let details = [`Surowce: M:${Math.floor(targetData.resources.metal)} K:${Math.floor(targetData.resources.crystal)} D:${Math.floor(targetData.resources.deuterium)}`];
 
                             if (levelDiff >= 2) {
-                                spyReport.ships = targetProfile.ships;
-                                details.push(`Flota: ${Object.keys(targetProfile.ships || {}).length} typów.`);
+                                spyReport.ships = targetData.ships;
+                                details.push(`Flota: ${Object.keys(targetData.ships || {}).length} typów.`);
                             }
                             if (levelDiff >= 3) {
-                                spyReport.defenses = targetProfile.defenses;
-                                details.push(`Obrona: ${Object.keys(targetProfile.defenses || {}).length} typów.`);
+                                spyReport.defenses = targetData.defenses;
+                                details.push(`Obrona: ${Object.keys(targetData.defenses || {}).length} typów.`);
                             }
                             if (levelDiff >= 5) {
-                                spyReport.buildings = targetProfile.buildings;
-                                details.push(`Budynki: ${Object.keys(targetProfile.buildings || {}).length} typów.`);
+                                spyReport.buildings = targetData.buildings;
+                                details.push(`Budynki: ${Object.keys(targetData.buildings || {}).length} typów.`);
                             }
 
                             // 3. Logs & Result
@@ -1312,8 +1334,8 @@ export const GameProvider: React.FC<{ children: ReactNode, session: any }> = ({ 
 
                         const { error: rpcError } = await supabase.rpc('apply_mission_outcome', {
                             p_mission_id: mission.id,
-                            p_target_id: mission.targetUserId,
-                            p_is_planet: false, // Currently logic supports Profiles (Main). If colonies, logic needs 'targetObj' check.
+                            p_target_id: targetId, // Dynamic ID (Planet or Profile)
+                            p_is_planet: isPlanet, // Dynamic Flag
                             p_log_entry: newLogs[0], // Only the new log
                             p_resources_diff: resourcesDiff,
                             p_debris_diff: debrisDiff,
