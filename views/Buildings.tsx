@@ -129,19 +129,19 @@ const Buildings: React.FC = () => {
             {/* Storage Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
                 <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
-                    <span className="text-[#929bc9] text-xs uppercase font-bold">Magazyn Metalu</span>
+                    <span className="text-[#929bc9] text-xs uppercase font-bold">{BUILDINGS[BuildingId.METAL_STORAGE].name}</span>
                     <span className={`text-sm font-mono ${resources.metal >= resources.storage.metal ? 'text-red-400 font-bold' : 'text-white'}`}>
                         {Math.floor(resources.metal).toLocaleString()} / {(resources.storage.metal / 1000).toFixed(0)}k
                     </span>
                 </div>
                 <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
-                    <span className="text-[#929bc9] text-xs uppercase font-bold">Magazyn Kryształu</span>
+                    <span className="text-[#929bc9] text-xs uppercase font-bold">{BUILDINGS[BuildingId.CRYSTAL_STORAGE].name}</span>
                     <span className={`text-sm font-mono ${resources.crystal >= resources.storage.crystal ? 'text-red-400 font-bold' : 'text-white'}`}>
                         {Math.floor(resources.crystal).toLocaleString()} / {(resources.storage.crystal / 1000).toFixed(0)}k
                     </span>
                 </div>
                 <div className="bg-[#1c2136] p-3 rounded-lg border border-white/5 flex items-center justify-between">
-                    <span className="text-[#929bc9] text-xs uppercase font-bold">Zbiornik Deuteru</span>
+                    <span className="text-[#929bc9] text-xs uppercase font-bold">{BUILDINGS[BuildingId.DEUTERIUM_TANK].name}</span>
                     <span className={`text-sm font-mono ${resources.deuterium >= resources.storage.deuterium ? 'text-red-400 font-bold' : 'text-white'}`}>
                         {Math.floor(resources.deuterium).toLocaleString()} / {(resources.storage.deuterium / 1000).toFixed(0)}k
                     </span>
