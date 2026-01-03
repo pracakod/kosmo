@@ -13,6 +13,14 @@ export const formatTime = (seconds: number): string => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+export const formatNumber = (num: number): string => {
+  if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
+  return num.toLocaleString();
+};
+
 // Centralized image store with working, reliable links
 export const IMAGES = {
   avatar: "/kosmo/avatars/avatar_default.png",

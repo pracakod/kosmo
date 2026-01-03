@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../GameContext';
-import { IMAGES, PLANET_IMAGES, formatTime, SHIPS, DEFENSES } from '../constants';
+import { IMAGES, PLANET_IMAGES, formatTime, formatNumber, SHIPS, DEFENSES } from '../constants';
 import { ShipId } from '../types';
 
 const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate }) => {
@@ -152,8 +152,8 @@ const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onNavigate
                                         {/* Tooltip */}
                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-black/90 border border-white/20 rounded p-2 text-xs text-gray-300 hidden group-hover:block z-50 pointer-events-none shadow-xl">
                                             <div className="font-bold text-yellow-400 mb-1">Doświadczenie (XP)</div>
-                                            <div>Aktualne: <span className="text-white">{Math.floor(xp || 0).toLocaleString()}</span></div>
-                                            <div>Następny poziom: <span className="text-white">{Math.floor(500 * Math.pow((level || 1), 2)).toLocaleString()}</span></div>
+                                            <div>Aktualne: <span className="text-white">{formatNumber(Math.floor(xp || 0))}</span></div>
+                                            <div>Następny poziom: <span className="text-white">{formatNumber(Math.floor(500 * Math.pow((level || 1), 2)))}</span></div>
                                         </div>
                                     </div>
                                     <div className="text-[#929bc9] text-xs uppercase mb-2">Poziom</div>
