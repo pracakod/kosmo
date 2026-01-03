@@ -62,7 +62,7 @@ export const IMAGES = {
   colonyShip: "/kosmo/ships/colony_ship.png",
   espionageProbe: "/kosmo/ships/espionage_probe.png",
   recycler: "/kosmo/ships/recycler.png",
-  pioneer: "https://lh3.googleusercontent.com/aida-public/AB6AXuAUsk_veHUVdI7Xyyen3wE1Sor8I2WXguf2jjbakOFbdtRfW9EJruiDvsIgX5IEW3yt01vrIYq_I5G3cqefGk7O7w9BvvVsHpHioXTKjEfTwaHGv1fWwoc4_coc6yXGitNBGAa3URR7KjlKaomN_pmSPD9Jalb9rxdmt1NRlt2b98OZQVQqii0zOOVaBBsICIos_bTfcnyMBW_tecAFg3TP9zzNghDVuvahMe87fSHyj_9wuv1y3NXeDTDGk2w8iBPZsl8B6D58Jhg" // Pioneer ship
+  pioneer: "/kosmo/ships/pioneer.png" // Pioneer ship
 };
 
 export const PLANET_IMAGES: Record<string, string> = {
